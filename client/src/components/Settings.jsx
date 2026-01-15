@@ -16,6 +16,8 @@ const Settings = () => {
         website: '',
         taxOffice: '',
         taxNo: '',
+        city: '',
+        town: '',
         logoPath: null
     });
     const [selectedFile, setSelectedFile] = useState(null);
@@ -333,6 +335,37 @@ const Settings = () => {
                                             />
                                             <FileText className="absolute left-3 top-3 text-slate-500" size={18} />
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="md:col-span-2 grid grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-1.5">İl</label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            name="city"
+                                            value={company.city}
+                                            onChange={handleCompanyChange}
+                                            className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-4 pl-10 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-600"
+                                            placeholder="İstanbul"
+                                        />
+                                        <MapPin className="absolute left-3 top-3 text-slate-500" size={18} />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-1.5">İlçe</label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            name="town"
+                                            value={company.town}
+                                            onChange={handleCompanyChange}
+                                            className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-4 pl-10 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-600"
+                                            placeholder="Kadıköy"
+                                        />
+                                        <MapPin className="absolute left-3 top-3 text-slate-500" size={18} />
                                     </div>
                                 </div>
                             </div>

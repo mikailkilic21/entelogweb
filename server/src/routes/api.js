@@ -30,6 +30,11 @@ router.get('/accounts/:id/orders', accountsController.getAccountOrders);
 const checksController = require('../controllers/checksController');
 router.get('/checks/payroll/:id', checksController.getPayrollDetails);
 
+// Order Routes
+const ordersController = require('../controllers/ordersController');
+router.get('/orders', ordersController.getOrders);
+router.get('/orders/:id', ordersController.getOrderDetails);
+
 // Product Routes
 router.get('/products', productsController.getProducts);
 router.get('/products/stats', productsController.getProductStats);

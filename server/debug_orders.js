@@ -1,63 +1,48 @@
 const { sql, connectDB, getConfig } = require('./src/config/db');
 
-async function debugOrders() {
+async function testOrders() {
     try {
         await connectDB();
         const config = getConfig();
+        console.log('Config:', config);
+
         const firm = config.firmNo || '113';
         const period = config.periodNo || '01';
-
         const orficheTable = `LG_${firm}_${period}_ORFICHE`;
-        const orflineTable = `LG_${firm}_${period}_ORFLINE`;
+        const clcardTable = `LG_${firm}_CLCARD`;
 
-        console.log(`Checking First 10 Orders in ${orficheTable}...`);
+        console.log(`Querying ${orficheTable}...`);
 
-        // 1. Check raw content of ORFICHE to understand APPROVE values
-        console.log('--- Sample ORFICHE Data ---');
-        const checkQuery = `
-            SELECT TOP 10 
-                LOGICALREF, FICHENO, DATE_, TRCODE, STATUS, APPROVE, DOCODE
-            FROM ${orficheTable}
+        // Query 1: Check total count without filters
+        const countResult = await sql.query(`SELECT COUNT(*) as count FROM ${orficheTable}`);
+        console.log('Total Orders in Table:', countResult.recordset[0].count);
+
+        // Query 2: Check TRCODEs (Transaction Codes)
+        const trcodeResult = await sql.query(`SELECT TRCODE, COUNT(*) as count FROM ${orficheTable} GROUP BY TRCODE`);
+        console.log('Orders by TRCODE:', trcodeResult.recordset);
+        // TRCODE 1: Giving Order (Alım Siparişi) - Wait, usually 1 is Sales Order in some contexts or Purchase? 
+        // Let's verify standard Logo codes:
+        // 1: Alınan Sipariş (Sales Order)
+        // 2: Verilen Sipariş (Purchase Order)
+
+        // Query 3: Check STATUS
+        const statusResult = await sql.query(`SELECT STATUS, COUNT(*) as count FROM ${orficheTable} WHERE TRCODE = 1 GROUP BY STATUS`);
+        console.log('Sales Orders (TRCODE=1) by STATUS:', statusResult.recordset);
+
+        // Query 4: Sample Data
+        const sampleResult = await sql.query(`
+            SELECT TOP 5 
+                LOGICALREF, FICHENO, DATE_, TRCODE, STATUS, NETTOTAL 
+            FROM ${orficheTable} 
             ORDER BY DATE_ DESC
-        `;
-        const checkResult = await sql.query(checkQuery);
-        console.table(checkResult.recordset);
-
-        // 2. Check APPROVE and STATUS column distribution
-        console.log('--- APPROVE Column Distribution ---');
-        const approveDist = await sql.query(`SELECT APPROVE, COUNT(*) as count FROM ${orficheTable} GROUP BY APPROVE`);
-        console.table(approveDist.recordset);
-
-        console.log('--- STATUS Column Distribution ---');
-        const statusDist = await sql.query(`SELECT STATUS, COUNT(*) as count FROM ${orficheTable} GROUP BY STATUS`);
-        console.table(statusDist.recordset);
-
-        // 3. Check CLOSED column distribution in ORFLINE
-        console.log('--- ORFLINE CLOSED Distribution ---');
-        const closedDist = await sql.query(`SELECT CLOSED, COUNT(*) as count FROM ${orflineTable} GROUP BY CLOSED`);
-        console.table(closedDist.recordset);
-
-        // 5. Find a sample CLIENTREF and STOCKREF with Pending Approved Orders
-        console.log('--- Sample IDs for Testing ---');
-        const sampleQuery = `
-            SELECT TOP 1 
-                O.CLIENTREF as clientRef, 
-                L.STOCKREF as stockRef,
-                O.FICHENO as orderNo
-            FROM ${orflineTable} L 
-            JOIN ${orficheTable} O ON L.ORDFICHEREF = O.LOGICALREF 
-            WHERE L.CLOSED = 0 AND O.STATUS = 4
-        `;
-        const sampleResult = await sql.query(sampleQuery);
-        if (sampleResult.recordset.length > 0) {
-            console.table(sampleResult.recordset);
-        } else {
-            console.log('No Pending Approved Orders found in the system!');
-        }
+        `);
+        console.log('Sample Orders:', sampleResult.recordset);
 
     } catch (err) {
-        console.error('❌ Error:', err.message);
+        console.error('Error:', err);
+    } finally {
+        process.exit();
     }
 }
 
-debugOrders();
+testOrders();
