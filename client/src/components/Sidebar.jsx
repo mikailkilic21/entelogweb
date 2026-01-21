@@ -14,6 +14,13 @@ import {
 
 const Sidebar = () => {
     const [dbConfig, setDbConfig] = useState(null);
+    const [firms, setFirms] = useState([]);
+    const [periods, setPeriods] = useState([]);
+    const [selectedFirmNo, setSelectedFirmNo] = useState('');
+    const [selectedPeriodNo, setSelectedPeriodNo] = useState('');
+    const [isEditing, setIsEditing] = useState(false);
+    const [tempFirmNo, setTempFirmNo] = useState('');
+    const [tempPeriodNo, setTempPeriodNo] = useState('');
 
     const fetchDbConfig = async () => {
         try {
@@ -21,14 +28,111 @@ const Sidebar = () => {
             if (res.ok) {
                 const data = await res.json();
                 setDbConfig(data);
+                setSelectedFirmNo(data.firmNo || '');
+                setSelectedPeriodNo(data.periodNo || '');
+                setTempFirmNo(data.firmNo || '');
+                setTempPeriodNo(data.periodNo || '');
             }
         } catch (err) {
             console.error('Sidebar config fetch error:', err);
         }
     };
 
+    const fetchFirms = async () => {
+        try {
+            const res = await fetch('/api/firms');
+            if (res.ok) {
+                const data = await res.json();
+                setFirms(data);
+            }
+        } catch (err) {
+            console.error('Firms fetch error:', err);
+        }
+    };
+
+    const fetchPeriods = async (firmNo) => {
+        try {
+            const res = await fetch(`/api/firms/${firmNo}/periods`);
+            if (res.ok) {
+                const data = await res.json();
+                setPeriods(data);
+            }
+        } catch (err) {
+            console.error('Periods fetch error:', err);
+            setPeriods([]);
+        }
+    };
+
+    const handleFirmChange = async (e) => {
+        const newFirmNo = e.target.value;
+        setTempFirmNo(newFirmNo);
+
+        if (newFirmNo) {
+            // Fetch periods for this firm
+            await fetchPeriods(newFirmNo);
+            // Auto-set to period 01
+            setTempPeriodNo('01');
+        } else {
+            setPeriods([]);
+            setTempPeriodNo('');
+        }
+    };
+
+    const handlePeriodChange = (e) => {
+        const newPeriodNo = e.target.value;
+        setTempPeriodNo(newPeriodNo);
+    };
+
+    const switchFirmPeriod = async (firmNo, periodNo) => {
+        try {
+            const res = await fetch('/api/settings/db/switch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ firmNo, periodNo })
+            });
+
+            if (res.ok) {
+                // Refresh config and emit event for Dashboard to reload
+                await fetchDbConfig();
+                window.dispatchEvent(new CustomEvent('dbSettingsUpdated'));
+
+                // Reload the page to reinitialize all data with new firm/period
+                window.location.reload();
+            }
+        } catch (err) {
+            console.error('Switch error:', err);
+        }
+    };
+
+    const handleEditClick = () => {
+        setIsEditing(true);
+        setTempFirmNo(selectedFirmNo);
+        setTempPeriodNo(selectedPeriodNo);
+    };
+
+    const handleConfirmClick = async () => {
+        if (!tempFirmNo || !tempPeriodNo) {
+            alert('Lütfen firma ve dönem seçiniz.');
+            return;
+        }
+
+        setIsEditing(false);
+        setSelectedFirmNo(tempFirmNo);
+        setSelectedPeriodNo(tempPeriodNo);
+
+        await switchFirmPeriod(tempFirmNo, tempPeriodNo);
+    };
+
+    const handleCancelClick = () => {
+        setIsEditing(false);
+        setTempFirmNo(selectedFirmNo);
+        setTempPeriodNo(selectedPeriodNo);
+    };
+
+
     useEffect(() => {
         fetchDbConfig();
+        fetchFirms();
 
         // Listen for db settings updates
         const handleDbUpdate = () => {
@@ -43,6 +147,13 @@ const Sidebar = () => {
         };
     }, []);
 
+    // Fetch periods when firmNo is loaded from config
+    useEffect(() => {
+        if (selectedFirmNo) {
+            fetchPeriods(selectedFirmNo);
+        }
+    }, [selectedFirmNo]);
+
     const navItems = [
         { path: '/', name: 'Panel', icon: <LayoutDashboard size={20} /> },
         { path: '/accounts', name: 'Cari Hesaplar', icon: <Users size={20} /> },
@@ -52,6 +163,8 @@ const Sidebar = () => {
         { path: '/checks', name: 'Çek / Senet', icon: <Banknote size={20} /> },
         { path: '/settings', name: 'Ayarlar', icon: <Settings size={20} /> },
     ];
+
+
 
     return (
         <div className="h-screen w-64 bg-slate-900 border-r border-slate-800 flex flex-col fixed left-0 top-0 z-50">
@@ -64,31 +177,74 @@ const Sidebar = () => {
                 {dbConfig && (
                     <div className="mt-4 px-4 py-3 bg-slate-800 rounded-xl border border-slate-700 shadow-lg">
                         {dbConfig.firmName && (
-                            <div className="mb-2 pb-2 border-b border-slate-700">
-                                <span className="block text-xs font-medium text-slate-400 mb-0.5">Aktif Firma</span>
+                            <div className="mb-3 pb-3 border-b border-slate-700">
+                                <span className="block text-xs font-medium text-slate-400 mb-1">Aktif Firma</span>
                                 <div className="text-sm font-bold text-white uppercase tracking-tight truncate" title={dbConfig.firmName}>
                                     {dbConfig.firmName}
                                 </div>
                             </div>
                         )}
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-                                    <span className="text-xs font-medium text-slate-400">Firma No</span>
-                                </div>
-                                <span className="font-mono text-sm font-bold text-white bg-slate-900/50 px-2 py-0.5 rounded border border-slate-700/50">
-                                    {dbConfig.firmNo}
-                                </span>
+                        <div className="space-y-3">
+                            {/* Firma Dropdown */}
+                            <div>
+                                <label className="block text-xs font-medium text-slate-400 mb-1">Firma Seç</label>
+                                <select
+                                    value={tempFirmNo}
+                                    onChange={handleFirmChange}
+                                    disabled={!isEditing}
+                                    className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <option value="">Seçiniz...</option>
+                                    {firms.map((firm) => (
+                                        <option key={firm.nr} value={firm.nr}>
+                                            {firm.nr} - {firm.name}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
-                                    <span className="text-xs font-medium text-slate-400">Dönem No</span>
-                                </div>
-                                <span className="font-mono text-sm font-bold text-white bg-slate-900/50 px-2 py-0.5 rounded border border-slate-700/50">
-                                    {dbConfig.periodNo}
-                                </span>
+
+                            {/* Dönem Dropdown */}
+                            <div>
+                                <label className="block text-xs font-medium text-slate-400 mb-1">Dönem Seç</label>
+                                <select
+                                    value={tempPeriodNo}
+                                    onChange={handlePeriodChange}
+                                    disabled={!isEditing || !tempFirmNo}
+                                    className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {periods.map((period) => (
+                                        <option key={period.nr} value={period.nr.toString().padStart(2, '0')}>
+                                            Dönem {period.nr.toString().padStart(2, '0')}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2 mt-2">
+                                {!isEditing ? (
+                                    <button
+                                        onClick={handleEditClick}
+                                        className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded transition"
+                                    >
+                                        Değiştir
+                                    </button>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={handleConfirmClick}
+                                            className="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded transition"
+                                        >
+                                            Tamam
+                                        </button>
+                                        <button
+                                            onClick={handleCancelClick}
+                                            className="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded transition"
+                                        >
+                                            İptal
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

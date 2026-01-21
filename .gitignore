@@ -1,1 +1,41 @@
-node_modules
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database Config (Sensitive!)
+server/src/config/db-config.json
+
+# Company Data
+server/data/
+server/public/uploads/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build outputs
+dist/
+build/
+*.log
+
+# Debug files
+server/debug_*.js
+server/test_*.js
+server/check_*.js
+server/list_*.js
+server/find_*.js
+server/verify_*.js

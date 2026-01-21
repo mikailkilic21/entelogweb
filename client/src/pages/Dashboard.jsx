@@ -19,7 +19,7 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(true);
     const [period, setPeriod] = useState('weekly');
     const [selectedInvoice, setSelectedInvoice] = useState(null);
-    const [isLive, setIsLive] = useState(true);
+
 
 
 
@@ -79,19 +79,7 @@ const Dashboard = () => {
         fetchData();
     }, [fetchData]);
 
-    // Auto Refresh Logic
-    useEffect(() => {
-        let interval;
-        if (isLive) {
-            console.log('⏰ Auto-refresh started (10s)');
-            interval = setInterval(() => {
-                fetchData();
-            }, 10000);
-        }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [isLive, fetchData]);
+
 
     if (loading) {
         return (
@@ -126,17 +114,6 @@ const Dashboard = () => {
 
                 {/* Period Selector + Refresh Button */}
                 <div className="flex gap-2 items-center">
-                    {/* Live Toggle */}
-                    <button
-                        onClick={() => setIsLive(!isLive)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${isLive
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 animate-pulse'
-                            : 'bg-slate-800 text-slate-400 border-slate-700'
-                            }`}
-                    >
-                        <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-emerald-400' : 'bg-slate-500'}`}></div>
-                        CANLI
-                    </button>
 
                     {/* Period Buttons */}
                     <div className="flex bg-slate-800/50 rounded-lg p-1 gap-1">

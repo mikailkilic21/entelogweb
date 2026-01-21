@@ -149,11 +149,86 @@ const updateDbSettings = (req, res) => {
     }
 };
 
+const getFirms = async (req, res) => {
+    try {
+        const pool = getPool();
+        if (!pool) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+
+        const result = await pool.request()
+            .query('SELECT NR as nr, NAME as name FROM L_CAPIFIRM ORDER BY NR');
+
+        res.json(result.recordset);
+    } catch (error) {
+        console.error('Error fetching firms:', error);
+        res.status(500).json({ error: 'Failed to fetch firms' });
+    }
+};
+
+const switchDbConfig = async (req, res) => {
+    try {
+        const { firmNo, periodNo } = req.body;
+
+        if (!firmNo || !periodNo) {
+            return res.status(400).json({ error: 'firmNo and periodNo are required' });
+        }
+
+        // Read current config
+        const currentConfig = JSON.parse(fs.readFileSync(DB_CONFIG_PATH, 'utf8').replace(/^\uFEFF/, ''));
+
+        // Update firm and period
+        currentConfig.firmNo = firmNo;
+        currentConfig.periodNo = periodNo;
+
+        // Save updated config
+        fs.writeFileSync(DB_CONFIG_PATH, JSON.stringify(currentConfig, null, 4));
+
+        // Reconnect with new config (optional - the app will use new values on next request)
+        // For now, just return success. The frontend will reload and use new config.
+
+        res.json({ success: true, message: 'Firma ve dönem güncellendi', config: currentConfig });
+    } catch (error) {
+        console.error('Error switching DB config:', error);
+        res.status(500).json({ error: 'Failed to switch firm/period' });
+    }
+};
+
+const getFirmPeriods = async (req, res) => {
+    try {
+        const { firmNo } = req.params;
+        const pool = getPool();
+        if (!pool) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+
+        const result = await pool.request()
+            .input('firmNo', sql.Int, parseInt(firmNo))
+            .query(`
+                SELECT 
+                    NR as nr, 
+                    BEGDATE as beginDate,
+                    ENDDATE as endDate
+                FROM L_CAPIPERIOD 
+                WHERE FIRMNR = @firmNo 
+                ORDER BY NR
+            `);
+
+        res.json(result.recordset);
+    } catch (error) {
+        console.error('Error fetching firm periods:', error);
+        res.status(500).json({ error: 'Failed to fetch periods' });
+    }
+};
+
 module.exports = {
     getSettings,
     updateSettings,
     uploadLogo,
     uploadMiddleware: upload.single('logo'),
     getDbSettings,
-    updateDbSettings
+    updateDbSettings,
+    getFirms,
+    switchDbConfig,
+    getFirmPeriods
 };

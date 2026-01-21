@@ -15,6 +15,13 @@ router.post('/settings/company/logo', settingsController.uploadMiddleware, setti
 router.get('/settings/db', settingsController.getDbSettings);
 router.post('/settings/db', settingsController.updateDbSettings);
 
+// Firms Routes
+router.get('/firms', settingsController.getFirms);
+router.get('/firms/:firmNo/periods', settingsController.getFirmPeriods);
+router.post('/settings/db/switch', settingsController.switchDbConfig);
+
+
+
 // Invoice Routes
 router.get('/invoices', invoiceController.getInvoices);
 router.get('/invoices/stats', invoiceController.getInvoiceStats);
@@ -29,6 +36,9 @@ router.get('/accounts/:id/orders', accountsController.getAccountOrders);
 // Check Routes
 const checksController = require('../controllers/checksController');
 router.get('/checks/payroll/:id', checksController.getPayrollDetails);
+router.get('/checks', checksController.getChecks);
+router.get('/checks/recent', checksController.getRecentChecks);
+router.get('/checks/upcoming', checksController.getUpcomingChecks);
 
 // Order Routes
 const ordersController = require('../controllers/ordersController');

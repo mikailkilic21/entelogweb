@@ -1,28 +1,31 @@
-const sql = require('mssql');
-const fs = require('fs');
-const path = require('path');
+const { sql, getConfig, connectDB } = require('./src/config/db');
 
-const dbConfig = JSON.parse(fs.readFileSync(path.join(__dirname, 'src', 'config', 'db-config.json'), 'utf8'));
-
-async function check() {
+async function debugColumns() {
     try {
-        const pool = await sql.connect(dbConfig);
-        const table = `LG_${dbConfig.firmNo}_${dbConfig.periodNo}_INVOICE`;
+        const pool = await connectDB();
+        const config = getConfig();
+        const firm = config.firmNo || '113';
+        const period = config.periodNo || '01';
 
-        // Sadece kolon isimlerini alalım
-        const res = await pool.request().query(`
-            SELECT COLUMN_NAME 
-            FROM INFORMATION_SCHEMA.COLUMNS 
-            WHERE TABLE_NAME = '${table}'
-            AND (COLUMN_NAME LIKE '%TIME%' OR COLUMN_NAME LIKE '%DATE%' OR COLUMN_NAME LIKE '%HOUR%' OR COLUMN_NAME LIKE '%MINUTE%')
-        `);
+        const cslinesTable = `LG_${firm}_${period}_CSLINES`;
+        const csrollTable = `LG_${firm}_${period}_CSROLL`;
 
-        console.log("Time related columns:");
-        res.recordset.forEach(row => console.log(row.COLUMN_NAME));
+        console.log(`Checking columns for ${cslinesTable} and ${csrollTable}`);
 
-        pool.close();
-    } catch (e) {
-        console.log("Error:", e.message);
+        const r1 = await pool.request().query(`SELECT TOP 1 * FROM ${cslinesTable}`);
+        console.log(`--- ${cslinesTable} Columns ---`);
+        console.log(Object.keys(r1.recordset[0] || {}));
+
+        const r2 = await pool.request().query(`SELECT TOP 1 * FROM ${csrollTable}`);
+        console.log(`--- ${csrollTable} Columns ---`);
+        console.log(Object.keys(r2.recordset[0] || {}));
+
+        process.exit(0);
+
+    } catch (err) {
+        console.error('Error:', err);
+        process.exit(1);
     }
 }
-check();
+
+debugColumns();
