@@ -18,7 +18,7 @@ const Sidebar = () => {
     const [periods, setPeriods] = useState([]);
     const [selectedFirmNo, setSelectedFirmNo] = useState('');
     const [selectedPeriodNo, setSelectedPeriodNo] = useState('');
-    const [isEditing, setIsEditing] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [tempFirmNo, setTempFirmNo] = useState('');
     const [tempPeriodNo, setTempPeriodNo] = useState('');
 
@@ -94,20 +94,25 @@ const Sidebar = () => {
             if (res.ok) {
                 // Refresh config and emit event for Dashboard to reload
                 await fetchDbConfig();
+
+                // Emit event for other components to listen
                 window.dispatchEvent(new CustomEvent('dbSettingsUpdated'));
 
-                // Reload the page to reinitialize all data with new firm/period
-                window.location.reload();
+                // Close menu
+                setIsMenuOpen(false);
             }
         } catch (err) {
             console.error('Switch error:', err);
         }
     };
 
-    const handleEditClick = () => {
-        setIsEditing(true);
-        setTempFirmNo(selectedFirmNo);
-        setTempPeriodNo(selectedPeriodNo);
+    const toggleMenu = () => {
+        if (!isMenuOpen) {
+            // Opening menu - reset temp values to current selected
+            setTempFirmNo(selectedFirmNo);
+            setTempPeriodNo(selectedPeriodNo);
+        }
+        setIsMenuOpen(!isMenuOpen);
     };
 
     const handleConfirmClick = async () => {
@@ -116,17 +121,10 @@ const Sidebar = () => {
             return;
         }
 
-        setIsEditing(false);
         setSelectedFirmNo(tempFirmNo);
         setSelectedPeriodNo(tempPeriodNo);
 
         await switchFirmPeriod(tempFirmNo, tempPeriodNo);
-    };
-
-    const handleCancelClick = () => {
-        setIsEditing(false);
-        setTempFirmNo(selectedFirmNo);
-        setTempPeriodNo(selectedPeriodNo);
     };
 
 
@@ -168,85 +166,85 @@ const Sidebar = () => {
 
     return (
         <div className="h-screen w-64 bg-slate-900 border-r border-slate-800 flex flex-col fixed left-0 top-0 z-50">
-            {/* Logo Area */}
-            <div className="p-6 border-b border-slate-800">
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                    ENTELOG
-                </h1>
-                <p className="text-slate-500 text-xs mt-1">Web Dashboard</p>
+            {/* Logo Area & Firm Switcher */}
+            <div className="p-4 border-b border-slate-800">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                            ENTELOG
+                        </h1>
+                        <p className="text-slate-500 text-[10px] tracking-wide">WEB DASHBOARD</p>
+                    </div>
+                </div>
+
+                {/* Compact Firm Switcher */}
                 {dbConfig && (
-                    <div className="mt-4 px-4 py-3 bg-slate-800 rounded-xl border border-slate-700 shadow-lg">
-                        {dbConfig.firmName && (
-                            <div className="mb-3 pb-3 border-b border-slate-700">
-                                <span className="block text-xs font-medium text-slate-400 mb-1">Aktif Firma</span>
-                                <div className="text-sm font-bold text-white uppercase tracking-tight truncate" title={dbConfig.firmName}>
-                                    {dbConfig.firmName}
+                    <div className="relative">
+                        <button
+                            onClick={toggleMenu}
+                            className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-all ${isMenuOpen ? 'bg-slate-800 border-blue-500/50' : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'}`}
+                        >
+                            <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="w-8 h-8 rounded bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs shrink-0">
+                                    {dbConfig.firmNo || '??'}
+                                </div>
+                                <div className="text-left overflow-hidden">
+                                    <div className="text-xs font-medium text-slate-300 truncate w-32" title={dbConfig.firmName}>
+                                        {dbConfig.firmName || 'Firma Seçiniz'}
+                                    </div>
+                                    <div className="text-[10px] text-slate-500">
+                                        Dönem: <span className="text-blue-400">{dbConfig.periodNo}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <Settings size={14} className={`text-slate-500 transition-transform duration-300 ${isMenuOpen ? 'rotate-90 text-blue-400' : ''}`} />
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {isMenuOpen && (
+                            <div className="absolute top-full left-0 right-0 mt-2 p-3 bg-slate-800 rounded-xl border border-slate-700 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200">
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-[10px] font-medium text-slate-400 mb-1">FİRMA</label>
+                                        <select
+                                            value={tempFirmNo}
+                                            onChange={handleFirmChange}
+                                            className="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"
+                                        >
+                                            <option value="">Seçiniz...</option>
+                                            {firms.map((firm) => (
+                                                <option key={firm.nr} value={firm.nr}>
+                                                    {firm.nr} - {firm.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[10px] font-medium text-slate-400 mb-1">DÖNEM</label>
+                                        <select
+                                            value={tempPeriodNo}
+                                            onChange={handlePeriodChange}
+                                            disabled={!tempFirmNo}
+                                            className="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-1.5 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                                        >
+                                            {periods.map((period) => (
+                                                <option key={period.nr} value={period.nr.toString().padStart(2, '0')}>
+                                                    {period.nr.toString().padStart(2, '0')} - {period.beginDate?.split('T')[0]} / {period.endDate?.split('T')[0]}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <button
+                                        onClick={handleConfirmClick}
+                                        className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-blue-500/20"
+                                    >
+                                        UYGULA & DEĞİŞTİR
+                                    </button>
                                 </div>
                             </div>
                         )}
-                        <div className="space-y-3">
-                            {/* Firma Dropdown */}
-                            <div>
-                                <label className="block text-xs font-medium text-slate-400 mb-1">Firma Seç</label>
-                                <select
-                                    value={tempFirmNo}
-                                    onChange={handleFirmChange}
-                                    disabled={!isEditing}
-                                    className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <option value="">Seçiniz...</option>
-                                    {firms.map((firm) => (
-                                        <option key={firm.nr} value={firm.nr}>
-                                            {firm.nr} - {firm.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Dönem Dropdown */}
-                            <div>
-                                <label className="block text-xs font-medium text-slate-400 mb-1">Dönem Seç</label>
-                                <select
-                                    value={tempPeriodNo}
-                                    onChange={handlePeriodChange}
-                                    disabled={!isEditing || !tempFirmNo}
-                                    className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {periods.map((period) => (
-                                        <option key={period.nr} value={period.nr.toString().padStart(2, '0')}>
-                                            Dönem {period.nr.toString().padStart(2, '0')}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex gap-2 mt-2">
-                                {!isEditing ? (
-                                    <button
-                                        onClick={handleEditClick}
-                                        className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded transition"
-                                    >
-                                        Değiştir
-                                    </button>
-                                ) : (
-                                    <>
-                                        <button
-                                            onClick={handleConfirmClick}
-                                            className="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded transition"
-                                        >
-                                            Tamam
-                                        </button>
-                                        <button
-                                            onClick={handleCancelClick}
-                                            className="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded transition"
-                                        >
-                                            İptal
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        </div>
                     </div>
                 )}
             </div>

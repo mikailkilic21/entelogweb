@@ -37,6 +37,16 @@ const Settings = () => {
         fetchCompanySettings();
         fetchDbSettings();
         setLoading(false);
+
+        const handleDbUpdate = () => {
+            fetchDbSettings();
+        };
+
+        window.addEventListener('dbSettingsUpdated', handleDbUpdate);
+
+        return () => {
+            window.removeEventListener('dbSettingsUpdated', handleDbUpdate);
+        };
     }, []);
 
     const fetchCompanySettings = async () => {

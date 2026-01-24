@@ -16,8 +16,13 @@ app.use('/api', apiRoutes);
 
 // Connect to Database and start server
 connectDB().then(() => {
-    const server = app.listen(PORT, () => {
-        console.log(`
+    console.log('✅ Veritabanı bağlantısı başarılı');
+}).catch(err => {
+    console.error('❌ Veritabanı bağlantı hatası (Sunucu yine de başlatılıyor):', err.message);
+});
+
+const server = app.listen(PORT, () => {
+    console.log(`
     ╔════════════════════════════════════════╗
     ║   ✅ Logo Go Wings API Çalışıyor!    ║
     ╚════════════════════════════════════════╝
@@ -26,17 +31,13 @@ connectDB().then(() => {
     📦 Fişler: http://localhost:${PORT}/api/invoices
     📊 İstatistikler: http://localhost:${PORT}/api/stats
     `);
-    });
+});
 
-    server.on('error', (e) => {
-        console.error('❌ Server Başlatma Hatası:', e);
-        // If port is in use, exit so we know it failed
-        if (e.code === 'EADDRINUSE') {
-            console.error(`❌ Port ${PORT} kullanımda!`);
-            process.exit(1);
-        }
-    });
-}).catch(err => {
-    console.error('❌ Kritik Başlangıç Hatası:', err);
-    process.exit(1);
+server.on('error', (e) => {
+    console.error('❌ Server Başlatma Hatası:', e);
+    // If port is in use, exit so we know it failed
+    if (e.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} kullanımda!`);
+        process.exit(1);
+    }
 });

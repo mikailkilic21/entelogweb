@@ -1,14 +1,22 @@
-const { sql, getConfig } = require('../config/db');
+const { sql, getConfig, getCachedData, setCachedData } = require('../config/db');
 
 exports.getStats = async (req, res) => {
   try {
     const config = getConfig();
     const firm = config.firmNo || '113';
     const period = config.periodNo || '01';
-    const stficheTable = `LG_${firm}_${period}_STFICHE`;
 
     // Period mapping: daily, weekly, monthly, yearly
     const timePeriod = req.query.period || 'daily';
+
+    // 1. Try Cache
+    const cacheKey = `stats_${firm}_${period}_${timePeriod}`;
+    const cached = getCachedData(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    const stficheTable = `LG_${firm}_${period}_STFICHE`;
     const daysMap = {
       'daily': 1,
       'weekly': 7,
@@ -19,12 +27,13 @@ exports.getStats = async (req, res) => {
 
     let whereClause;
     if (timePeriod === 'daily') {
-      whereClause = `DATE_ >= CAST(GETDATE() AS DATE)`;
+      // Safer T-SQL for 'Start of Day' (Today 00:00:00)
+      whereClause = `DATE_ >= DATEADD(dd, DATEDIFF(dd, 0, GETDATE()), 0)`;
     } else {
       whereClause = `DATE_ >= DATEADD(DAY, -${days}, GETDATE())`;
     }
 
-    const result = await sql.query(`
+    const query = `
       SELECT 
         COUNT(*) as totalCount,
         ISNULL(SUM(CASE WHEN TRCODE IN (1,2,3) THEN 1 ELSE 0 END), 0) as purchaseCount,
@@ -34,36 +43,24 @@ exports.getStats = async (req, res) => {
         ISNULL(SUM(TOTALVAT), 0) as totalVat
       FROM ${stficheTable}
       WHERE ${whereClause}
-    `);
+    `;
 
-    console.log(`✅ İstatistikler çekildi (${timePeriod})`);
-    res.json(result.recordset[0]);
+    console.log(`🔍 Query (${timePeriod}):`, query);
+
+    const result = await sql.query(query);
+
+    const data = result.recordset[0];
+
+    // 2. Set Cache (60 seconds)
+    setCachedData(cacheKey, data, 60);
+
+    console.log(`✅ İstatistikler çekildi (${timePeriod}) - DB fetch`);
+    res.json(data);
 
   } catch (err) {
-    console.error('❌ Hata:', err.message);
-    // Fallback data simulation based on period
-    const timePeriod = req.query.period || 'daily';
-    const multipliers = {
-      'daily': 1,
-      'weekly': 7,
-      'monthly': 30,
-      'yearly': 365
-    };
-    const m = multipliers[timePeriod] || 1;
-
-    // Simulate values growing with time period
-    const baseSales = 15000;
-    const basePurchases = 12000;
-    const count = Math.floor(5 * Math.sqrt(m));
-
-    res.json({
-      totalCount: count,
-      purchaseCount: Math.floor(count * 0.4),
-      salesCount: Math.floor(count * 0.6),
-      totalPurchases: basePurchases * m * 0.8, // Add some variance
-      totalSales: baseSales * m * 0.9,
-      totalVat: (baseSales * m * 0.18)
-    });
+    console.error(`❌ getStats Hatası (${req.query.period}):`, err.message);
+    // Return real error to client for debugging
+    res.status(500).json({ error: err.message, details: 'SQL Error' });
   }
 };
 

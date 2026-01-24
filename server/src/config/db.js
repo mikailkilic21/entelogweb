@@ -39,6 +39,11 @@ const connectDB = async () => {
             options: {
                 encrypt: savedConfig.encrypt,
                 trustServerCertificate: savedConfig.trustServerCertificate
+            },
+            pool: {
+                max: 10,
+                min: 0,
+                idleTimeoutMillis: 30000
             }
         };
 
@@ -59,4 +64,26 @@ const connectDB = async () => {
 
 const getPool = () => pool;
 
-module.exports = { sql, connectDB, getPool, getConfig };
+// Simple in-memory cache
+const cache = new Map();
+
+const getCachedData = (key, ttlSeconds = 60) => {
+    if (cache.has(key)) {
+        const { data, expiry } = cache.get(key);
+        if (Date.now() < expiry) {
+            console.log(`⚡ Cache hit: ${key}`);
+            return data;
+        }
+        cache.delete(key);
+    }
+    return null;
+};
+
+const setCachedData = (key, data, ttlSeconds = 60) => {
+    cache.set(key, {
+        data,
+        expiry: Date.now() + (ttlSeconds * 1000)
+    });
+};
+
+module.exports = { sql, connectDB, getPool, getConfig, getCachedData, setCachedData };
