@@ -5,6 +5,21 @@ const accountsController = require('../controllers/accountsController');
 const productsController = require('../controllers/productsController');
 const statsController = require('../controllers/statsController');
 const settingsController = require('../controllers/settingsController');
+const authController = require('../controllers/authController');
+const licenseController = require('../controllers/licenseController');
+
+// Auth Routes
+// Auth Routes
+router.post('/auth/login', authController.login);
+router.get('/users', authController.getUsers);
+router.post('/users', authController.createUser);
+router.put('/users/:id', authController.updateUser);
+router.delete('/users/:id', authController.deleteUser);
+
+// License Routes
+router.post('/license/apply', licenseController.apply);
+router.get('/license/status/:taxNumber', licenseController.checkStatus);
+
 
 // Settings Routes (Company Info)
 router.get('/settings/company', settingsController.getSettings);

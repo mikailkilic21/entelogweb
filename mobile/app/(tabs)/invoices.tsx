@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, FileText, ArrowUpRight, ArrowDownLeft, Filter } from 'lucide-react-native';
+import { Search, TrendingUp, TrendingDown, Calendar, Filter, FileText, CheckCircle, XCircle, ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useAuth } from '@/context/AuthContext';
 
 export default function InvoicesScreen() {
+    const { isDemo } = useAuth();
     const router = useRouter();
     const [invoices, setInvoices] = useState<any[]>([]);
     const [stats, setStats] = useState<any>(null);
@@ -15,16 +17,18 @@ export default function InvoicesScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [searchText, setSearchText] = useState('');
 
-    // Filters
-    const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
-    const [type, setType] = useState<'all' | 'sales' | 'purchase'>('all');
+    // New Filters
+    const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
+    const [type, setType] = useState<'all' | 'sales' | 'purchases'>('all');
 
     const fetchData = useCallback(async () => {
         try {
             // Fetch Stats with filters
             let statsUrl = `${API_URL}/invoices/stats?period=${period}`;
             if (searchText) statsUrl += `&search=${encodeURIComponent(searchText)}`;
-            const statsRes = await fetch(statsUrl);
+            const statsRes = await fetch(statsUrl, {
+                headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
+            });
             if (statsRes.ok) setStats(await statsRes.json());
 
             // Fetch Invoices with filters
@@ -32,7 +36,9 @@ export default function InvoicesScreen() {
             if (type !== 'all') url += `&type=${type}`;
             if (searchText) url += `&search=${encodeURIComponent(searchText)}`;
 
-            const res = await fetch(url);
+            const res = await fetch(url, {
+                headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
+            });
             if (res.ok) {
                 const data = await res.json();
                 setInvoices(Array.isArray(data) ? data : []);
@@ -81,13 +87,13 @@ export default function InvoicesScreen() {
                 {[
                     { key: 'all', label: 'Tümü' },
                     { key: 'sales', label: 'Satışlar' },
-                    { key: 'purchase', label: 'Alışlar' }
+                    { key: 'purchases', label: 'Alışlar' }
                 ].map((t) => (
                     <TouchableOpacity
                         key={t.key}
                         onPress={() => setType(t.key as any)}
                         className={`flex-1 py-2 rounded-lg items-center ${type === t.key ?
-                            (t.key === 'sales' ? 'bg-blue-600' : t.key === 'purchase' ? 'bg-rose-600' : 'bg-slate-700')
+                            (t.key === 'sales' ? 'bg-blue-600' : t.key === 'purchases' ? 'bg-rose-600' : 'bg-slate-700')
                             : 'bg-transparent'}`}
                     >
                         <Text className={`text-xs font-bold ${type === t.key ? 'text-white' : 'text-slate-400'}`}>

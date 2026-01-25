@@ -1,36 +1,36 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Dimensions, Image } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LayoutDashboard, TrendingUp, TrendingDown, Receipt, RefreshCcw, AlertCircle } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { API_URL } from '@/constants/Config';
 import { SalesTrendChart, TopProductsChart, TopCustomersChart } from '@/components/DashboardCharts';
-
-const { width } = Dimensions.get('window');
+import { LinearGradient } from 'expo-linear-gradient';
+import { Bell, Search, TrendingUp, TrendingDown, Package, Users, AlertCircle, LayoutDashboard, Receipt, RefreshCcw } from 'lucide-react-native';
+import { useAuth } from '@/context/AuthContext';
 
 export default function DashboardScreen() {
-  const [stats, setStats] = useState<any>(null);
-  const [trendData, setTrendData] = useState<any[]>([]);
-  const [topProducts, setTopProducts] = useState<any[]>([]);
-  const [topCustomers, setTopCustomers] = useState<any[]>([]);
-
-  const [loading, setLoading] = useState(true);
+  const { isDemo, user } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
-  const [period, setPeriod] = useState('monthly');
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
   const [customerType, setCustomerType] = useState<'sales' | 'purchases'>('sales');
+
+  const [stats, setStats] = useState<any>(null);
+  const [trendData, setTrendData] = useState<any>(null);
+  const [topProducts, setTopProducts] = useState<any[]>([]);
+  const [topCustomers, setTopCustomers] = useState<any[]>([]);
 
   const fetchData = async () => {
     setError(null);
     try {
+      const headers = { 'x-demo-mode': isDemo ? 'true' : 'false' };
       // Parallel Fetching for Perforamnce
       const [statsRes, trendRes, productsRes, customersRes] = await Promise.all([
-        fetch(`${API_URL}/stats?period=${period}`),
-        fetch(`${API_URL}/stats/trend?period=${period}`),
-        fetch(`${API_URL}/stats/top-products?period=${period}`),
-        fetch(`${API_URL}/stats/top-${customerType === 'sales' ? 'customers' : 'suppliers'}?period=${period}`)
+        fetch(`${API_URL}/stats?period=${period}`, { headers }),
+        fetch(`${API_URL}/stats/trend?period=${period}`, { headers }),
+        fetch(`${API_URL}/stats/top-products?period=${period}`, { headers }),
+        fetch(`${API_URL}/stats/top-${customerType === 'sales' ? 'customers' : 'suppliers'}?period=${period}`, { headers })
       ]);
 
       if (!statsRes.ok) throw new Error('Sunucu yanıt vermedi: ' + statsRes.status);

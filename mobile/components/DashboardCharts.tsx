@@ -5,19 +5,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
-export const SalesTrendChart = ({ data, period, onPeriodChange }: { data: any[], period: string, onPeriodChange: (p: string) => void }) => {
+export const SalesTrendChart = ({ data, period }: { data: any[], period: string }) => {
     // Determine label format based on period
     const getLabel = (dateStr: string) => {
         if (!dateStr) return '';
-        if (period === 'daily') return dateStr.split(':')[0]; // Show hour
-        if (period === 'yearly') {
-            // 2024-05 -> 05
+        // Backend now returns pre-formatted labels for daily (00:00), weekly (Mon), monthly (Hafta 1)
+        // Only Yearly might need parsing if it returns yyyy-MM
+        if (period === 'yearly' && dateStr.includes('-')) {
             const parts = dateStr.split('-');
             return parts.length > 1 ? parts[1] : dateStr;
         }
-        // Weekly/Monthly: Show Day (DD)
-        const parts = dateStr.split('-');
-        return parts.length > 2 ? parts[2] : dateStr;
+        return dateStr;
     };
 
     // Transform data for chart
@@ -32,32 +30,10 @@ export const SalesTrendChart = ({ data, period, onPeriodChange }: { data: any[],
         dataPointText: (item.purchase / 1000).toFixed(1) + 'k',
     }));
 
-    const periods = [
-        { key: 'daily', label: 'Günlük' },
-        { key: 'weekly', label: 'Haftalık' },
-        { key: 'monthly', label: 'Aylık' },
-        { key: 'yearly', label: 'Yıllık' }
-    ];
-
     return (
         <View className="bg-slate-900/50 p-4 rounded-3xl border border-slate-800 mb-6">
             <View className="flex-row justify-between items-center mb-4 ml-2">
-                <Text className="text-white font-bold text-lg">Finansal Trend</Text>
-            </View>
-
-            {/* Period Tabs */}
-            <View className="flex-row bg-slate-800/50 p-1 rounded-xl mb-4">
-                {periods.map((p) => (
-                    <TouchableOpacity
-                        key={p.key}
-                        onPress={() => onPeriodChange(p.key)}
-                        className={`flex-1 py-1.5 rounded-lg items-center ${period === p.key ? 'bg-blue-600' : 'bg-transparent'}`}
-                    >
-                        <Text className={`text-[10px] font-bold ${period === p.key ? 'text-white' : 'text-slate-400'}`}>
-                            {p.label}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
+                <Text className="text-white font-bold text-lg">Finansal Trend (Satış vs Alış)</Text>
             </View>
 
             <LineChart

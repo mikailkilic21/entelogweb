@@ -2,6 +2,24 @@ const { sql, getConfig } = require('../config/db');
 
 exports.getPayrollDetails = async (req, res) => {
     try {
+        const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+        if (isDemo) {
+            // Mock data for details usually not needed strictly if listing is mocked, 
+            // but effectively we can mock it or return a generic item.
+            // For now, let's return a dummy based on ID.
+            return res.json([{
+                id: parseInt(req.params.id),
+                portfolioNo: 'DEMO-999',
+                serialNo: 'DEMO-SERIES',
+                dueDate: '2026-12-31',
+                amount: 10000,
+                bankName: 'DEMO BANK',
+                cardType: 1,
+                type: 'Çek',
+                trcode: 1
+            }]);
+        }
+
         const config = getConfig();
         const firm = config.firmNo || '113';
         const period = config.periodNo || '01';
@@ -43,6 +61,68 @@ exports.getPayrollDetails = async (req, res) => {
 
 exports.getChecks = async (req, res) => {
     try {
+        const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+        if (isDemo) {
+            const mockFile = require('path').join(__dirname, '../../data/mock/checks.json');
+            if (require('fs').existsSync(mockFile)) {
+                let data = JSON.parse(require('fs').readFileSync(mockFile, 'utf8'));
+                const { type, search, period, status } = req.query;
+
+                // 1. Filter by Type (Check vs Promissory Note is usually handling in 'trcode' or 'doc' logic, 
+                // but frontend sends 'type=customer' vs 'type=own'. 
+                // In mock data, let's assume all are 'customer' (1, 2) unless specified.
+                // If type is 'own' we might filter, but mock data only has customer checks for now. 
+                // Let's filter by status map if provided.
+
+                // 2. Filter by Status
+                if (status && status !== 'all') {
+                    if (status === 'overdue') {
+                        // Due date < today
+                        const today = new Date().toISOString().split('T')[0];
+                        data = data.filter(c => c.dueDate < today && ['Portföyde', 'Karşılıksız', 'Protestolu'].includes(c.status));
+                    } else if (status === 'portfolio') {
+                        data = data.filter(c => c.status === 'Portföyde');
+                    } else if (status === 'in_bank') {
+                        data = data.filter(c => ['Tahsil Edildi', 'Bankada'].includes(c.status));
+                    } else if (status === 'endorsed') {
+                        data = data.filter(c => c.status === 'Ciro Edildi');
+                    }
+                }
+
+                // 3. Filter by Date Period
+                if (period && period !== 'all') {
+                    const now = new Date();
+                    data = data.filter(c => {
+                        const d = new Date(c.dueDate);
+                        if (period === 'daily') return d.toDateString() === now.toDateString();
+                        if (period === 'weekly') {
+                            const nextWeek = new Date();
+                            nextWeek.setDate(now.getDate() + 7);
+                            return d >= now && d <= nextWeek;
+                        }
+                        if (period === 'monthly') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                        if (period === 'yearly') return d.getFullYear() === now.getFullYear();
+                        return true;
+                    });
+                }
+
+                // 4. Search
+                if (search) {
+                    const q = search.toLowerCase();
+                    data = data.filter(c =>
+                        (c.portfolioNo && c.portfolioNo.toLowerCase().includes(q)) ||
+                        (c.serialNo && c.serialNo.toLowerCase().includes(q)) ||
+                        (c.bankName && c.bankName.toLowerCase().includes(q)) ||
+                        (c.accountName && c.accountName.toLowerCase().includes(q))
+                    );
+                }
+
+                // Map format for frontend if needed
+                data = data.map(c => ({ ...c, statusLabel: c.status }));
+                return res.json(data);
+            }
+        }
+
         const config = getConfig();
         const firm = config.firmNo || '113';
         const period = config.periodNo || '01';

@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Alert, Pressable, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Building2, Calendar, Check, LogOut, ChevronRight, X, Briefcase, CreditCard, Package, FileText } from 'lucide-react-native';
+import { Building2, Calendar, Check, LogOut, ChevronRight, X, Briefcase, FileText } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, interpolate, Extrapolation, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import { useAuth } from '../../context/AuthContext';
 
 // 3D Card Component
-const MenuCard = ({ children, onPress, delay = 0, colors = ['#1e293b', '#0f172a'] }: any) => {
+const MenuCard = ({ children, onPress, colors = ['#1e293b', '#0f172a'] }: any) => {
     const scale = useSharedValue(0.9);
     const opacity = useSharedValue(0);
     const rotateX = useSharedValue(15); // Start tilted
@@ -53,6 +54,7 @@ const MenuCard = ({ children, onPress, delay = 0, colors = ['#1e293b', '#0f172a'
 };
 
 export default function MenuScreen() {
+    const { isDemo, signOut } = useAuth();
     const [dbConfig, setDbConfig] = useState<any>(null);
     const [firms, setFirms] = useState<any[]>([]);
     const [periods, setPeriods] = useState<any[]>([]);
@@ -62,9 +64,14 @@ export default function MenuScreen() {
     const [showPeriodModal, setShowPeriodModal] = useState(false);
 
     useEffect(() => {
-        fetchDbConfig();
-        fetchFirms();
-    }, []);
+        if (!isDemo) {
+            fetchDbConfig();
+            fetchFirms();
+        } else {
+            // For Demo, mock config or keep empty
+            setDbConfig({ firmName: 'DEMO LTD. ŞTİ.', firmNo: '999', periodNo: '01' });
+        }
+    }, [isDemo]);
 
     const fetchDbConfig = async () => {
         try {
@@ -160,67 +167,99 @@ export default function MenuScreen() {
                 </View>
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+
                     {/* Active Info Card */}
-                    <MenuCard colors={['#1e293b', '#0f172a']}>
+                    <MenuCard colors={isDemo ? ['#ea580c', '#c2410c'] : ['#1e293b', '#0f172a']}>
                         <View className="flex-row items-center justify-between mb-4">
-                            <View className="bg-blue-500/20 p-2 rounded-lg">
-                                <Briefcase size={20} color="#60a5fa" />
+                            <View className={isDemo ? "bg-orange-500/20 p-2 rounded-lg" : "bg-blue-500/20 p-2 rounded-lg"}>
+                                <Briefcase size={20} color={isDemo ? "#fdba74" : "#60a5fa"} />
                             </View>
                             <View className="bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
-                                <Text className="text-slate-400 text-xs font-bold">AKTİF ÇALIŞMA ALANI</Text>
+                                <Text className={isDemo ? "text-orange-200 text-xs font-bold" : "text-slate-400 text-xs font-bold"}>
+                                    {isDemo ? 'DEMO MOD' : 'AKTİF ÇALIŞMA ALANI'}
+                                </Text>
                             </View>
                         </View>
                         <Text className="text-white font-bold text-xl mb-1 shadow-black shadow-md">{dbConfig?.firmName || 'Yükleniyor...'}</Text>
-                        <View className="flex-row gap-2 mt-3">
-                            <View className="bg-indigo-500/20 px-3 py-1.5 rounded-md border border-indigo-500/30">
-                                <Text className="text-indigo-300 text-xs font-bold">Firma: {dbConfig?.firmNo}</Text>
+
+                        {!isDemo && (
+                            <View className="flex-row gap-2 mt-3">
+                                <View className="bg-indigo-500/20 px-3 py-1.5 rounded-md border border-indigo-500/30">
+                                    <Text className="text-indigo-300 text-xs font-bold">Firma: {dbConfig?.firmNo}</Text>
+                                </View>
+                                <View className="bg-emerald-500/20 px-3 py-1.5 rounded-md border border-emerald-500/30">
+                                    <Text className="text-emerald-300 text-xs font-bold">Dönem: {dbConfig?.periodNo}</Text>
+                                </View>
                             </View>
-                            <View className="bg-emerald-500/20 px-3 py-1.5 rounded-md border border-emerald-500/30">
-                                <Text className="text-emerald-300 text-xs font-bold">Dönem: {dbConfig?.periodNo}</Text>
-                            </View>
-                        </View>
+                        )}
+                        {isDemo && (
+                            <Text className="text-orange-100 text-sm mt-2 opacity-80">
+                                Kısıtlı özellikler ile inceliyorsunuz.
+                            </Text>
+                        )}
                     </MenuCard>
 
                     <Text className="text-slate-500 font-bold text-xs uppercase tracking-widest mb-4 mt-2 ml-1">Uygulama Ayarları</Text>
 
-                    {/* Change Firm */}
-                    <MenuCard onPress={() => setShowFirmModal(true)} colors={['#2563eb', '#1d4ed8']}>
-                        <View className="flex-row items-center">
-                            <View className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-                                <Building2 size={24} color="white" />
+                    {/* License Application - ONLY FOR DEMO */}
+                    {isDemo && (
+                        <MenuCard onPress={() => router.push('/license')} colors={['#16a34a', '#15803d']}>
+                            <View className="flex-row items-center">
+                                <View className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                                    <FileText size={24} color="white" />
+                                </View>
+                                <View className="flex-1 ml-4">
+                                    <Text className="text-white text-lg font-bold">Lisans Başvurusu</Text>
+                                    <Text className="text-green-100 text-xs opacity-80">Tam sürüme geçmek için başvurun</Text>
+                                </View>
+                                <ChevronRight size={24} color="white" opacity={0.5} />
                             </View>
-                            <View className="flex-1 ml-4">
-                                <Text className="text-white text-lg font-bold">Firma Değiştir</Text>
-                                <Text className="text-blue-100 text-xs opacity-80">Aktif çalışma firmanızı seçin</Text>
-                            </View>
-                            <ChevronRight size={24} color="white" opacity={0.5} />
-                        </View>
-                    </MenuCard>
+                        </MenuCard>
+                    )}
 
-                    {/* Change Period */}
-                    <MenuCard
-                        onPress={async () => {
-                            if (dbConfig?.firmNo) {
-                                await fetchPeriods(dbConfig.firmNo);
-                                setShowPeriodModal(true);
-                            }
-                        }}
-                        colors={['#059669', '#047857']}
-                    >
-                        <View className="flex-row items-center">
-                            <View className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-                                <Calendar size={24} color="white" />
-                            </View>
-                            <View className="flex-1 ml-4">
-                                <Text className="text-white text-lg font-bold">Dönem Değiştir</Text>
-                                <Text className="text-emerald-100 text-xs opacity-80">Mali dönem yılını güncelleyin</Text>
-                            </View>
-                            <ChevronRight size={24} color="white" opacity={0.5} />
-                        </View>
-                    </MenuCard>
+                    {/* DB Settings - ONLY FOR REAL USERS */}
+                    {!isDemo && (
+                        <>
+                            {/* Change Firm */}
+                            <MenuCard onPress={() => setShowFirmModal(true)} colors={['#2563eb', '#1d4ed8']}>
+                                <View className="flex-row items-center">
+                                    <View className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                                        <Building2 size={24} color="white" />
+                                    </View>
+                                    <View className="flex-1 ml-4">
+                                        <Text className="text-white text-lg font-bold">Firma Değiştir</Text>
+                                        <Text className="text-blue-100 text-xs opacity-80">Aktif çalışma firmanızı seçin</Text>
+                                    </View>
+                                    <ChevronRight size={24} color="white" opacity={0.5} />
+                                </View>
+                            </MenuCard>
+
+                            {/* Change Period */}
+                            <MenuCard
+                                onPress={async () => {
+                                    if (dbConfig?.firmNo) {
+                                        await fetchPeriods(dbConfig.firmNo);
+                                        setShowPeriodModal(true);
+                                    }
+                                }}
+                                colors={['#059669', '#047857']}
+                            >
+                                <View className="flex-row items-center">
+                                    <View className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                                        <Calendar size={24} color="white" />
+                                    </View>
+                                    <View className="flex-1 ml-4">
+                                        <Text className="text-white text-lg font-bold">Dönem Değiştir</Text>
+                                        <Text className="text-emerald-100 text-xs opacity-80">Mali dönem yılını güncelleyin</Text>
+                                    </View>
+                                    <ChevronRight size={24} color="white" opacity={0.5} />
+                                </View>
+                            </MenuCard>
+                        </>
+                    )}
 
                     {/* Logout */}
-                    <MenuCard colors={['#7f1d1d', '#991b1b']}>
+                    <MenuCard onPress={signOut} colors={['#7f1d1d', '#991b1b']}>
                         <View className="flex-row items-center">
                             <View className="bg-white/10 p-3 rounded-xl">
                                 <LogOut size={24} color="#fca5a5" />
@@ -232,6 +271,7 @@ export default function MenuScreen() {
                     </MenuCard>
 
                 </ScrollView>
+
 
                 {/* Modals with Blur Background check? Modal covers everything so safe. */}
                 {/* Firm Selection Modal */}

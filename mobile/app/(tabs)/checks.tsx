@@ -6,8 +6,10 @@ import { API_URL } from '@/constants/Config';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ChecksScreen() {
+    const { isDemo } = useAuth();
     const [selectedCheck, setSelectedCheck] = useState<any>(null);
 
     const router = useRouter();
@@ -25,7 +27,9 @@ export default function ChecksScreen() {
     const fetchData = useCallback(async () => {
         try {
             // Stats might be global, leaving as is for now
-            const statsRes = await fetch(`${API_URL}/checks/stats`);
+            const statsRes = await fetch(`${API_URL}/checks/stats`, {
+                headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
+            });
             if (statsRes.ok) setStats(await statsRes.json());
 
             let url = `${API_URL}/checks?limit=50&search=${encodeURIComponent(searchText)}`;
@@ -35,7 +39,9 @@ export default function ChecksScreen() {
                 url += `&status=${customerStatus}`;
             }
 
-            const res = await fetch(url);
+            const res = await fetch(url, {
+                headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
+            });
             if (res.ok) {
                 const data = await res.json();
                 setChecks(Array.isArray(data) ? data : []);
@@ -171,7 +177,7 @@ export default function ChecksScreen() {
     const renderItem = ({ item, index }) => {
         const isCheck = item.cardType === 1;
         return (
-            <Animated.View incoming={FadeInDown.delay(index * 50).springify()}>
+            <Animated.View entering={FadeInDown.delay(index * 100).springify()} className="mb-3">
                 <TouchableOpacity
                     onPress={() => setSelectedCheck(item)}
                     activeOpacity={0.7}

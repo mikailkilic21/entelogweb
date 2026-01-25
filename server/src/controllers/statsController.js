@@ -1,7 +1,22 @@
 const { sql, getConfig, getCachedData, setCachedData } = require('../config/db');
+const fs = require('fs');
+const path = require('path');
 
 exports.getStats = async (req, res) => {
   try {
+    const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+
+    if (isDemo) {
+      const mockFile = path.join(__dirname, '../../data/mock/stats.json');
+      if (fs.existsSync(mockFile)) {
+        console.log('📦 Serving MOCK Stats');
+        const data = fs.readFileSync(mockFile, 'utf8');
+        const stats = JSON.parse(data);
+        return res.json(stats.monthlyStats || {});
+      }
+    }
+
+    console.log('🔍 getStats Request Received');
     const config = getConfig();
     const firm = config.firmNo || '113';
     const period = config.periodNo || '01';
@@ -66,6 +81,17 @@ exports.getStats = async (req, res) => {
 
 exports.getFinancialTrend = async (req, res) => {
   try {
+    const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+
+    if (isDemo) {
+      const mockFile = path.join(__dirname, '../../data/mock/stats.json');
+      if (fs.existsSync(mockFile)) {
+        const data = fs.readFileSync(mockFile, 'utf8');
+        const stats = JSON.parse(data);
+        return res.json(stats.financialTrend || []);
+      }
+    }
+
     const config = getConfig();
     const firm = config.firmNo || '113';
     const period = config.periodNo || '01';
@@ -83,43 +109,67 @@ exports.getFinancialTrend = async (req, res) => {
     // Dynamic SQL configuration based on period
     switch (timePeriod) {
       case 'daily':
-        // Hourly for Today
+        // Today in 4-hour intervals: 00-04, 04-08, 08-12, 12-16, 16-20, 20-24
         // LOGO FTIME logic: Hour = FLOOR(FTIME / 16777216)
+        // Interval = FLOOR(Hour / 4)
         whereClause = `DATE_ = CAST(GETDATE() AS DATE)`;
-        selectDate = "CAST(FLOOR(FTIME / 16777216) AS VARCHAR)";
-        groupByClause = "FLOOR(FTIME / 16777216)";
-        orderByClause = "FLOOR(FTIME / 16777216)";
+        const hourExpr = "FLOOR(FTIME / 16777216)";
+        groupByClause = `FLOOR(${hourExpr} / 4)`;
+
+        // Return a label like '00:00', '04:00' etc. or just the index 0-5
+        selectDate = `
+            CASE 
+                WHEN FLOOR(${hourExpr} / 4) = 0 THEN '00:00'
+                WHEN FLOOR(${hourExpr} / 4) = 1 THEN '04:00'
+                WHEN FLOOR(${hourExpr} / 4) = 2 THEN '08:00'
+                WHEN FLOOR(${hourExpr} / 4) = 3 THEN '12:00'
+                WHEN FLOOR(${hourExpr} / 4) = 4 THEN '16:00'
+                ELSE '20:00'
+            END
+        `;
+        orderByClause = groupByClause;
         break;
 
       case 'weekly':
-        // Last 7 Days (Daily)
-        whereClause = `DATE_ >= DATEADD(DAY, -7, GETDATE())`;
-        selectDate = "CONVERT(VARCHAR(10), DATE_, 23)"; // YYYY-MM-DD
-        groupByClause = "DATE_";
+        // Current Week (Mon-Sun)
+        // DATEFIRST default varies, but we can use DATEPART(weekday)
+        // Assuming default English (Sun=1) or Turkish (Mon=1). Safer to use DATENAME or generic logic.
+        // Let's filter for Start of Current Week (Monday)
+        // Logic: DATEADD(wk, DATEDIFF(wk, 0, GETDATE()), 0) usually gives Monday
+        whereClause = `DATE_ >= DATEADD(wk, DATEDIFF(wk, 0, GETDATE()), 0) AND DATE_ < DATEADD(wk, DATEDIFF(wk, 0, GETDATE()) + 1, 0)`;
+
+        // Group by Day Name
+        selectDate = "SUBSTRING(DATENAME(weekday, DATE_), 1, 3)"; // Mon, Tue... (First 3 chars)
+        groupByClause = "DATE_, DATENAME(weekday, DATE_)"; // Group by actual date to sort correctly
         orderByClause = "DATE_";
         break;
 
       case 'monthly':
-        // Last 30 Days (Daily)
-        whereClause = `DATE_ >= DATEADD(DAY, -30, GETDATE())`;
-        selectDate = "CONVERT(VARCHAR(10), DATE_, 23)"; // YYYY-MM-DD
-        groupByClause = "DATE_";
-        orderByClause = "DATE_";
+        // Current Month, group by 4 Weeks
+        // Week number within month: (Day - 1) / 7 + 1
+        whereClause = `MONTH(DATE_) = MONTH(GETDATE()) AND YEAR(DATE_) = YEAR(GETDATE())`;
+
+        const dayOfMonth = "DAY(DATE_)";
+        const weekNum = `(((${dayOfMonth} - 1) / 7) + 1)`;
+
+        groupByClause = weekNum;
+        selectDate = `'Hafta ' + CAST(${weekNum} AS VARCHAR)`;
+        orderByClause = groupByClause;
         break;
 
       case 'yearly':
-        // Last 12 Months (Monthly)
         whereClause = `DATE_ >= DATEADD(MONTH, -12, GETDATE())`;
-        selectDate = "FORMAT(DATE_, 'yyyy-MM')"; // YYYY-MM
+        selectDate = "FORMAT(DATE_, 'yyyy-MM')";
         groupByClause = "YEAR(DATE_), MONTH(DATE_)";
         orderByClause = "YEAR(DATE_), MONTH(DATE_)";
         break;
 
       default:
-        whereClause = `DATE_ >= DATEADD(DAY, -7, GETDATE())`;
-        selectDate = "CONVERT(VARCHAR(10), DATE_, 23)";
-        groupByClause = "DATE_";
-        orderByClause = "DATE_";
+        // Default to daily logic if unknown
+        whereClause = `DATE_ = CAST(GETDATE() AS DATE)`;
+        groupByClause = "FLOOR( FLOOR(FTIME / 16777216) / 4 )";
+        selectDate = "'Daily'";
+        orderByClause = groupByClause;
         break;
     }
 
@@ -165,6 +215,17 @@ exports.getFinancialTrend = async (req, res) => {
 
 exports.getTopProducts = async (req, res) => {
   try {
+    const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+
+    if (isDemo) {
+      const mockFile = path.join(__dirname, '../../data/mock/stats.json');
+      if (fs.existsSync(mockFile)) {
+        const data = fs.readFileSync(mockFile, 'utf8');
+        const stats = JSON.parse(data);
+        return res.json(stats.topProducts || []);
+      }
+    }
+
     const config = getConfig();
     const firm = config.firmNo || '113';
     const period = config.periodNo || '01';
@@ -214,6 +275,18 @@ exports.getTopProducts = async (req, res) => {
 
 exports.getTopCustomers = async (req, res) => {
   try {
+    const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+    if (isDemo) {
+      // Return clear demo data
+      return res.json([
+        { name: 'Demo Müşteri A', value: 500000 },
+        { name: 'Demo Müşteri B', value: 350000 },
+        { name: 'Demo Müşteri C', value: 150000 },
+        { name: 'Demo Müşteri D', value: 75000 },
+        { name: 'Demo Müşteri E', value: 25000 }
+      ]);
+    }
+
     const config = getConfig();
     const firm = config.firmNo || '113';
     const period = config.periodNo || '01';
@@ -257,6 +330,16 @@ exports.getTopCustomers = async (req, res) => {
 
 exports.getTopSuppliers = async (req, res) => {
   try {
+    const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+    if (isDemo) {
+      const mockFile = path.join(__dirname, '../../data/mock/stats.json');
+      if (fs.existsSync(mockFile)) {
+        const data = fs.readFileSync(mockFile, 'utf8');
+        const stats = JSON.parse(data);
+        return res.json(stats.topSuppliers || []);
+      }
+    }
+
     const config = getConfig();
     const firm = config.firmNo || '113';
     const period = config.periodNo || '01';

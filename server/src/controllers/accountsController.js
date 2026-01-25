@@ -2,6 +2,40 @@ const { sql, getConfig } = require('../config/db');
 
 exports.getAccounts = async (req, res) => {
   try {
+    const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+    if (isDemo) {
+      const mockFile = require('path').join(__dirname, '../../data/mock/accounts.json');
+      if (require('fs').existsSync(mockFile)) {
+        let data = JSON.parse(require('fs').readFileSync(mockFile, 'utf8'));
+        const { search, type, listingType } = req.query;
+
+        // Custom filtering simulation because mock data doesn't perfectly align with complex SQL types
+        if (type === 'customer') {
+          // Heuristic: Mock data starting with 120 are customers
+          data = data.filter(a => a.code.startsWith('120'));
+        } else if (type === 'supplier') {
+          // Heuristic: Mock data starting with 320 are suppliers
+          data = data.filter(a => a.code.startsWith('320'));
+        }
+
+        if (listingType === 'debtor') {
+          data = data.filter(a => a.balance > 0);
+        } else if (listingType === 'creditor') {
+          data = data.filter(a => a.balance < 0);
+        }
+
+        if (search) {
+          const q = search.toLowerCase();
+          data = data.filter(a =>
+            (a.code && a.code.toLowerCase().includes(q)) ||
+            (a.name && a.name.toLowerCase().includes(q))
+          );
+        }
+
+        return res.json(data);
+      }
+    }
+
     const config = getConfig();
     const firm = config.firmNo || '113';
     const period = config.periodNo || '01';
@@ -67,6 +101,16 @@ exports.getAccounts = async (req, res) => {
 
 exports.getAccountStats = async (req, res) => {
   try {
+    const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+    if (isDemo) {
+      // Mock stats
+      return res.json({
+        total: 50,
+        customers: 45,
+        suppliers: 5
+      });
+    }
+
     const config = getConfig();
     const firm = config.firmNo || '113';
     const clcardTable = `LG_${firm}_CLCARD`;

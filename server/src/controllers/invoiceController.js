@@ -1,7 +1,20 @@
 const { sql, getConfig } = require('../config/db');
+const fs = require('fs');
+const path = require('path');
 
 exports.getInvoices = async (req, res) => {
   try {
+    const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+
+    if (isDemo) {
+      const mockFile = path.join(__dirname, '../../data/mock/invoices.json');
+      if (fs.existsSync(mockFile)) {
+        console.log('📦 Serving MOCK Invoices');
+        const data = fs.readFileSync(mockFile, 'utf8');
+        return res.json(JSON.parse(data));
+      }
+    }
+
     const config = getConfig();
     const firm = config.firmNo || '113';
     const period = config.periodNo || '01';

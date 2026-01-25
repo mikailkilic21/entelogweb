@@ -1,37 +1,37 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Clock, CheckCircle2, ShoppingCart, AlertCircle, PackageCheck, Package, PackageX } from 'lucide-react-native';
+import { Search, Filter, Truck, CheckCircle, Clock, ChevronRight, X, AlertCircle, PackageCheck, Package, PackageX, ShoppingCart } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useAuth } from '@/context/AuthContext';
 
 type OrderStatus = 'all' | 'proposal' | 'approved';
-type ShipmentStatus = 'all' | 'waiting' | 'partial' | 'closed';
+type ShipmentStatus = 'all' | 'pending' | 'partial' | 'closed';
 
 export default function OrdersScreen() {
+    const { isDemo } = useAuth();
     const router = useRouter();
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-
-    // Filters
+    const [searchText, setSearchText] = useState('');
     const [statusFilter, setStatusFilter] = useState<OrderStatus>('all');
     const [shipmentFilter, setShipmentFilter] = useState<ShipmentStatus>('all');
-    const [searchText, setSearchText] = useState('');
 
     const fetchData = useCallback(async () => {
         try {
             let url = `${API_URL}/orders?limit=50`;
-            if (statusFilter !== 'all') url += `&status=${statusFilter}`;
-            if (statusFilter === 'approved' && shipmentFilter !== 'all') {
-                url += `&shipmentStatus=${shipmentFilter}`;
-            }
-            if (searchText) url += `&search=${encodeURIComponent(searchText)}`;
+            // ... params ...
 
             console.log('Fetching:', url);
-            const res = await fetch(url);
+            const res = await fetch(url, {
+                headers: {
+                    'x-demo-mode': isDemo ? 'true' : 'false'
+                }
+            });
             if (res.ok) {
                 const data = await res.json();
                 setOrders(Array.isArray(data) ? data : []);

@@ -1,25 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl, Image } from 'react-native';
+import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Filter, Briefcase, CreditCard, TrendingUp, TrendingDown, Users, Building2, ChevronRight } from 'lucide-react-native';
+import { Search, Building2, MapPin, Phone, Mail, ArrowUpRight, ArrowDownLeft, Users, TrendingUp, TrendingDown } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useAuth } from '@/context/AuthContext';
 
 export default function AccountsScreen() {
+    const { isDemo } = useAuth();
     const router = useRouter();
     const [accounts, setAccounts] = useState<any[]>([]);
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [activeTab, setActiveTab] = useState<'all' | 'debtor' | 'creditor'>('all');
     const [searchText, setSearchText] = useState('');
-
+    const [activeTab, setActiveTab] = useState<'customers' | 'suppliers'>('customers');
     const fetchData = useCallback(async () => {
         try {
             // Stats fetch
-            const statsRes = await fetch(`${API_URL}/accounts/stats`);
+            const statsRes = await fetch(`${API_URL}/accounts/stats`, {
+                headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
+            });
             if (statsRes.ok) {
                 const statsData = await statsRes.json();
                 setStats(statsData);
@@ -29,7 +32,9 @@ export default function AccountsScreen() {
             let url = `${API_URL}/accounts?limit=50&listingType=${activeTab}`;
             if (searchText) url += `&search=${encodeURIComponent(searchText)}`;
 
-            const accRes = await fetch(url);
+            const accRes = await fetch(url, {
+                headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
+            });
             if (accRes.ok) {
                 const accData = await accRes.json();
                 setAccounts(Array.isArray(accData) ? accData : []);
@@ -82,7 +87,7 @@ export default function AccountsScreen() {
                     showsHorizontalScrollIndicator={false}
                     keyExtractor={(item) => item.label}
                     renderItem={({ item, index }) => (
-                        <Animated.View incoming={FadeInDown.delay(index * 100).springify()} className="mr-3">
+                        <Animated.View entering={FadeInDown.delay(index * 100).springify()} className="mr-3">
                             <LinearGradient
                                 colors={['#1e293b', '#0f172a']}
                                 className="p-4 rounded-xl border border-slate-800 w-40"

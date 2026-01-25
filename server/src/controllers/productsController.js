@@ -2,6 +2,31 @@ const { sql, getConfig } = require('../config/db');
 
 exports.getProducts = async (req, res) => {
     try {
+        const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+        if (isDemo) {
+            const mockFile = require('path').join(__dirname, '../../data/mock/products.json');
+            if (require('fs').existsSync(mockFile)) {
+                let data = JSON.parse(require('fs').readFileSync(mockFile, 'utf8'));
+                const { search, sortBy } = req.query;
+
+                if (search) {
+                    const q = search.toLowerCase();
+                    data = data.filter(p =>
+                        (p.code && p.code.toLowerCase().includes(q)) ||
+                        (p.name && p.name.toLowerCase().includes(q))
+                    );
+                }
+
+                if (sortBy === 'amount') {
+                    data.sort((a, b) => b.salesAmount - a.salesAmount);
+                } else {
+                    data.sort((a, b) => b.salesQuantity - a.salesQuantity);
+                }
+
+                return res.json(data);
+            }
+        }
+
         const config = getConfig();
         const firm = config.firmNo || '113';
         const period = config.periodNo || '01';
@@ -67,6 +92,16 @@ exports.getProducts = async (req, res) => {
 
 exports.getProductStats = async (req, res) => {
     try {
+        const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+        if (isDemo) {
+            // Calculate stats from mock file if needed, or return static
+            return res.json({
+                totalProducts: 15,
+                productsInStock: 12,
+                criticalStock: 3
+            });
+        }
+
         const config = getConfig();
         const firm = config.firmNo || '113';
         const period = config.periodNo || '01';
@@ -91,14 +126,44 @@ exports.getProductStats = async (req, res) => {
 
 exports.getProductDetails = async (req, res) => {
     try {
+        const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+        const { id } = req.params;
+
+        if (isDemo) {
+            const mockFile = require('path').join(__dirname, '../../data/mock/products.json');
+            if (require('fs').existsSync(mockFile)) {
+                const products = JSON.parse(require('fs').readFileSync(mockFile, 'utf8'));
+                const product = products.find(p => p.id == id) || products[0]; // Fallback to first if not found for robustness in demo
+
+                if (!product) return res.status(404).json({ message: 'Ürün bulunamadı' });
+
+                // Mock Transactions
+                const transactions = [
+                    { date: '2023-11-20', accountName: 'ABC Market', ficheNo: '001235', type: 'Satış', quantity: 10, unit: 'ADET', price: 150.00, total: 1500.00 },
+                    { date: '2023-11-18', accountName: 'Tedarikçi Ltd.', ficheNo: '000987', type: 'Alış', quantity: 50, unit: 'ADET', price: 120.00, total: 6000.00 },
+                    { date: '2023-11-15', accountName: 'XYZ Bakkal', ficheNo: '001220', type: 'Satış', quantity: 5, unit: 'ADET', price: 155.00, total: 775.00 },
+                ];
+
+                // Mock Warehouses
+                const warehouses = [
+                    { warehouse: 1, amount: Math.floor(product.stockLevel * 0.7) },
+                    { warehouse: 2, amount: Math.floor(product.stockLevel * 0.3) }
+                ];
+
+                return res.json({
+                    ...product,
+                    transactions,
+                    warehouses
+                });
+            }
+        }
+
         const config = getConfig();
         const firm = config.firmNo || '113';
         const period = config.periodNo || '01';
         const itemsTable = `LG_${firm}_ITEMS`;
         const stlineTable = `LG_${firm}_${period}_STLINE`;
         const gntotstTable = `LG_${firm}_${period}_GNTOTST`;
-
-        const { id } = req.params;
 
         // 1. Product Info
         const infoQuery = `
@@ -132,6 +197,7 @@ exports.getProductDetails = async (req, res) => {
                 C.DEFINITION_ as accountName,
                 S.INVOICEREF as invoiceId,
                 F.FICHENO as ficheNo,
+                U.CODE as unit,
                 CASE 
                     WHEN S.TRCODE IN (1, 2, 3) THEN 'Alış'
                     WHEN S.TRCODE IN (7, 8) THEN 'Satış'
@@ -141,6 +207,7 @@ exports.getProductDetails = async (req, res) => {
             FROM ${stlineTable} S
             LEFT JOIN ${clcardTable} C ON S.CLIENTREF = C.LOGICALREF
             LEFT JOIN ${stficheTable} F ON S.STFICHEREF = F.LOGICALREF
+            LEFT JOIN LG_${firm}_UNITSETL U ON S.UOMREF = U.LOGICALREF
             WHERE S.STOCKREF = ${id} AND S.CANCELLED = 0
             ORDER BY S.DATE_ DESC
         `;
@@ -175,14 +242,24 @@ exports.getProductDetails = async (req, res) => {
 
 exports.getProductOrders = async (req, res) => {
     try {
+        const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+        const { id } = req.params;
+
+        if (isDemo) {
+            // Mock Orders
+            const orders = [
+                { date: '2023-11-25', orderNo: 'SIP-0056', documentNo: 'DOC-56', accountName: 'ABC Market', quantity: 20, unit: 'ADET', type: 'Alınan Sipariş' },
+                { date: '2023-11-22', orderNo: 'SIP-0052', documentNo: 'DOC-52', accountName: 'Mehmet Bakkal', quantity: 10, unit: 'ADET', type: 'Alınan Sipariş' }
+            ];
+            return res.json(orders);
+        }
+
         const config = getConfig();
         const firm = config.firmNo || '113';
         const period = config.periodNo || '01';
         const orficheTable = `LG_${firm}_${period}_ORFICHE`;
         const orflineTable = `LG_${firm}_${period}_ORFLINE`;
         const clcardTable = `LG_${firm}_CLCARD`;
-
-        const { id } = req.params;
 
         // Pending (Closed=0) AND Approved (Approve=1)
         const query = `
