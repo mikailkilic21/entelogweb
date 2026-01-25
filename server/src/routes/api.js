@@ -35,6 +35,7 @@ router.get('/accounts/:id/orders', accountsController.getAccountOrders);
 
 // Check Routes
 const checksController = require('../controllers/checksController');
+router.get('/checks/stats', checksController.getCheckStats);
 router.get('/checks/payroll/:id', checksController.getPayrollDetails);
 router.get('/checks', checksController.getChecks);
 router.get('/checks/recent', checksController.getRecentChecks);

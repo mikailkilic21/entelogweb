@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Alert, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Alert, Pressable, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Building2, Calendar, Check, LogOut, ChevronRight, X, Briefcase, CreditCard } from 'lucide-react-native';
+import { Building2, Calendar, Check, LogOut, ChevronRight, X, Briefcase, CreditCard, Package, FileText } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -147,9 +147,17 @@ export default function MenuScreen() {
             />
 
             <SafeAreaView className="flex-1 px-6 pt-6">
-                <Text className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500 mb-8 tracking-tighter shadow-lg shadow-blue-500/20">
-                    Menü
-                </Text>
+                <View className="flex-row items-center gap-3 mb-6">
+                    <Image
+                        source={require('../../assets/images/siyahlogo.png')}
+                        style={{ width: 40, height: 40, borderRadius: 10 }}
+                        resizeMode="contain"
+                    />
+                    <View>
+                        <Text className="text-3xl font-black text-white">Ayarlar</Text>
+                        <Text className="text-slate-400 text-[10px] font-medium tracking-wide uppercase">Entelog Mobile</Text>
+                    </View>
+                </View>
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
                     {/* Active Info Card */}
@@ -159,7 +167,7 @@ export default function MenuScreen() {
                                 <Briefcase size={20} color="#60a5fa" />
                             </View>
                             <View className="bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
-                                <Text className="text-slate-400 text-[10px] font-bold">AKTİF ÇALIŞMA ALANI</Text>
+                                <Text className="text-slate-400 text-xs font-bold">AKTİF ÇALIŞMA ALANI</Text>
                             </View>
                         </View>
                         <Text className="text-white font-bold text-xl mb-1 shadow-black shadow-md">{dbConfig?.firmName || 'Yükleniyor...'}</Text>
@@ -173,7 +181,7 @@ export default function MenuScreen() {
                         </View>
                     </MenuCard>
 
-                    <Text className="text-slate-500 font-bold text-xs uppercase tracking-widest mb-4 mt-2 ml-1">İşlemler</Text>
+                    <Text className="text-slate-500 font-bold text-xs uppercase tracking-widest mb-4 mt-2 ml-1">Uygulama Ayarları</Text>
 
                     {/* Change Firm */}
                     <MenuCard onPress={() => setShowFirmModal(true)} colors={['#2563eb', '#1d4ed8']}>
@@ -241,8 +249,8 @@ export default function MenuScreen() {
                                     <TouchableOpacity
                                         onPress={() => handleFirmSelect(firm)}
                                         className={`p-5 rounded-2xl border flex-row items-center justify-between ${dbConfig?.firmNo == firm.nr
-                                                ? 'bg-blue-600 border-blue-500'
-                                                : 'bg-slate-900 border-slate-800'
+                                            ? 'bg-blue-600 border-blue-500'
+                                            : 'bg-slate-900 border-slate-800'
                                             }`}
                                     >
                                         <View>
@@ -273,8 +281,8 @@ export default function MenuScreen() {
                                     <TouchableOpacity
                                         onPress={() => handlePeriodSelect(period)}
                                         className={`p-5 rounded-2xl border flex-row items-center justify-between ${dbConfig?.periodNo == period.nr.toString().padStart(2, '0')
-                                                ? 'bg-emerald-600 border-emerald-600'
-                                                : 'bg-slate-900 border-slate-800'
+                                            ? 'bg-emerald-600 border-emerald-600'
+                                            : 'bg-slate-900 border-slate-800'
                                             }`}
                                     >
                                         <View>

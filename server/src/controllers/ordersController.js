@@ -14,31 +14,31 @@ exports.getOrders = async (req, res) => {
         // Filters
         const limit = parseInt(req.query.limit) || 50;
         const status = req.query.status; // 'proposal' (Öneri) or 'approved' (Onaylı)
-        const shipmentStatus = req.query.shipmentStatus; // 'S' (Sevk Bekliyor), 'B' (Kısmi), 'K' (Kapandı)
+        const shipmentStatus = req.query.shipmentStatus; // 'waiting', 'partial', 'closed', 'all'
         const search = req.query.search || '';
-        const startDate = req.query.startDate;
-        const endDate = req.query.endDate;
-        const timePeriod = req.query.period || 'yearly';
 
+        // Base Where
         let whereClause = '1=1';
 
         // 1. Status Filter
+        // Logo: 1=Öneri, 2=Sevkedilemez, 4=Onaylı (Siparişleşmiş)
         if (status === 'proposal') {
             whereClause += ' AND O.STATUS = 1';
         } else if (status === 'approved') {
             whereClause += ' AND O.STATUS = 4';
+        } else if (status === 'all') {
+            // Show all valid orders (exclude cancelled usually, but logic here varies)
         }
 
-        // 2. Date Filter
-        if (startDate && endDate) {
-            whereClause += ` AND O.DATE_ BETWEEN '${startDate}' AND '${endDate}'`;
-        } else {
-            const daysMap = { 'daily': 1, 'weekly': 7, 'monthly': 30, 'yearly': 365 };
-            const days = daysMap[timePeriod] || 365;
-            if (timePeriod === 'daily') {
-                whereClause += ` AND O.DATE_ >= CAST(GETDATE() AS DATE)`;
-            } else {
-                whereClause += ` AND O.DATE_ >= DATEADD(DAY, -${days}, GETDATE())`;
+        // 2. Shipment Status Filter (Only for Approved Orders typically, but applied generically if requested)
+        // We use the aggregation from OUTER APPLY: SStat.TotalQty, SStat.ShippedQty
+        if (status === 'approved' && shipmentStatus && shipmentStatus !== 'all') {
+            if (shipmentStatus === 'waiting') {
+                whereClause += ' AND (ISNULL(SStat.ShippedQty, 0) = 0)';
+            } else if (shipmentStatus === 'partial') {
+                whereClause += ' AND (ISNULL(SStat.ShippedQty, 0) > 0 AND ISNULL(SStat.ShippedQty, 0) < SStat.TotalQty)';
+            } else if (shipmentStatus === 'closed') {
+                whereClause += ' AND (ISNULL(SStat.ShippedQty, 0) >= SStat.TotalQty)';
             }
         }
 
@@ -47,24 +47,15 @@ exports.getOrders = async (req, res) => {
             whereClause += ` AND (O.FICHENO LIKE '%${search}%' OR O.DOCODE LIKE '%${search}%' OR C.DEFINITION_ LIKE '%${search}%')`;
         }
 
-        // Sales Orders only usually (TRCODE=1)
-        whereClause += ' AND O.TRCODE = 1';
+        // Sales Orders (Verilen Sipariş) or Purchase (Alınan)
+        // Usually separate or filtered. Assume Sales (TRCODE=1) for now if not specified? 
+        // User asked "Tümü, Öneri, Onaylı", didn't explicitly ask for Sales/Purchase split here but implementation plan said "Type Tabs" in Mobile. 
+        // Let's support TRCODE filter if needed, but default to Sales Orders (1) usually. 
+        // Wait, user said "Tümü, Öneri, Onaylı" - this is usually for SALES orders in a B2B app context. 
+        // I will default to TRCODE=1 (Sales) but allow overriding.
+        const trcode = req.query.type === 'purchase' ? 2 : 1;
+        whereClause += ` AND O.TRCODE = ${trcode}`;
 
-        // 4. Shipment Status Filter (Only for Approved Orders based on dynamic calculation)
-        if (status === 'approved' && shipmentStatus) {
-            // Logic:
-            // S: ShippedQty = 0
-            // B: ShippedQty > 0 AND ShippedQty < TotalQty
-            // K: ShippedQty >= TotalQty
-
-            if (shipmentStatus === 'S') {
-                whereClause += ' AND (ISNULL(SStat.ShippedQty, 0) = 0)';
-            } else if (shipmentStatus === 'B') {
-                whereClause += ' AND (ISNULL(SStat.ShippedQty, 0) > 0 AND ISNULL(SStat.ShippedQty, 0) < SStat.TotalQty)';
-            } else if (shipmentStatus === 'K') {
-                whereClause += ' AND (ISNULL(SStat.ShippedQty, 0) >= SStat.TotalQty)';
-            }
-        }
 
         const query = `
             SELECT TOP ${limit}
@@ -72,16 +63,16 @@ exports.getOrders = async (req, res) => {
                 O.FICHENO as ficheNo,
                 O.DOCODE as documentNo,
                 O.DATE_ as date,
-                C.DEFINITION_ as customer,
-                C.CODE as customerCode,
-                O.NETTOTAL as amount,
+                C.DEFINITION_ as accountName,
+                C.CODE as accountCode,
+                O.NETTOTAL as netTotal,
                 O.GROSSTOTAL as grossTotal,
                 O.STATUS as status,
                 CASE 
-                    WHEN O.STATUS = 1 THEN '-'
-                    WHEN ISNULL(SStat.ShippedQty, 0) = 0 THEN 'S'
-                    WHEN ISNULL(SStat.ShippedQty, 0) >= SStat.TotalQty THEN 'K'
-                    ELSE 'B'
+                    WHEN O.STATUS = 1 THEN 'proposal'
+                    WHEN ISNULL(SStat.ShippedQty, 0) >= SStat.TotalQty THEN 'closed'
+                    WHEN ISNULL(SStat.ShippedQty, 0) > 0 THEN 'partial'
+                    ELSE 'waiting'
                 END as shipmentStatus
             FROM ${orficheTable} O
             LEFT JOIN ${clcardTable} C ON O.CLIENTREF = C.LOGICALREF
@@ -94,22 +85,19 @@ exports.getOrders = async (req, res) => {
             ORDER BY O.DATE_ DESC
         `;
 
-        console.log(`[getOrders] SQL Query: ${query}`);
+        console.log(`[getOrders] Generated Query:`, query);
 
         const result = await sql.query(query);
-        console.log(`[getOrders] Row Count: ${result.recordset.length}`);
-
         const orders = result.recordset.map(o => ({
             ...o,
             date: o.date ? new Date(o.date).toISOString().split('T')[0] : '',
-            statusText: o.status === 1 ? 'Öneri' : 'Onaylı'
         }));
 
         res.json(orders);
 
     } catch (err) {
-        console.error('❌ getOrders Error:', err.message);
-        res.status(500).json({ error: err.message });
+        console.error('❌ getOrders CRITICAL ERROR:', err);
+        res.status(500).json({ error: err.message, stack: err.stack });
     }
 };
 

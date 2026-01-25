@@ -97,7 +97,7 @@ exports.getInvoices = async (req, res) => {
       }
 
       return {
-        id: item.ficheNo || item.id,
+        id: item.id, // Always use LOGICALREF for navigation/ID
         logicalRef: item.id,
         date: item.date ? new Date(item.date).toISOString().split('T')[0] : '',
         type: item.type,
@@ -190,6 +190,7 @@ exports.getInvoiceDetails = async (req, res) => {
     const unitsetlTable = `LG_${firm}_UNITSETL`;
     const clflineTable = `LG_${firm}_${period}_CLFLINE`;
     const stficheTable = `LG_${firm}_${period}_STFICHE`;
+    const srvcardTable = `LG_${firm}_SRVCARD`;
 
     const { id } = req.params;
 
@@ -207,19 +208,21 @@ exports.getInvoiceDetails = async (req, res) => {
     const linesQuery = `
             SELECT 
                 L.LOGICALREF as id,
-                I.CODE as code,
-                I.NAME as name,
+                COALESCE(I.CODE, S.CODE) as code,
+                COALESCE(I.NAME, S.DEFINITION_) as name,
                 L.AMOUNT as quantity,
                 U.CODE as unit,
                 L.PRICE as price,
                 L.VAT as vatRate,
                 L.VATAMNT as vatAmount,
                 L.TOTAL as total,
-                L.DISTDISC as discount
+                L.DISTDISC as discount,
+                L.LINETYPE as lineType
             FROM ${stlineTable} L
-            JOIN ${itemsTable} I ON L.STOCKREF = I.LOGICALREF
+            LEFT JOIN ${itemsTable} I ON L.STOCKREF = I.LOGICALREF AND L.LINETYPE = 0
+            LEFT JOIN ${srvcardTable} S ON L.STOCKREF = S.LOGICALREF AND L.LINETYPE = 4
             LEFT JOIN ${unitsetlTable} U ON L.UOMREF = U.LOGICALREF
-            WHERE ${whereCondition} AND L.LINETYPE = 0
+            WHERE ${whereCondition} AND L.LINETYPE IN (0, 4)
         `;
 
     const paymentsQuery = `
@@ -291,7 +294,6 @@ exports.getInvoiceStats = async (req, res) => {
     const firm = config.firmNo || '113';
     const period = config.periodNo || '01';
     const invoiceTable = `LG_${firm}_${period}_INVOICE`;
-
     const clcardTable = `LG_${firm}_CLCARD`;
 
     // Date Filters logic

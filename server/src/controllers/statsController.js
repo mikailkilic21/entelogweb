@@ -72,43 +72,52 @@ exports.getFinancialTrend = async (req, res) => {
     const stficheTable = `LG_${firm}_${period}_STFICHE`;
 
     // Period mapping: daily (default), weekly, monthly, yearly
+    // Period mapping: daily (Today Hourly), weekly (Last 7 Days), monthly (Last 30 Days), yearly (Last 12 Months)
     const timePeriod = req.query.period || 'daily';
 
     let groupByClause = 'DATE_';
     let selectDate = 'DATE_';
     let orderByClause = 'DATE_';
-    let days = 90; // Default for daily
+    let whereClause = '';
 
     // Dynamic SQL configuration based on period
     switch (timePeriod) {
-      case 'weekly':
-        // Group by Year and Week. Format: YYYY-WW (ISO Week)
-        days = 180; // ~6 months
-        selectDate = "CONCAT(DATEPART(YEAR, DATE_), '-', RIGHT('0' + CAST(DATEPART(ISO_WEEK, DATE_) AS VARCHAR), 2))";
-        groupByClause = "DATEPART(YEAR, DATE_), DATEPART(ISO_WEEK, DATE_)";
-        orderByClause = "DATEPART(YEAR, DATE_), DATEPART(ISO_WEEK, DATE_)";
+      case 'daily':
+        // Hourly for Today
+        // LOGO FTIME logic: Hour = FLOOR(FTIME / 16777216)
+        whereClause = `DATE_ = CAST(GETDATE() AS DATE)`;
+        selectDate = "CAST(FLOOR(FTIME / 16777216) AS VARCHAR)";
+        groupByClause = "FLOOR(FTIME / 16777216)";
+        orderByClause = "FLOOR(FTIME / 16777216)";
         break;
+
+      case 'weekly':
+        // Last 7 Days (Daily)
+        whereClause = `DATE_ >= DATEADD(DAY, -7, GETDATE())`;
+        selectDate = "CONVERT(VARCHAR(10), DATE_, 23)"; // YYYY-MM-DD
+        groupByClause = "DATE_";
+        orderByClause = "DATE_";
+        break;
+
       case 'monthly':
-        // Group by Year and Month. Format: YYYY-MM
-        days = 365; // 1 year
-        selectDate = "FORMAT(DATE_, 'yyyy-MM')";
-        groupByClause = "YEAR(DATE_), MONTH(DATE_)"; // FORMAT sql server 2012+ compatible
-        // Safer T-SQL group by
+        // Last 30 Days (Daily)
+        whereClause = `DATE_ >= DATEADD(DAY, -30, GETDATE())`;
+        selectDate = "CONVERT(VARCHAR(10), DATE_, 23)"; // YYYY-MM-DD
+        groupByClause = "DATE_";
+        orderByClause = "DATE_";
+        break;
+
+      case 'yearly':
+        // Last 12 Months (Monthly)
+        whereClause = `DATE_ >= DATEADD(MONTH, -12, GETDATE())`;
+        selectDate = "FORMAT(DATE_, 'yyyy-MM')"; // YYYY-MM
         groupByClause = "YEAR(DATE_), MONTH(DATE_)";
-        selectDate = "CONCAT(YEAR(DATE_), '-', RIGHT('0' + CAST(MONTH(DATE_) AS VARCHAR), 2))";
         orderByClause = "YEAR(DATE_), MONTH(DATE_)";
         break;
-      case 'yearly':
-        // Group by Year. Format: YYYY
-        days = 730; // 2 years
-        selectDate = "CAST(YEAR(DATE_) AS VARCHAR)";
-        groupByClause = "YEAR(DATE_)";
-        orderByClause = "YEAR(DATE_)";
-        break;
-      case 'daily':
+
       default:
-        days = 90;
-        selectDate = "CONVERT(VARCHAR(10), DATE_, 126)"; // YYYY-MM-DD
+        whereClause = `DATE_ >= DATEADD(DAY, -7, GETDATE())`;
+        selectDate = "CONVERT(VARCHAR(10), DATE_, 23)";
         groupByClause = "DATE_";
         orderByClause = "DATE_";
         break;
@@ -120,32 +129,37 @@ exports.getFinancialTrend = async (req, res) => {
         SUM(CASE WHEN TRCODE IN (1,2,3) THEN NETTOTAL ELSE 0 END) as purchase,
         SUM(CASE WHEN TRCODE IN (7,8,9) THEN NETTOTAL ELSE 0 END) as sales
       FROM ${stficheTable}
-      WHERE DATE_ >= DATEADD(DAY, -${days}, GETDATE())
+      WHERE ${whereClause}
       GROUP BY ${groupByClause}
       ORDER BY ${orderByClause} ASC
     `;
 
     const result = await sql.query(query);
 
-    // Format fields (if needed, mostly standardized by SQL now)
+    // Format fields
     const formattedData = result.recordset.map(item => ({
       date: item.date,
       purchase: item.purchase || 0,
       sales: item.sales || 0
     }));
 
+    // For Daily, ensure all 24 hours are present (optional but good for charts)
+    if (timePeriod === 'daily') {
+      const fullDay = Array.from({ length: 24 }, (_, i) => {
+        const hourStr = i.toString();
+        const existing = formattedData.find(d => d.date == hourStr); // lenient compare
+        return existing || { date: `${i}:00`, purchase: 0, sales: 0 };
+      });
+      // Remap date to readable hour if needed, but "14" is fine. Converting to "14:00" for chart.
+      res.json(fullDay.map(d => ({ ...d, date: d.date.includes(':') ? d.date : `${d.date}:00` })));
+      return;
+    }
+
     res.json(formattedData);
 
   } catch (err) {
     console.error('❌ getFinancialTrend Error:', err.message);
-    // Fallback simulation
-    const days = 90;
-    const demoData = Array.from({ length: 10 }, (_, i) => ({
-      date: `2024-${i + 1}`,
-      sales: Math.random() * 20000,
-      purchase: Math.random() * 15000
-    }));
-    res.json(demoData);
+    res.json([]);
   }
 };
 
@@ -174,20 +188,26 @@ exports.getTopProducts = async (req, res) => {
             GROUP BY IT.NAME
             ORDER BY value DESC
         `);
-    res.json(result.recordset);
+
+    // Format names to Title Case
+    const formatted = result.recordset.map(item => {
+      const name = item.name || '';
+      const titleCase = name.toLowerCase().split(' ').map(word =>
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+      return { ...item, name: titleCase };
+    });
+
+    res.json(formatted);
   } catch (err) {
     console.error('❌ Top Products Hata:', err.message);
-    // Fallback demo data - Scale values by period
-    const timePeriod = req.query.period || 'daily';
-    const multipliers = { 'daily': 1, 'weekly': 5, 'monthly': 20, 'yearly': 200 };
-    const m = multipliers[timePeriod] || 1;
-
+    // Fallback demo data
     res.json([
-      { name: 'Laptop Pro X1', value: 125000 * m },
-      { name: 'Ofis Koltuğu Ergonomik', value: 85000 * m },
-      { name: 'Kablosuz Mouse', value: 45000 * m },
-      { name: '27" Monitör', value: 32000 * m },
-      { name: 'USB-C Dock', value: 15000 * m }
+      { name: 'Laptop Pro X1', value: 125000 },
+      { name: 'Ofis Koltuğu Ergonomik', value: 85000 },
+      { name: 'Kablosuz Mouse', value: 45000 },
+      { name: '27" Monitör', value: 32000 },
+      { name: 'USB-C Dock', value: 15000 }
     ]);
   }
 };

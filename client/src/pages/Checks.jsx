@@ -19,6 +19,7 @@ const Checks = () => {
     const [activeTab, setActiveTab] = useState('customer'); // 'customer' | 'own'
     const [checks, setChecks] = useState([]);
     const [upcomingChecks, setUpcomingChecks] = useState([]);
+    const [activeCheck, setActiveCheck] = useState(null);
     const [upcomingFilter, setUpcomingFilter] = useState('week'); // 'today', 'week', 'month'
     const [recentChecks, setRecentChecks] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -45,14 +46,19 @@ const Checks = () => {
             const res = await fetch(url);
             const data = await res.json();
 
-            let filtered = data;
-            if (dateFilter) {
-                // Client side date filtering as before
-                filtered = data.filter(c => c.dueDate === dateFilter);
+            if (Array.isArray(data)) {
+                let filtered = data;
+                if (dateFilter) {
+                    filtered = data.filter(c => c.dueDate === dateFilter);
+                }
+                setChecks(filtered);
+            } else {
+                console.error('Fetch checks returned non-array:', data);
+                setChecks([]);
             }
-            setChecks(filtered);
         } catch (error) {
             console.error('Error fetching checks:', error);
+            setChecks([]);
         } finally {
             setLoading(false);
         }
@@ -62,9 +68,14 @@ const Checks = () => {
         try {
             const res = await fetch('/api/checks/upcoming');
             const data = await res.json();
-            setUpcomingChecks(data);
+            if (Array.isArray(data)) {
+                setUpcomingChecks(data);
+            } else {
+                setUpcomingChecks([]);
+            }
         } catch (error) {
             console.error('Error fetching upcoming checks:', error);
+            setUpcomingChecks([]);
         }
     };
 
@@ -72,9 +83,14 @@ const Checks = () => {
         try {
             const res = await fetch('/api/checks/recent');
             const data = await res.json();
-            setRecentChecks(data);
+            if (Array.isArray(data)) {
+                setRecentChecks(data);
+            } else {
+                setRecentChecks([]);
+            }
         } catch (error) {
             console.error('Error fetching recent checks:', error);
+            setRecentChecks([]);
         }
     };
 
@@ -174,8 +190,8 @@ const Checks = () => {
                                 key={f}
                                 onClick={() => setUpcomingFilter(f)}
                                 className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all ${upcomingFilter === f
-                                        ? 'bg-slate-800 text-white shadow-sm'
-                                        : 'text-slate-500 hover:text-slate-300'
+                                    ? 'bg-slate-800 text-white shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-300'
                                     }`}
                             >
                                 {f === 'today' ? 'Bugün' : f === 'week' ? 'Bu Hafta' : 'Bu Ay'}
@@ -205,7 +221,7 @@ const Checks = () => {
                                 </tr>
                             ) : (
                                 filteredUpcoming.map((check, idx) => (
-                                    <tr key={check.id} className={`${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/10'} hover:bg-indigo-900/10 transition-colors`}>
+                                    <tr key={check.id} onClick={() => setActiveCheck(check)} className={`${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/10'} hover:bg-indigo-900/10 transition-colors cursor-pointer group`}>
                                         <td className="px-6 py-3 font-medium text-slate-200">
                                             {formatDate(check.dueDate)}
                                         </td>
@@ -249,8 +265,8 @@ const Checks = () => {
                     <button
                         onClick={() => setActiveTab('customer')}
                         className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'customer'
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
-                                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
                             }`}
                     >
                         Müşteri Çekleri
@@ -258,8 +274,8 @@ const Checks = () => {
                     <button
                         onClick={() => setActiveTab('own')}
                         className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'own'
-                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20'
-                                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
                             }`}
                     >
                         Kendi Çeklerimiz
@@ -301,7 +317,7 @@ const Checks = () => {
                             ) : checks.length === 0 ? (
                                 <tr><td colSpan="7" className="px-6 py-12 text-center text-slate-500">Kayıt bulunamadı.</td></tr>
                             ) : checks.map((check) => (
-                                <tr key={check.id} className="hover:bg-slate-800/30 transition-colors group">
+                                <tr key={check.id} onClick={() => setActiveCheck(check)} className="hover:bg-slate-800/30 transition-colors group cursor-pointer">
                                     <td className="px-6 py-4">{getStatusBadge(check.statusLabel, activeTab)}</td>
                                     <td className="px-6 py-4 text-slate-300 font-medium">{formatDate(check.dueDate)}</td>
                                     <td className="px-6 py-4 text-slate-300">
@@ -340,6 +356,76 @@ const Checks = () => {
                     ))}
                 </div>
             </div>
+            {/* Detail Modal */}
+            {activeCheck && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative">
+                        <button
+                            onClick={() => setActiveCheck(null)}
+                            className="absolute top-4 right-4 p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+
+                        <div className="p-6 border-b border-slate-800 bg-slate-800/30">
+                            <h3 className="text-xl font-bold text-white">Çek Detayı</h3>
+                            <div className="flex items-center gap-2 mt-2">
+                                <span className={`w-2 h-2 rounded-full ${activeCheck.statusLabel === 'Portföyde' ? 'bg-blue-500' : 'bg-slate-500'}`}></span>
+                                <span className="text-slate-400 text-sm">{activeCheck.portfolioNo} / {activeCheck.serialNo}</span>
+                            </div>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label className="text-xs text-slate-500 uppercase font-semibold">Cari Hesap</label>
+                                    <p className="text-white font-medium text-lg mt-1 truncate" title={activeCheck.clientName}>
+                                        {activeCheck.clientName || 'Cari Yok'}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <label className="text-xs text-slate-500 uppercase font-semibold">Tutar</label>
+                                    <p className="text-emerald-400 font-bold text-2xl mt-1 font-mono">
+                                        {formatCurrency(activeCheck.amount)}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-6 p-4 bg-slate-950/50 rounded-xl border border-slate-800">
+                                <div>
+                                    <label className="text-xs text-slate-500 uppercase">Vade Tarihi</label>
+                                    <div className="flex items-center gap-2 mt-1 text-slate-200">
+                                        <Calendar size={16} />
+                                        <span className="font-semibold">{formatDate(activeCheck.dueDate)}</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-xs text-slate-500 uppercase">Banka</label>
+                                    <div className="flex items-center gap-2 mt-1 text-slate-200">
+                                        <Building2 size={16} />
+                                        <span className="truncate">{activeCheck.bankName || '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="flex justify-between py-2 border-b border-slate-800/50">
+                                    <span className="text-slate-500 text-sm">Çek Durumu</span>
+                                    <span>{getStatusBadge(activeCheck.statusLabel, activeCheck.type)}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b border-slate-800/50">
+                                    <span className="text-slate-500 text-sm">Ciro Edilen / Alıcı</span>
+                                    <span className="text-slate-300 text-sm">{activeCheck.endorseeName || '-'}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b border-slate-800/50">
+                                    <span className="text-slate-500 text-sm">Devir Durumu</span>
+                                    <span className="text-slate-300 text-sm">{activeCheck.isRollover ? 'Devir' : 'Yeni Dönem'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

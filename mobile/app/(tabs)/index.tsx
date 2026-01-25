@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Dimensions, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LayoutDashboard, TrendingUp, TrendingDown, Receipt, RefreshCcw, AlertCircle } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +20,8 @@ export default function DashboardScreen() {
   const [period, setPeriod] = useState('monthly');
   const [error, setError] = useState<string | null>(null);
 
+  const [customerType, setCustomerType] = useState<'sales' | 'purchases'>('sales');
+
   const fetchData = async () => {
     setError(null);
     try {
@@ -28,7 +30,7 @@ export default function DashboardScreen() {
         fetch(`${API_URL}/stats?period=${period}`),
         fetch(`${API_URL}/stats/trend?period=${period}`),
         fetch(`${API_URL}/stats/top-products?period=${period}`),
-        fetch(`${API_URL}/stats/top-customers?period=${period}`)
+        fetch(`${API_URL}/stats/top-${customerType === 'sales' ? 'customers' : 'suppliers'}?period=${period}`)
       ]);
 
       if (!statsRes.ok) throw new Error('Sunucu yanıt vermedi: ' + statsRes.status);
@@ -54,7 +56,7 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     fetchData();
-  }, [period]);
+  }, [period, customerType]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -81,25 +83,38 @@ export default function DashboardScreen() {
         style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
       />
 
-      <SafeAreaView className="flex-1">
-        <ScrollView
-          contentContainerStyle={{ paddingBottom: 100 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}
-        >
-          {/* Header */}
-          <View className="px-6 pt-2 pb-6">
-            <View className="flex-row items-center justify-between">
+      <SafeAreaView className="flex-1" edges={['top']}>
+        {/* Fixed Header */}
+        <View className="px-6 pt-2 pb-4 bg-transparent z-10">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center gap-3">
+              <Image
+                source={require('../../assets/images/siyahlogo.png')}
+                style={{ width: 45, height: 45, borderRadius: 10 }}
+                resizeMode="contain"
+              />
               <View>
-                <Text className="text-3xl font-bold text-white tracking-tight">
-                  Entelog<Text className="text-blue-500">.</Text> Mobile
+                <Text className="text-2xl font-bold text-white tracking-tight">
+                  Entelog Mobile
                 </Text>
-                <Text className="text-slate-400 text-xs font-medium tracking-wide uppercase mt-1">Premium Dashboard</Text>
-              </View>
-              <View className="bg-slate-800/50 p-2.5 rounded-full border border-slate-700/50">
-                <LayoutDashboard size={24} color="#60a5fa" />
+                <Text className="text-slate-400 text-[10px] font-medium tracking-wide uppercase">Premium Dashboard</Text>
               </View>
             </View>
+            <View className="bg-slate-800/50 p-2.5 rounded-full border border-slate-700/50">
+              <LayoutDashboard size={24} color="#60a5fa" />
+            </View>
           </View>
+        </View>
+
+        {/* Scrollable Content */}
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{
+            paddingBottom: 20, // Reduced from 100 to sit closer to bottom bar as requested
+            paddingTop: 10
+          }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}
+        >
 
           {/* Period Selector */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-6 mb-6 max-h-12">
@@ -108,8 +123,8 @@ export default function DashboardScreen() {
                 key={p}
                 onPress={() => setPeriod(p)}
                 className={`px-5 py-2.5 rounded-full mr-3 border ${period === p
-                    ? 'bg-blue-600 border-blue-500 shadow-lg shadow-blue-500/30'
-                    : 'bg-slate-800/60 border-slate-700/50'
+                  ? 'bg-blue-600 border-blue-500 shadow-lg shadow-blue-500/30'
+                  : 'bg-slate-800/60 border-slate-700/50'
                   }`}
               >
                 <Text className={`${period === p ? 'text-white font-bold' : 'text-slate-400 font-medium'} capitalize text-xs`}>
@@ -132,65 +147,67 @@ export default function DashboardScreen() {
           )}
 
           {/* Main Stats Cards */}
-          <View className="px-6 space-y-5 mb-8">
-            {/* Sales Card */}
-            <LinearGradient
-              colors={['#059669', '#047857']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              className="rounded-3xl p-6 shadow-xl shadow-emerald-500/20 border-t border-white/10"
-            >
-              <View className="flex-row justify-between items-start mb-6">
-                <View className="bg-white/20 p-3 rounded-2xl backdrop-blur-md">
-                  <TrendingUp size={28} color="white" />
+          <View className="px-6 mb-8">
+            <View className="flex-row gap-4 mb-4">
+              {/* Sales Card */}
+              <LinearGradient
+                colors={['#059669', '#047857']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                className="flex-1 rounded-3xl p-5 shadow-lg shadow-emerald-500/20 border-t border-white/10"
+              >
+                <View className="flex-row justify-between items-start mb-4">
+                  <View className="bg-white/20 p-2.5 rounded-xl backdrop-blur-md">
+                    <TrendingUp size={20} color="white" />
+                  </View>
+                  <View className="bg-black/20 px-2 py-1 rounded-md">
+                    <Text className="text-white/90 text-[10px] font-bold">
+                      +{stats?.salesCount || 0}
+                    </Text>
+                  </View>
                 </View>
-                <View className="bg-black/20 px-3 py-1 rounded-full">
-                  <Text className="text-white/90 text-xs font-medium">
-                    +{stats?.salesCount || 0} Sipariş
-                  </Text>
-                </View>
-              </View>
-              <Text className="text-white/70 text-sm font-medium uppercase tracking-wider mb-1">Toplam Satış</Text>
-              <Text className="text-4xl font-black text-white tracking-tight">
-                {formatCurrency(stats?.totalSales)}
-              </Text>
-            </LinearGradient>
+                <Text className="text-emerald-100 text-xs font-bold uppercase tracking-wider mb-1">Toplam Satış</Text>
+                <Text className="text-xl font-black text-white tracking-tight" numberOfLines={1} adjustsFontSizeToFit>
+                  {formatCurrency(stats?.totalSales)}
+                </Text>
+              </LinearGradient>
 
-            {/* Purchases Card */}
-            <LinearGradient
-              colors={['#be123c', '#9f1239']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              className="rounded-3xl p-6 shadow-xl shadow-rose-900/20 border-t border-white/10"
-            >
-              <View className="flex-row justify-between items-start mb-6">
-                <View className="bg-white/20 p-3 rounded-2xl backdrop-blur-md">
-                  <TrendingDown size={28} color="white" />
+              {/* Purchases Card */}
+              <LinearGradient
+                colors={['#be123c', '#9f1239']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                className="flex-1 rounded-3xl p-5 shadow-lg shadow-rose-900/20 border-t border-white/10"
+              >
+                <View className="flex-row justify-between items-start mb-4">
+                  <View className="bg-white/20 p-2.5 rounded-xl backdrop-blur-md">
+                    <TrendingDown size={20} color="white" />
+                  </View>
+                  <View className="bg-black/20 px-2 py-1 rounded-md">
+                    <Text className="text-white/90 text-[10px] font-bold">
+                      -{stats?.purchaseCount || 0}
+                    </Text>
+                  </View>
                 </View>
-                <View className="bg-black/20 px-3 py-1 rounded-full">
-                  <Text className="text-white/90 text-xs font-medium">
-                    -{stats?.purchaseCount || 0} İşlem
-                  </Text>
-                </View>
-              </View>
-              <Text className="text-white/70 text-sm font-medium uppercase tracking-wider mb-1">Toplam Alış</Text>
-              <Text className="text-4xl font-black text-white tracking-tight">
-                {formatCurrency(stats?.totalPurchases)}
-              </Text>
-            </LinearGradient>
+                <Text className="text-rose-100 text-xs font-bold uppercase tracking-wider mb-1">Toplam Alış</Text>
+                <Text className="text-xl font-black text-white tracking-tight" numberOfLines={1} adjustsFontSizeToFit>
+                  {formatCurrency(stats?.totalPurchases)}
+                </Text>
+              </LinearGradient>
+            </View>
 
             {/* Secondary Stats Row */}
             <View className="flex-row gap-4">
               <View className="flex-1 bg-slate-800/40 p-5 rounded-3xl border border-slate-700/50 backdrop-blur-xl">
                 <Receipt size={24} color="#94a3b8" className="mb-4" />
                 <Text className="text-slate-400 text-xs font-medium uppercase mb-1">KDV Toplam</Text>
-                <Text className="text-xl font-bold text-slate-200">{formatCurrency(stats?.totalVat)}</Text>
+                <Text className="text-lg font-bold text-slate-200" numberOfLines={1} adjustsFontSizeToFit>{formatCurrency(stats?.totalVat)}</Text>
               </View>
 
               <View className="flex-1 bg-slate-800/40 p-5 rounded-3xl border border-slate-700/50 backdrop-blur-xl">
                 <RefreshCcw size={24} color={stats?.totalSales - stats?.totalPurchases >= 0 ? '#10b981' : '#ef4444'} className="mb-4" />
                 <Text className="text-slate-400 text-xs font-medium uppercase mb-1">Net Durum</Text>
-                <Text className={`text-xl font-bold ${stats?.totalSales - stats?.totalPurchases >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                <Text className={`text-lg font-bold ${stats?.totalSales - stats?.totalPurchases >= 0 ? 'text-emerald-400' : 'text-red-400'}`} numberOfLines={1} adjustsFontSizeToFit>
                   {formatCurrency((stats?.totalSales || 0) - (stats?.totalPurchases || 0))}
                 </Text>
               </View>
@@ -199,9 +216,17 @@ export default function DashboardScreen() {
 
           {/* Charts Section */}
           <View className="px-6 space-y-2">
-            <SalesTrendChart data={trendData} period={period} />
+            <SalesTrendChart
+              data={trendData}
+              period={period}
+              onPeriodChange={setPeriod}
+            />
             <TopProductsChart data={topProducts} />
-            <TopCustomersChart data={topCustomers} />
+            <TopCustomersChart
+              data={topCustomers}
+              type={customerType}
+              onTypeChange={setCustomerType}
+            />
           </View>
 
         </ScrollView>

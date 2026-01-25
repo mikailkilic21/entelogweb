@@ -1,35 +1,71 @@
 import React from 'react';
-import { View, Text, Dimensions } from 'react-native';
+import { View, Text, Dimensions, TouchableOpacity } from 'react-native';
 import { LineChart, BarChart, PieChart } from 'react-native-gifted-charts';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
-export const SalesTrendChart = ({ data, period }: { data: any[], period: string }) => {
-    if (!data || data.length === 0) return null;
+export const SalesTrendChart = ({ data, period, onPeriodChange }: { data: any[], period: string, onPeriodChange: (p: string) => void }) => {
+    // Determine label format based on period
+    const getLabel = (dateStr: string) => {
+        if (!dateStr) return '';
+        if (period === 'daily') return dateStr.split(':')[0]; // Show hour
+        if (period === 'yearly') {
+            // 2024-05 -> 05
+            const parts = dateStr.split('-');
+            return parts.length > 1 ? parts[1] : dateStr;
+        }
+        // Weekly/Monthly: Show Day (DD)
+        const parts = dateStr.split('-');
+        return parts.length > 2 ? parts[2] : dateStr;
+    };
 
     // Transform data for chart
-    const lineData = data.map(item => ({
+    const lineData = (data || []).map(item => ({
         value: item.sales || 0,
-        label: period === 'monthly' ? item.date.split('-')[1] : item.date.split('-')[2], // Show month or day
+        label: getLabel(item.date),
         dataPointText: (item.sales / 1000).toFixed(1) + 'k',
     }));
 
-    // Purchases data for second line
-    const lineData2 = data.map(item => ({
+    const lineData2 = (data || []).map(item => ({
         value: item.purchase || 0,
         dataPointText: (item.purchase / 1000).toFixed(1) + 'k',
     }));
 
+    const periods = [
+        { key: 'daily', label: 'Günlük' },
+        { key: 'weekly', label: 'Haftalık' },
+        { key: 'monthly', label: 'Aylık' },
+        { key: 'yearly', label: 'Yıllık' }
+    ];
+
     return (
         <View className="bg-slate-900/50 p-4 rounded-3xl border border-slate-800 mb-6">
-            <Text className="text-white font-bold text-lg mb-4 ml-2">Satış & Alış Trendi</Text>
+            <View className="flex-row justify-between items-center mb-4 ml-2">
+                <Text className="text-white font-bold text-lg">Finansal Trend</Text>
+            </View>
+
+            {/* Period Tabs */}
+            <View className="flex-row bg-slate-800/50 p-1 rounded-xl mb-4">
+                {periods.map((p) => (
+                    <TouchableOpacity
+                        key={p.key}
+                        onPress={() => onPeriodChange(p.key)}
+                        className={`flex-1 py-1.5 rounded-lg items-center ${period === p.key ? 'bg-blue-600' : 'bg-transparent'}`}
+                    >
+                        <Text className={`text-[10px] font-bold ${period === p.key ? 'text-white' : 'text-slate-400'}`}>
+                            {p.label}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+
             <LineChart
                 data={lineData}
                 data2={lineData2}
                 height={220}
                 width={width - 80}
-                spacing={45}
+                spacing={data.length > 20 ? 20 : 45} // Adjust spacing for daily (24 items) vs weekly (7)
                 initialSpacing={20}
                 color1="#3b82f6"
                 color2="#ef4444"
@@ -51,9 +87,7 @@ export const SalesTrendChart = ({ data, period }: { data: any[], period: string 
                 rulesColor="#1e293b"
                 rulesType="solid"
                 curved
-                isAnimated={false} // Disabled to prevent crash on data change
-                // animateOnDataChange={false} 
-                // animationDuration={1000}
+                isAnimated={false}
                 pointerConfig={{
                     pointerStripHeight: 160,
                     pointerStripColor: 'lightgray',
@@ -75,11 +109,11 @@ export const SalesTrendChart = ({ data, period }: { data: any[], period: string 
                                     marginLeft: -40,
                                 }}>
                                 <Text style={{ color: 'white', fontSize: 14, marginBottom: 6, textAlign: 'center' }}>
-                                    {items[0].date}
+                                    {items[0].label}
                                 </Text>
                                 <View style={{ padding: 6, borderRadius: 4, backgroundColor: '#333' }}>
-                                    <Text style={{ fontSize: 12, color: 'lightgray' }}>Satış: {items[0].value}</Text>
-                                    <Text style={{ fontSize: 12, color: 'lightgray' }}>Alış: {items[1]?.value}</Text>
+                                    <Text style={{ fontSize: 12, color: 'lightgray' }}>Satış: {items[0].value?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</Text>
+                                    <Text style={{ fontSize: 12, color: 'lightgray' }}>Alış: {items[1]?.value?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</Text>
                                 </View>
                             </View>
                         );
@@ -103,12 +137,11 @@ export const SalesTrendChart = ({ data, period }: { data: any[], period: string 
 export const TopProductsChart = ({ data }: { data: any[] }) => {
     if (!data || data.length === 0) return null;
 
-    // Transform for Bar Chart
     const barData = data.map((item, index) => ({
         value: item.value,
-        frontColor: index === 0 ? '#fbbf24' : '#10b981', // Gold for #1
+        frontColor: index === 0 ? '#fbbf24' : '#10b981',
         gradientColor: index === 0 ? '#d97706' : '#059669',
-        label: item.name.length > 10 ? item.name.substring(0, 8) + '...' : item.name,
+        label: item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name, // Longer truncation
         topLabelComponent: () => (
             <Text style={{ color: '#94a3b8', fontSize: 10, marginBottom: 4 }}>
                 {(item.value / 1000).toFixed(0)}k
@@ -118,7 +151,7 @@ export const TopProductsChart = ({ data }: { data: any[] }) => {
 
     return (
         <View className="bg-slate-900/50 p-4 rounded-3xl border border-slate-800 mb-6">
-            <Text className="text-white font-bold text-lg mb-4 ml-2">Top 5 Ürün</Text>
+            <Text className="text-white font-bold text-lg mb-4 ml-2">En Çok Satılan Ürünler</Text>
             <BarChart
                 data={barData}
                 barWidth={35}
@@ -129,7 +162,7 @@ export const TopProductsChart = ({ data }: { data: any[] }) => {
                 xAxisThickness={0}
                 yAxisThickness={0}
                 yAxisTextStyle={{ color: 'gray' }}
-                xAxisLabelTextStyle={{ color: 'gray', fontSize: 10 }}
+                xAxisLabelTextStyle={{ color: 'gray', fontSize: 9, width: 60, textAlign: 'center' }}
                 noOfSections={3}
                 maxValue={Math.max(...data.map(d => d.value)) * 1.2}
                 isAnimated={false}
@@ -140,37 +173,77 @@ export const TopProductsChart = ({ data }: { data: any[] }) => {
     );
 };
 
-export const TopCustomersChart = ({ data }: { data: any[] }) => {
-    if (!data || data.length === 0) return null;
-
-    const barData = data.map((item, index) => ({
+export const TopCustomersChart = ({ data, type, onTypeChange }: { data: any[], type: 'sales' | 'purchases', onTypeChange: (t: 'sales' | 'purchases') => void }) => {
+    // Pie Chart Data
+    const pieData = (data || []).map((item, index) => ({
         value: item.value,
-        frontColor: '#8b5cf6',
-        gradientColor: '#6d28d9',
-        label: item.name.length > 8 ? item.name.substring(0, 6) + '..' : item.name,
+        color: ['#8b5cf6', '#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4'][index % 5],
+        text: '', // No text on slice to keep clean
     }));
 
     return (
         <View className="bg-slate-900/50 p-4 rounded-3xl border border-slate-800 mb-6">
-            <Text className="text-white font-bold text-lg mb-4 ml-2">En İyi Müşteriler</Text>
-            <BarChart
-                data={barData}
-                barWidth={30}
-                spacing={30}
-                roundedTop
-                roundedBottom
-                hideRules
-                xAxisThickness={0}
-                yAxisThickness={0}
-                yAxisTextStyle={{ color: 'gray' }}
-                xAxisLabelTextStyle={{ color: 'gray', fontSize: 10 }}
-                noOfSections={3}
-                isAnimated={false}
-                showGradient
-                height={180}
-                horizontal
-                rtl
-            />
+            <View className="flex-row justify-between items-center mb-6">
+                <Text className="text-white font-bold text-lg ml-2">En İyiler</Text>
+
+                <View className="flex-row bg-slate-800/50 rounded-lg p-0.5">
+                    <TouchableOpacity
+                        onPress={() => onTypeChange('sales')}
+                        className={`px-3 py-1.5 rounded-md ${type === 'sales' ? 'bg-purple-600' : 'bg-transparent'}`}
+                    >
+                        <Text className={`text-[10px] font-bold ${type === 'sales' ? 'text-white' : 'text-slate-400'}`}>Satış</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => onTypeChange('purchases')}
+                        className={`px-3 py-1.5 rounded-md ${type === 'purchases' ? 'bg-blue-600' : 'bg-transparent'}`}
+                    >
+                        <Text className={`text-[10px] font-bold ${type === 'purchases' ? 'text-white' : 'text-slate-400'}`}>Alış</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            <View className="flex-row items-center justify-center">
+                {/* Pie Chart */}
+                <View>
+                    <PieChart
+                        data={pieData}
+                        donut
+                        showGradient
+                        sectionAutoFocus
+                        radius={70}
+                        innerRadius={45}
+                        innerCircleColor={'#1e293b'}
+                        centerLabelComponent={() => {
+                            const total = data.reduce((acc, curr) => acc + curr.value, 0);
+                            return (
+                                <View style={{ justifyContent: 'center', alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 18, color: 'white', fontWeight: 'bold' }}>
+                                        {(total / 1000).toFixed(1)}k
+                                    </Text>
+                                    <Text style={{ fontSize: 10, color: 'lightgray' }}>Toplam</Text>
+                                </View>
+                            );
+                        }}
+                    />
+                </View>
+
+                {/* Legend */}
+                <View className="ml-6 flex-1">
+                    {data.map((item, index) => (
+                        <View key={index} className="flex-row items-center mb-2">
+                            <View
+                                style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: pieData[index]?.color, marginRight: 8 }}
+                            />
+                            <View className="flex-1">
+                                <Text className="text-slate-300 text-[10px]" numberOfLines={1}>{item.name}</Text>
+                            </View>
+                            <Text className="text-white text-[10px] font-bold">
+                                {(item.value / 1000).toFixed(0)}k
+                            </Text>
+                        </View>
+                    ))}
+                </View>
+            </View>
         </View>
     );
 };

@@ -6,44 +6,55 @@ exports.getAccounts = async (req, res) => {
     const firm = config.firmNo || '113';
     const period = config.periodNo || '01';
     const clcardTable = `LG_${firm}_CLCARD`;
-    const clflineTable = `LG_${firm}_${period}_CLFLINE`; // For transactions
+    const clflineTable = `LG_${firm}_${period}_CLFLINE`;
 
     const limit = parseInt(req.query.limit) || 50;
-    const type = req.query.type; // 'customer' or 'supplier'
+    const type = req.query.type; // 'customer' or 'supplier' (Legacy)
+    const listingType = req.query.listingType || 'all'; // 'all', 'debtor', 'creditor'
     const search = req.query.search || '';
 
-    let whereCondition = '1=1';
-    if (type === 'customer') whereCondition += ' AND C.CARDTYPE IN (1, 3)'; // Alıcı
-    else if (type === 'supplier') whereCondition += ' AND C.CARDTYPE IN (2, 3)'; // Satıcı
+    // Base conditions
+    let baseWhere = '1=1';
+    if (type === 'customer') baseWhere += ' AND C.CARDTYPE IN (1, 3)'; // Alıcı
+    else if (type === 'supplier') baseWhere += ' AND C.CARDTYPE IN (2, 3)'; // Satıcı
 
     if (search) {
-      whereCondition += ` AND (C.CODE LIKE '%${search}%' OR C.DEFINITION_ LIKE '%${search}%')`;
+      baseWhere += ` AND (C.CODE LIKE '%${search}%' OR C.DEFINITION_ LIKE '%${search}%')`;
     }
 
+    // CTE Query to calculate balance first, then filter/sort
     const query = `
-            SELECT TOP ${limit}
-                C.LOGICALREF as id,
-                C.CODE as code,
-                C.DEFINITION_ as name,
-                C.TAXNR as taxNumber,
-                C.CITY as city,
-                C.TOWN as town,
-                C.TELNRS1 as phone,
-                C.EMAILADDR as email,
-                C.CARDTYPE as cardType,
-                -- Calculate Balance (Borç - Alacak) from CLFLINE
-                ISNULL((SELECT SUM(CASE WHEN SIGN = 0 THEN AMOUNT ELSE -AMOUNT END) 
-                 FROM ${clflineTable} 
-                 WHERE CLIENTREF = C.LOGICALREF AND CANCELLED = 0), 0) as balance,
-                -- Last Transaction Date
-                (SELECT TOP 1 DATE_ 
-                 FROM ${clflineTable} 
-                 WHERE CLIENTREF = C.LOGICALREF AND CANCELLED = 0 
-                 ORDER BY DATE_ DESC) as lastOperationDate
-            FROM ${clcardTable} C
-            WHERE ${whereCondition}
-            ORDER BY C.DEFINITION_ ASC
-        `;
+      WITH AccountBalances AS (
+          SELECT 
+              C.LOGICALREF as id,
+              C.CODE as code,
+              C.DEFINITION_ as name,
+              C.TAXNR as taxNumber,
+              C.CITY as city,
+              C.TOWN as town,
+              C.TELNRS1 as phone,
+              C.EMAILADDR as email,
+              C.CARDTYPE as cardType,
+              ISNULL((SELECT SUM(CASE WHEN SIGN = 0 THEN AMOUNT ELSE -AMOUNT END) 
+               FROM ${clflineTable} 
+               WHERE CLIENTREF = C.LOGICALREF AND CANCELLED = 0), 0) as balance,
+               (SELECT TOP 1 DATE_ 
+                FROM ${clflineTable} 
+                WHERE CLIENTREF = C.LOGICALREF AND CANCELLED = 0 
+                ORDER BY DATE_ DESC) as lastOperationDate
+          FROM ${clcardTable} C
+          WHERE ${baseWhere}
+      )
+      SELECT TOP ${limit} *
+      FROM AccountBalances
+      WHERE ABS(balance) > 0.1  -- Filter out zero balances (allowing for small float diffs)
+      
+      -- Positive Balance (+): Customer owes us money (Borç Bakiyesi / Borçlu)
+      -- Negative Balance (-): We owe supplier money (Alacak Bakiyesi / Alacaklı)
+      ${listingType === 'debtor' ? 'AND balance > 0' : ''}
+      ${listingType === 'creditor' ? 'AND balance < 0' : ''}
+      ORDER BY ABS(balance) DESC -- Sort by magnitude
+    `;
 
     const result = await sql.query(query);
     res.json(result.recordset);
