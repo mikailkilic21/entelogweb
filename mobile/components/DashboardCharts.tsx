@@ -30,6 +30,14 @@ export const SalesTrendChart = ({ data, period }: { data: any[], period: string 
         dataPointText: (item.purchase / 1000).toFixed(1) + 'k',
     }));
 
+    if (!data || data.length === 0) {
+        return (
+            <View className="bg-slate-900/50 p-4 rounded-3xl border border-slate-800 mb-6">
+                <Text className="text-slate-500 text-center py-10">Veri yok</Text>
+            </View>
+        );
+    }
+
     return (
         <View className="bg-slate-900/50 p-4 rounded-3xl border border-slate-800 mb-6">
             <View className="flex-row justify-between items-center mb-4 ml-2">
@@ -117,7 +125,7 @@ export const TopProductsChart = ({ data }: { data: any[] }) => {
         value: item.value,
         frontColor: index === 0 ? '#fbbf24' : '#10b981',
         gradientColor: index === 0 ? '#d97706' : '#059669',
-        label: item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name, // Longer truncation
+        label: (item.name || '').length > 15 ? (item.name || '').substring(0, 15) + '...' : (item.name || 'Bilinmiyor'),
         topLabelComponent: () => (
             <Text style={{ color: '#94a3b8', fontSize: 10, marginBottom: 4 }}>
                 {(item.value / 1000).toFixed(0)}k
