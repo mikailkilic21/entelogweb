@@ -41,9 +41,10 @@ export default function DashboardScreen() {
       const customersData = await customersRes.json();
 
       setStats(statsData);
-      setTrendData(trendData);
-      setTopProducts(productsData);
-      setTopCustomers(customersData);
+      // Ensure trendData is array, if error object comes it might crash charts
+      setTrendData(Array.isArray(trendData) ? trendData : []);
+      setTopProducts(Array.isArray(productsData) ? productsData : []);
+      setTopCustomers(Array.isArray(customersData) ? customersData : []);
 
     } catch (error: any) {
       console.error('Error fetching data:', error);
