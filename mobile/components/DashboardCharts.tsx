@@ -41,7 +41,7 @@ export const SalesTrendChart = ({ data, period }: { data: any[], period: string 
                 data2={lineData2}
                 height={220}
                 width={width - 80}
-                spacing={data.length > 20 ? 20 : 45} // Adjust spacing for daily (24 items) vs weekly (7)
+                spacing={(data || []).length > 20 ? 20 : 45} // Adjust spacing for daily (24 items) vs weekly (7)
                 initialSpacing={20}
                 color1="#3b82f6"
                 color2="#ef4444"
@@ -150,6 +150,7 @@ export const TopProductsChart = ({ data }: { data: any[] }) => {
 };
 
 export const TopCustomersChart = ({ data, type, onTypeChange }: { data: any[], type: 'sales' | 'purchases', onTypeChange: (t: 'sales' | 'purchases') => void }) => {
+    if (!data || data.length === 0) return null;
     // Pie Chart Data
     const pieData = (data || []).map((item, index) => ({
         value: item.value,
