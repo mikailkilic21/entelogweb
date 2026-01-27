@@ -394,3 +394,230 @@ exports.getCheckStats = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+exports.getOverdueChecks = async (req, res) => {
+    try {
+        const config = getConfig();
+        const firm = config.firmNo || '113';
+        const period = config.periodNo || '01';
+        const cscardTable = `LG_${firm}_${period}_CSCARD`;
+        const clcardTable = `LG_${firm}_CLCARD`;
+        const cstransTable = `LG_${firm}_${period}_CSTRANS`;
+
+        // We want checks with DueDate < Today (and not paid/closed/void completely)
+        // DOC 1: Customer Check
+        // DOC 3: Own Check
+
+        // Categories:
+        // 1. Own Checks (Vadesi Geçmiş Kendi Çeklerimiz) -> Status 7 (Issued), 9 (Karşılıksız), 11 (Protestolu) 
+        //    (Excluded: 8 Paid, 10 Returned, 12 Cancelled in some contexts?)
+        //    Usually Own check is Open/Issued if status is 7. 
+
+        // 2. Customer Checks (Vadesi Geçmiş Müşteri Çekleri)
+        //    - Portfolio (Portföyde) -> Status 1
+        //    - Endorsed (Ciro Edildi) -> Status 2
+        //    - Also: Bank (3, 6), Protested (5), Unpaid (11) if relevant.
+        //    For now, user explicitly asked for "Portfolio" and "Endorsed" separate in Customer Checks.
+
+        const query = `
+            SELECT 
+                C.LOGICALREF as id,
+                C.NEWSERINO as serialNo,
+                C.PORTFOYNO as portfolioNo,
+                C.DUEDATE as dueDate,
+                C.AMOUNT as amount,
+                C.CURRSTAT as status,
+                C.DOC as docType,
+                C.BANKNAME as bankName,
+                CA.DEFINITION_ as clientName,
+                C.OWING as debtorName
+            FROM ${cscardTable} C
+            OUTER APPLY (
+                SELECT TOP 1 CARDREF FROM ${cstransTable} 
+                WHERE CSREF = C.LOGICALREF AND STATUS IN (1, 7)
+                ORDER BY DATE_ ASC, LOGICALREF ASC
+            ) T
+            LEFT JOIN ${clcardTable} CA ON T.CARDREF = CA.LOGICALREF
+            WHERE 
+                C.DUEDATE < CAST(GETDATE() AS DATE) -- Overdue
+                AND (
+                    -- Customer Checks: Portfolio (1), Endorsed (2), Bank (3,6), Protest (5), Unpaid (11)
+                    (C.DOC = 1 AND C.CURRSTAT IN (1, 2, 3, 5, 6, 11))
+                    OR
+                    -- Own Checks: Issued (7), Protest (11), Unpaid/Dishonored (9)
+                    (C.DOC = 3 AND C.CURRSTAT IN (7, 9, 11))
+                )
+            ORDER BY C.DUEDATE ASC
+        `;
+
+        const result = await sql.query(query);
+
+        const checks = result.recordset.map(c => {
+            let category = 'other';
+            let categoryLabel = 'Diğer';
+
+            // Identify Category
+            if (c.docType === 3) {
+                category = 'own_overdue';
+                categoryLabel = 'Şirket Çeki (Vadesi Geçmiş)';
+            } else if (c.docType === 1) {
+                if (c.status === 1) {
+                    category = 'customer_portfolio';
+                    categoryLabel = 'Müşteri Çeki (Portföyde)';
+                } else if (c.status === 2) {
+                    category = 'customer_endorsed';
+                    categoryLabel = 'Müşteri Çeki (Cirolu)';
+                } else {
+                    category = 'customer_other';
+                    categoryLabel = 'Müşteri Çeki (Diğer)';
+                }
+            }
+
+            const mapStatus = (status, type) => {
+                if (type === 3) { // Own
+                    if (status === 7) return 'Portföyde (Kendi)';
+                    if (status === 9) return 'Karşılıksız';
+                    if (status === 11) return 'Protestolu';
+                    return 'İşlemde';
+                }
+                // Customer
+                if (status === 1) return 'Portföyde';
+                if (status === 2) return 'Ciro Edildi';
+                if (status === 3) return 'Bankada (Tahsil)';
+                if (status === 6) return 'Bankada (Teminat)';
+                if (status === 5) return 'Protestolu';
+                if (status === 11) return 'Karşılıksız';
+                return 'Diğer';
+            };
+
+            return {
+                ...c,
+                dueDate: c.dueDate ? c.dueDate.toISOString().split('T')[0] : null,
+                statusLabel: mapStatus(c.status, c.docType),
+                category,
+                categoryLabel,
+                clientName: c.clientName || c.debtorName || 'Bilinmeyen Cari'
+            };
+        });
+
+        res.json(checks);
+
+    } catch (err) {
+        console.error('❌ getOverdueChecks Error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+
+};
+
+exports.getCheckTrend = async (req, res) => {
+    try {
+        const config = getConfig();
+        const firm = config.firmNo || '113';
+        const period = config.periodNo || '01';
+        const cscardTable = `LG_${firm}_${period}_CSCARD`;
+
+        // Period mapping: daily, weekly, monthly, yearly
+        const timePeriod = req.query.period || 'weekly';
+
+        let groupByClause = 'DUEDATE';
+        let selectDate = 'DUEDATE';
+        let orderByClause = 'DUEDATE';
+        let whereClause = "WHERE DOC IN (1, 2)"; // Customer Checks
+
+        // Dynamic SQL configuration based on period
+        switch (timePeriod) {
+            case 'daily':
+                whereClause += ` AND DUEDATE >= DATEADD(day, -30, GETDATE()) AND DUEDATE <= DATEADD(day, 60, GETDATE())`;
+                selectDate = "FORMAT(DUEDATE, 'yyyy-MM-dd')";
+                groupByClause = "DUEDATE";
+                break;
+
+            case 'weekly':
+                whereClause += ` AND DUEDATE >= DATEADD(week, -12, GETDATE()) AND DUEDATE <= DATEADD(week, 12, GETDATE())`;
+                selectDate = "FORMAT(DATEADD(week, DATEDIFF(week, 0, DUEDATE), 0), 'yyyy-MM-dd')";
+                groupByClause = "DATEADD(week, DATEDIFF(week, 0, DUEDATE), 0)";
+                break;
+
+            case 'monthly':
+                whereClause += ` AND DUEDATE >= DATEADD(month, -12, GETDATE()) AND DUEDATE <= DATEADD(month, 12, GETDATE())`;
+                selectDate = "FORMAT(DUEDATE, 'yyyy-MM')";
+                groupByClause = "YEAR(DUEDATE), MONTH(DUEDATE), FORMAT(DUEDATE, 'yyyy-MM')";
+                orderByClause = "YEAR(DUEDATE), MONTH(DUEDATE)";
+                break;
+
+            case 'yearly':
+                selectDate = "CAST(YEAR(DUEDATE) AS VARCHAR)";
+                groupByClause = "YEAR(DUEDATE)";
+                break;
+
+            default:
+                whereClause += ` AND DUEDATE >= DATEADD(week, -12, GETDATE())`;
+                selectDate = "FORMAT(DATEADD(week, DATEDIFF(week, 0, DUEDATE), 0), 'yyyy-MM-dd')";
+                groupByClause = "DATEADD(week, DATEDIFF(week, 0, DUEDATE), 0)";
+                break;
+        }
+
+        const query = `
+            SELECT 
+                ${selectDate} as date,
+                SUM(AMOUNT) as amount,
+                COUNT(*) as count
+            FROM ${cscardTable}
+            ${whereClause}
+            GROUP BY ${groupByClause}
+            ORDER BY ${groupByClause} ASC
+        `;
+
+        const result = await sql.query(query);
+        const formatted = result.recordset.map(item => ({
+            date: item.date,
+            amount: item.amount || 0,
+            count: item.count || 0
+        }));
+
+        res.json(formatted);
+
+    } catch (err) {
+        console.error('❌ getCheckTrend Error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.getTopCheckIssuers = async (req, res) => {
+    try {
+        const config = getConfig();
+        const firm = config.firmNo || '113';
+        const period = config.periodNo || '01';
+        const cscardTable = `LG_${firm}_${period}_CSCARD`;
+        const cstransTable = `LG_${firm}_${period}_CSTRANS`;
+        const clcardTable = `LG_${firm}_CLCARD`;
+
+        // Top 5 Customers by Due Amount (Customer Checks - DOC 1/2)
+        const query = `
+            SELECT TOP 5
+                CA.DEFINITION_ as name,
+                SUM(C.AMOUNT) as value
+            FROM ${cscardTable} C
+            OUTER APPLY (
+                SELECT TOP 1 CARDREF FROM ${cstransTable} 
+                WHERE CSREF = C.LOGICALREF AND STATUS IN (1, 7)
+                ORDER BY DATE_ ASC, LOGICALREF ASC
+            ) T
+            LEFT JOIN ${clcardTable} CA ON T.CARDREF = CA.LOGICALREF
+            WHERE C.DOC IN (1, 2)
+            GROUP BY CA.DEFINITION_
+            ORDER BY value DESC
+        `;
+
+        const result = await sql.query(query);
+        const formatted = result.recordset.map(item => ({
+            name: item.name || 'Bilinmeyen Cari',
+            value: item.value || 0
+        }));
+
+        res.json(formatted);
+    } catch (err) {
+        console.error('❌ getTopCheckIssuers Error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+};

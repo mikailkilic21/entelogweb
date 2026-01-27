@@ -47,11 +47,14 @@ exports.getOrders = async (req, res) => {
         // We use the aggregation from OUTER APPLY: SStat.TotalQty, SStat.ShippedQty
         if (status === 'approved' && shipmentStatus && shipmentStatus !== 'all') {
             if (shipmentStatus === 'waiting') {
-                whereClause += ' AND (ISNULL(SStat.ShippedQty, 0) = 0)';
+                // Waiting: No quantity to ship OR nothing shipped yet
+                whereClause += ' AND (ISNULL(SStat.TotalQty, 0) = 0 OR ISNULL(SStat.ShippedQty, 0) = 0)';
             } else if (shipmentStatus === 'partial') {
+                // Partial: Something shipped but less than total (and Total > 0 implied by logic)
                 whereClause += ' AND (ISNULL(SStat.ShippedQty, 0) > 0 AND ISNULL(SStat.ShippedQty, 0) < SStat.TotalQty)';
             } else if (shipmentStatus === 'closed') {
-                whereClause += ' AND (ISNULL(SStat.ShippedQty, 0) >= SStat.TotalQty)';
+                // Closed: Shipped >= Total AND Total > 0 (otherwise it's waiting)
+                whereClause += ' AND (ISNULL(SStat.TotalQty, 0) > 0 AND ISNULL(SStat.ShippedQty, 0) >= SStat.TotalQty)';
             }
         }
 
@@ -83,6 +86,7 @@ exports.getOrders = async (req, res) => {
                 O.STATUS as status,
                 CASE 
                     WHEN O.STATUS = 1 THEN 'proposal'
+                    WHEN SStat.TotalQty IS NULL OR SStat.TotalQty = 0 THEN 'waiting'
                     WHEN ISNULL(SStat.ShippedQty, 0) >= SStat.TotalQty THEN 'closed'
                     WHEN ISNULL(SStat.ShippedQty, 0) > 0 THEN 'partial'
                     ELSE 'waiting'
@@ -195,5 +199,37 @@ exports.getOrderDetails = async (req, res) => {
     } catch (err) {
         console.error('❌ getOrderDetails Error:', err.message);
         res.status(500).json({ error: err.message });
+    }
+};
+
+// Get top 5 products from order items
+exports.getTopProducts = async (req, res) => {
+    try {
+        const config = getConfig();
+        const firm = config.firmNo || '113';
+        const period = config.periodNo || '01';
+        const orflineTable = `LG_${firm}_${period}_ORFLINE`;
+        const itemsTable = `LG_${firm}_ITEMS`;
+
+        const limit = parseInt(req.query.limit) || 5;
+
+        const query = `
+            SELECT TOP ${limit}
+                I.CODE as productCode,
+                I.NAME as name,
+                COUNT(DISTINCT O.LOGICALREF) as count
+            FROM ${orflineTable} O
+            INNER JOIN ${itemsTable} I ON O.STOCKREF = I.LOGICALREF
+            WHERE O.LINETYPE = 0  -- Only product lines
+            AND O.CANCELLED = 0   -- Not cancelled
+            GROUP BY I.CODE, I.NAME
+            ORDER BY count DESC
+        `;
+
+        const result = await sql.query(query);
+        res.json(result.recordset);
+    } catch (error) {
+        console.error('Error fetching top products:', error);
+        res.status(500).json({ error: 'Failed to fetch top products' });
     }
 };

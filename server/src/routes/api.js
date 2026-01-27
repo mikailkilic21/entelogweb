@@ -51,14 +51,18 @@ router.get('/accounts/:id/orders', accountsController.getAccountOrders);
 // Check Routes
 const checksController = require('../controllers/checksController');
 router.get('/checks/stats', checksController.getCheckStats);
+router.get('/checks/stats/trend', checksController.getCheckTrend);
+router.get('/checks/stats/top-issuers', checksController.getTopCheckIssuers);
 router.get('/checks/payroll/:id', checksController.getPayrollDetails);
 router.get('/checks', checksController.getChecks);
 router.get('/checks/recent', checksController.getRecentChecks);
 router.get('/checks/upcoming', checksController.getUpcomingChecks);
+router.get('/checks/overdue', checksController.getOverdueChecks);
 
 // Order Routes
 const ordersController = require('../controllers/ordersController');
 router.get('/orders', ordersController.getOrders);
+router.get('/orders/top-products', ordersController.getTopProducts);
 router.get('/orders/:id', ordersController.getOrderDetails);
 
 // Product Routes
