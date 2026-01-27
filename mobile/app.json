@@ -4,17 +4,19 @@
     "slug": "entelog-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/beyazlogo.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "entelog-mobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.entelog.mobile"
     },
     "android": {
+      "package": "com.entelog.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
-        "foregroundImage": "./assets/images/beyazlogo.png"
+        "foregroundImage": "./assets/images/icon.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false

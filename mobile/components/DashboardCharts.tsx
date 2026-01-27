@@ -9,8 +9,6 @@ export const SalesTrendChart = ({ data, period }: { data: any[], period: string 
     // Determine label format based on period
     const getLabel = (dateStr: string) => {
         if (!dateStr) return '';
-        // Backend now returns pre-formatted labels for daily (00:00), weekly (Mon), monthly (Hafta 1)
-        // Only Yearly might need parsing if it returns yyyy-MM
         if (period === 'yearly' && dateStr.includes('-')) {
             const parts = dateStr.split('-');
             return parts.length > 1 ? parts[1] : dateStr;
@@ -18,17 +16,28 @@ export const SalesTrendChart = ({ data, period }: { data: any[], period: string 
         return dateStr;
     };
 
+    // Ensure data is array
+    const validData = Array.isArray(data) ? data : [];
+
     // Transform data for chart
-    const lineData = (data || []).map(item => ({
+    const lineData = validData.filter(item => item != null).map(item => ({
         value: item.sales || 0,
         label: getLabel(item.date),
-        dataPointText: (item.sales / 1000).toFixed(1) + 'k',
+        dataPointText: ((item.sales || 0) / 1000).toFixed(1) + 'k',
     }));
 
-    const lineData2 = (data || []).map(item => ({
+    const lineData2 = validData.filter(item => item != null).map(item => ({
         value: item.purchase || 0,
-        dataPointText: (item.purchase / 1000).toFixed(1) + 'k',
+        dataPointText: ((item.purchase || 0) / 1000).toFixed(1) + 'k',
     }));
+
+    if (validData.length === 0) {
+        return (
+            <View className="bg-slate-900/50 p-4 rounded-3xl border border-slate-800 mb-6">
+                <Text className="text-slate-500 text-center py-10">Veri yok</Text>
+            </View>
+        );
+    }
 
     return (
         <View className="bg-slate-900/50 p-4 rounded-3xl border border-slate-800 mb-6">
@@ -41,7 +50,7 @@ export const SalesTrendChart = ({ data, period }: { data: any[], period: string 
                 data2={lineData2}
                 height={220}
                 width={width - 80}
-                spacing={data.length > 20 ? 20 : 45} // Adjust spacing for daily (24 items) vs weekly (7)
+                spacing={validData.length > 20 ? 20 : 45} // Adjust spacing for daily (24 items) vs weekly (7)
                 initialSpacing={20}
                 color1="#3b82f6"
                 color2="#ef4444"
@@ -113,14 +122,14 @@ export const SalesTrendChart = ({ data, period }: { data: any[], period: string 
 export const TopProductsChart = ({ data }: { data: any[] }) => {
     if (!data || data.length === 0) return null;
 
-    const barData = data.map((item, index) => ({
-        value: item.value,
+    const barData = data.filter(item => item != null).map((item, index) => ({
+        value: item.value || 0,
         frontColor: index === 0 ? '#fbbf24' : '#10b981',
         gradientColor: index === 0 ? '#d97706' : '#059669',
-        label: item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name, // Longer truncation
+        label: (item.name || '').length > 15 ? (item.name || '').substring(0, 15) + '...' : (item.name || 'Bilinmiyor'),
         topLabelComponent: () => (
             <Text style={{ color: '#94a3b8', fontSize: 10, marginBottom: 4 }}>
-                {(item.value / 1000).toFixed(0)}k
+                {((item.value || 0) / 1000).toFixed(0)}k
             </Text>
         ),
     }));
@@ -150,9 +159,11 @@ export const TopProductsChart = ({ data }: { data: any[] }) => {
 };
 
 export const TopCustomersChart = ({ data, type, onTypeChange }: { data: any[], type: 'sales' | 'purchases', onTypeChange: (t: 'sales' | 'purchases') => void }) => {
+    if (!data || !Array.isArray(data) || data.length === 0) return null;
     // Pie Chart Data
-    const pieData = (data || []).map((item, index) => ({
-        value: item.value,
+    const validData = data.filter(item => item != null);
+    const pieData = validData.map((item, index) => ({
+        value: item.value || 0,
         color: ['#8b5cf6', '#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4'][index % 5],
         text: '', // No text on slice to keep clean
     }));
@@ -190,7 +201,7 @@ export const TopCustomersChart = ({ data, type, onTypeChange }: { data: any[], t
                         innerRadius={45}
                         innerCircleColor={'#1e293b'}
                         centerLabelComponent={() => {
-                            const total = data.reduce((acc, curr) => acc + curr.value, 0);
+                            const total = validData.reduce((acc, curr) => acc + (curr.value || 0), 0);
                             return (
                                 <View style={{ justifyContent: 'center', alignItems: 'center' }}>
                                     <Text style={{ fontSize: 18, color: 'white', fontWeight: 'bold' }}>
