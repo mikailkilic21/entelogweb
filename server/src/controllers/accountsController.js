@@ -81,7 +81,8 @@ exports.getAccounts = async (req, res) => {
       )
       SELECT TOP ${limit} *
       FROM AccountBalances
-      WHERE ABS(balance) > 0.1  -- Filter out zero balances (allowing for small float diffs)
+
+      WHERE (${req.query.includeZeroBalance === 'true' ? '1=1' : 'ABS(balance) > 0.1'})
       
       -- Positive Balance (+): Customer owes us money (Borç Bakiyesi / Borçlu)
       -- Negative Balance (-): We owe supplier money (Alacak Bakiyesi / Alacaklı)

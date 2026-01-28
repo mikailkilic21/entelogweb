@@ -2,6 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-slate-900 text-slate-100;
+@layer base {
+  body {
+    @apply bg-slate-900 text-slate-100;
+  }
+}
+
+@media print {
+
+  /* Hide sidebar, header, and other layout elements globally */
+  .layout-sidebar,
+  .layout-header,
+  nav,
+  aside {
+    display: none !important;
+  }
+
+  /* Reset background and text colors for print */
+  body,
+  .print-container {
+    background-color: white !important;
+    color: black !important;
+  }
+
+  /* Ensure the print content takes full width */
+  .print-full-width {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
 }

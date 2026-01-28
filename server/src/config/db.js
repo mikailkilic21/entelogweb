@@ -47,8 +47,10 @@ const connectDB = async () => {
             }
         };
 
-        // Close existing pool if any
         if (pool) {
+            if (pool.connected) {
+                return pool;
+            }
             await pool.close();
         }
 
@@ -57,7 +59,6 @@ const connectDB = async () => {
         return pool;
     } catch (err) {
         console.error('❌ Veritabanı bağlantı hatası:', err.message);
-        // Don't exit process, just throw so controller can catch
         throw err;
     }
 };

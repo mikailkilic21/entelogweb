@@ -90,6 +90,9 @@ router.get('/banks/finance-transactions', banksController.getBankFinanceTransact
 const dbsController = require('../controllers/dbsController');
 router.get('/dbs/settings', dbsController.getSettings);
 router.post('/dbs/settings', dbsController.saveSettings);
+router.get('/dbs/settings/global', dbsController.getGlobalSettings);
+router.post('/dbs/settings/global', dbsController.saveGlobalSettings);
 router.get('/dbs/invoices', dbsController.getDBSInvoices);
+router.get('/dbs/invoice/:id', dbsController.getInvoiceDetails);
 
 module.exports = router;

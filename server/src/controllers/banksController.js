@@ -1,7 +1,8 @@
-const { sql, getConfig } = require('../config/db');
+const { sql, getConfig, connectDB } = require('../config/db');
 
 exports.getBanks = async (req, res) => {
     try {
+        await connectDB();
         const { firmNo, periodNo } = await getConfig();
         const firm = firmNo.toString().padStart(3, '0');
         const period = periodNo.toString().padStart(2, '0');
@@ -47,6 +48,7 @@ exports.getBanks = async (req, res) => {
 
 exports.getBankStats = async (req, res) => {
     try {
+        await connectDB();
         const { firmNo, periodNo } = await getConfig();
         const firm = firmNo.toString().padStart(3, '0');
         const period = periodNo.toString().padStart(2, '0');
@@ -111,6 +113,7 @@ exports.getBankStats = async (req, res) => {
 
 exports.getBankFinanceTransactions = async (req, res) => {
     try {
+        await connectDB();
         const { firmNo, periodNo } = await getConfig();
         const firm = firmNo.toString().padStart(3, '0');
         const period = periodNo.toString().padStart(2, '0');
