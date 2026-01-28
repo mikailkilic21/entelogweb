@@ -22,11 +22,20 @@ import {
     Area
 } from 'recharts';
 import { DataTable } from '../components/ui/data-table';
+import BankCharts from '../components/BankCharts';
+import FinanceDetailModal from '../components/FinanceDetailModal';
+import DBSSettings from '../components/DBSSettings';
+import DBSInvoiceList from '../components/DBSInvoiceList';
 
 const Banks = () => {
-    const [viewMode, setViewMode] = useState('modern'); // 'modern', 'list'
+    const [viewMode, setViewMode] = useState('list'); // 'modern', 'list'
     const [activeTab, setActiveTab] = useState('accounts'); // 'accounts', 'pos', 'cc', 'havale-in', 'havale-out'
+    const [activeDBSTab, setActiveDBSTab] = useState('list'); // 'list' | 'settings'
     const [search, setSearch] = useState('');
+
+    // Modal State
+    const [selectedTransaction, setSelectedTransaction] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Data States
     const [banks, setBanks] = useState([]);
@@ -57,7 +66,7 @@ const Banks = () => {
             setStatsData(statsJson);
 
             // Fetch transactions based on active tab
-            if (activeTab !== 'accounts') {
+            if (activeTab !== 'accounts' && activeTab !== 'dbs') {
                 const txRes = await fetch(`/api/banks/finance-transactions?type=${activeTab}`);
                 if (!txRes.ok) throw new Error('İşlemler alınamadı');
                 const txData = await txRes.json();
@@ -82,6 +91,12 @@ const Banks = () => {
 
     // Format Currency
     const formatCurrency = (val) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(val || 0);
+
+    // Handle Row Click
+    const handleTransactionClick = (transaction) => {
+        setSelectedTransaction(transaction);
+        setIsModalOpen(true);
+    };
 
     // Columns for different types
     const bankColumns = [
@@ -111,14 +126,14 @@ const Banks = () => {
             cell: ({ row }) => <span className="font-mono text-sm">{row.original.iban}</span>
         },
         {
-            header: 'Bakiye',
+            header: <div className="text-right">Bakiye</div>,
             accessorKey: 'balance',
             cell: ({ row }) => {
                 const amount = row.original.balance;
                 return (
-                    <span className={`font-bold ${amount >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <div className={`font-bold text-right ${amount >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {formatCurrency(amount)}
-                    </span>
+                    </div>
                 );
             }
         }
@@ -156,16 +171,16 @@ const Banks = () => {
             cell: ({ row }) => <span className="text-slate-500">{row.original.bankAccount}</span>
         },
         {
-            header: 'Tutar',
+            header: <div className="text-right">Tutar</div>,
             accessorKey: 'amount',
             cell: ({ row }) => {
                 const { trcode, sign, amount } = row.original;
                 // Sign logic based on TRCODE
                 const isOutflow = (trcode === 72 && sign === 0) || (trcode === 4 && sign === 1);
                 return (
-                    <span className={`font-bold ${!isOutflow ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <div className={`font-bold text-right ${!isOutflow ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {isOutflow ? '-' : ''}{formatCurrency(amount)}
-                    </span>
+                    </div>
                 );
             }
         }
@@ -208,6 +223,15 @@ const Banks = () => {
                     </button>
                 </div>
             </div>
+
+            {/* Charts Section */}
+            {statsData && statsData.chart && (
+                <BankCharts
+                    stats={statsData.stats || {}}
+                    banks={banks}
+                    dailyMovements={statsData.chart}
+                />
+            )}
 
             {/* Summary Grid */}
             {statsData && statsData.stats && (
@@ -261,7 +285,8 @@ const Banks = () => {
                         { id: 'pos', label: 'POS Tahsilatları', icon: HandCoins },
                         { id: 'cc', label: 'Kredi Kartı', icon: CreditCard },
                         { id: 'havale-in', label: 'Gelen Havale', icon: DownloadCloud },
-                        { id: 'havale-out', label: 'Giden Havale', icon: SendHorizontal }
+                        { id: 'havale-out', label: 'Giden Havale', icon: SendHorizontal },
+                        { id: 'dbs', label: 'DBS İşlemleri', icon: Receipt }
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -297,17 +322,40 @@ const Banks = () => {
                             ))}
                         </div>
                     ) : (
-                        <div className="bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden text-xs">
-                            <DataTable columns={bankColumns} data={banks || []} />
+                        <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden backdrop-blur-sm">
+                            <DataTable columns={bankColumns} data={banks} searchKey="bankName" />
                         </div>
                     )
+                ) : activeTab === 'dbs' ? (
+                    <div className="space-y-6">
+                        <div className="flex p-1 bg-slate-900/50 rounded-xl border border-slate-800 w-fit">
+                            <button
+                                onClick={() => setActiveDBSTab('list')}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeDBSTab === 'list' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                            >
+                                DBS Ödeme Listesi
+                            </button>
+                            <button
+                                onClick={() => setActiveDBSTab('settings')}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeDBSTab === 'settings' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                            >
+                                Ayarlar & Müşteriler
+                            </button>
+                        </div>
+
+                        {activeDBSTab === 'settings' ? <DBSSettings /> : <DBSInvoiceList />}
+                    </div>
                 ) : (
                     <div className="space-y-6">
                         {viewMode === 'modern' ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {financeTransactions.slice(0, 15).map((tx) => (
-                                    <div key={tx.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4 flex gap-4 items-center group hover:border-white/20 transition-all">
-                                        <div className={`p-3 rounded-xl ${tx.trcode === 70 || tx.trcode === 3 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                    <div
+                                        key={tx.id}
+                                        onClick={() => handleTransactionClick(tx)}
+                                        className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4 flex gap-4 items-center group hover:border-blue-500/50 hover:bg-white/10 transition-all cursor-pointer hover:shadow-lg hover:shadow-blue-500/10"
+                                    >
+                                        <div className={`p-3 rounded-xl ${tx.trcode === 70 || tx.trcode === 3 ? 'bg-emerald-500/10 text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white transition-colors' : 'bg-rose-500/10 text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-colors'}`}>
                                             {tx.trcode === 70 ? <HandCoins size={20} /> : tx.trcode === 72 ? <Receipt size={20} /> : tx.trcode === 3 ? <DownloadCloud size={20} /> : <SendHorizontal size={20} />}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -330,14 +378,25 @@ const Banks = () => {
                                 )}
                             </div>
                         ) : (
-                            <div className="bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden text-xs">
-                                <DataTable columns={financeColumns} data={financeTransactions || []} />
+                            <div className="bg-slate-900/50 backdrop-blur-sm rounded-xl shadow-xl border border-slate-700/50 overflow-hidden text-xs">
+                                <DataTable
+                                    columns={financeColumns}
+                                    data={financeTransactions || []}
+                                    onRowClick={handleTransactionClick}
+                                    className="cursor-pointer hover:bg-white/5"
+                                />
                             </div>
                         )}
                     </div>
                 )}
             </div>
-        </div>
+
+            <FinanceDetailModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                transaction={selectedTransaction}
+            />
+        </div >
     );
 };
 

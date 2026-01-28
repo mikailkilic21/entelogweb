@@ -86,4 +86,10 @@ router.get('/banks', banksController.getBanks);
 router.get('/banks/stats', banksController.getBankStats);
 router.get('/banks/finance-transactions', banksController.getBankFinanceTransactions);
 
+// DBS Routes
+const dbsController = require('../controllers/dbsController');
+router.get('/dbs/settings', dbsController.getSettings);
+router.post('/dbs/settings', dbsController.saveSettings);
+router.get('/dbs/invoices', dbsController.getDBSInvoices);
+
 module.exports = router;

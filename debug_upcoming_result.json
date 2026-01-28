@@ -1,0 +1,40 @@
+{
+  "total": 597,
+  "counts": {
+    "own": 86,
+    "portfolio": 148,
+    "endorsed": 363
+  },
+  "sample": [
+    {
+      "id": 78,
+      "status": 1,
+      "type": "customer",
+      "clientName": "DURMAZ OTO.PET.ÜRÜN.İNŞ.SAN. VE TİC.A.Ş"
+    },
+    {
+      "id": 231,
+      "status": 1,
+      "type": "customer",
+      "clientName": "OPTİMAL MÜHENDİSLİK OTO. ENERJİ LDT.ŞTİ."
+    },
+    {
+      "id": 390,
+      "status": 9,
+      "type": "own",
+      "clientName": "YAKISIKLI ELEKTRIK ELEKTRONİK İNŞ. NAKL. PLAS.SAN.TİC.LTD.ŞTİ."
+    },
+    {
+      "id": 391,
+      "status": 9,
+      "type": "own",
+      "clientName": "YAKIŞIKLI ELEK.ELEKTRONIK INS.NAK.PLAS.SAN.TIC.LTD.STI- 2025"
+    },
+    {
+      "id": 392,
+      "status": 9,
+      "type": "own",
+      "clientName": "YAKIŞIKLI ELEK.ELEKTRONIK INS.NAK.PLAS.SAN.TIC.LTD.STI- 2025"
+    }
+  ]
+}

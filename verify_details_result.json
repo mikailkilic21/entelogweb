@@ -1,0 +1,18 @@
+{
+  "count": 73,
+  "isSortedDesc": true,
+  "hasDetails": true,
+  "sample": {
+    "id": 4816,
+    "date": "2026-01-28T00:00:00.000Z",
+    "trcode": 70,
+    "type": "Müşteri KK Tahsilatı (POS)",
+    "clientName": "ALATAŞ ELK.İNŞ.MET. GIDA NAK.SAN.TİC.LTD.ŞTİ.",
+    "bankAccount": "HALK BANKASI - DAĞKAPI -375",
+    "amount": 175,
+    "sign": 1,
+    "description": "",
+    "ficheNo": "0000000000000070",
+    "speCode": ""
+  }
+}

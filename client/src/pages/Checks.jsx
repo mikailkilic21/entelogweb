@@ -324,15 +324,28 @@ const Checks = () => {
 
                 <div className="px-6 pb-4 bg-slate-900/80 border-b border-slate-800">
                     <div className="flex gap-2">
-                        {['all', 'own', 'portfolio', 'endorsed'].map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setUpcomingCheckTab(tab)}
-                                className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${upcomingCheckTab === tab ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-                            >
-                                {tab === 'all' ? 'Tümü' : tab === 'own' ? 'Kendi Çeklerimiz' : tab === 'portfolio' ? 'Müşteri (Portföy)' : 'Müşteri (Cirolu)'}
-                            </button>
-                        ))}
+                        {['all', 'own', 'portfolio', 'endorsed'].map(tab => {
+                            const count = filteredUpcoming.filter(check => {
+                                if (tab === 'all') return true;
+                                if (tab === 'own') return check.type === 'own' || (Number(check.status) >= 7 && Number(check.status) <= 13);
+                                if (tab === 'portfolio') return Number(check.status) === 1;
+                                if (tab === 'endorsed') return Number(check.status) === 2;
+                                return false;
+                            }).length;
+
+                            return (
+                                <button
+                                    key={tab}
+                                    onClick={() => setUpcomingCheckTab(tab)}
+                                    className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${upcomingCheckTab === tab ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                                >
+                                    {tab === 'all' ? `Tümü (${count})` :
+                                        tab === 'own' ? `Kendi Çeklerimiz (${count})` :
+                                            tab === 'portfolio' ? `Müşteri (Portföy) (${count})` :
+                                                `Müşteri (Cirolu) (${count})`}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -340,8 +353,9 @@ const Checks = () => {
                     <table className="w-full text-sm text-left">
                         <thead className="bg-slate-950 text-slate-500 uppercase font-medium text-xs">
                             <tr>
+                                <th className="px-6 py-3">Seri No</th>
                                 <th className="px-6 py-3">Vade</th>
-                                <th className="px-6 py-3">Cari Ünvanı</th>
+                                <th className="px-6 py-3">Firma Ünvanı</th>
                                 <th className="px-6 py-3">Banka</th>
                                 <th className="px-6 py-3 text-right">Tutar</th>
                                 <th className="px-6 py-3">Ciro Edilen / Ödenen</th>
@@ -349,23 +363,22 @@ const Checks = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/50">
-                            {filteredUpcoming.filter(check => {
-                                if (upcomingCheckTab === 'all') return true;
-                                if (upcomingCheckTab === 'own') return check.type === 'own' || (check.status >= 7 && check.status <= 13);
-                                if (upcomingCheckTab === 'portfolio') return check.status === 1;
-                                if (upcomingCheckTab === 'endorsed') return check.status === 2;
-                                return true;
-                            }).length === 0 ? (
-                                <tr><td colSpan="6" className="px-6 py-8 text-center text-slate-500">Seçilen kategoride yaklaşan çek bulunmamaktadır.</td></tr>
-                            ) : (
-                                filteredUpcoming.filter(check => {
+                            {(() => {
+                                const visibleChecks = filteredUpcoming.filter(check => {
                                     if (upcomingCheckTab === 'all') return true;
-                                    if (upcomingCheckTab === 'own') return check.type === 'own' || (check.status >= 7 && check.status <= 13);
-                                    if (upcomingCheckTab === 'portfolio') return check.status === 1;
-                                    if (upcomingCheckTab === 'endorsed') return check.status === 2;
-                                    return true;
-                                }).map((check, idx) => (
+                                    if (upcomingCheckTab === 'own') return check.type === 'own' || (Number(check.status) >= 7 && Number(check.status) <= 13);
+                                    if (upcomingCheckTab === 'portfolio') return Number(check.status) === 1;
+                                    if (upcomingCheckTab === 'endorsed') return Number(check.status) === 2;
+                                    return false;
+                                });
+
+                                if (visibleChecks.length === 0) {
+                                    return <tr><td colSpan="7" className="px-6 py-8 text-center text-slate-500">Seçilen kategoride yaklaşan çek bulunmamaktadır.</td></tr>;
+                                }
+
+                                return visibleChecks.map((check, idx) => (
                                     <tr key={check.id} onClick={() => setActiveCheck(check)} className={`${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/10'} hover:bg-indigo-900/10 transition-colors cursor-pointer group`}>
+                                        <td className="px-6 py-3 font-mono text-slate-100 font-bold text-sm tracking-wide">{check.serialNo}</td>
                                         <td className="px-6 py-3 font-medium text-slate-200">{formatDate(check.dueDate)}</td>
                                         <td className="px-6 py-3 text-slate-300">
                                             <div className="flex items-center gap-2">
@@ -385,8 +398,8 @@ const Checks = () => {
                                         </td>
                                         <td className="px-6 py-3 text-center">{getStatusBadge(check.statusLabel, check.type)}</td>
                                     </tr>
-                                ))
-                            )}
+                                ));
+                            })()}
                         </tbody>
                     </table>
                 </div>
@@ -395,13 +408,16 @@ const Checks = () => {
             {/* Main Tabs and Search */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-12">
                 <div className="flex p-1 bg-slate-900/50 rounded-xl border border-slate-800">
-                    {['customer', 'own', 'overdue', 'recent'].map(tab => (
+                    {['customer', 'own', 'overdue', 'recent'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === tab ? (tab === 'customer' ? 'bg-blue-600' : tab === 'own' ? 'bg-indigo-600' : tab === 'overdue' ? 'bg-red-600' : 'bg-emerald-600') + ' text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                         >
-                            {tab === 'customer' ? 'Müşteri Çekleri' : tab === 'own' ? 'Kendi Çeklerimiz' : tab === 'overdue' ? 'Vadesi Geçmiş' : 'Son İşlemler'}
+                            {tab === 'customer' && 'Müşteri Çekleri'}
+                            {tab === 'own' && 'Kendi Çeklerimiz'}
+                            {tab === 'overdue' && 'Günü Geçenler'}
+                            {tab === 'recent' && 'Son İşlemler'}
                         </button>
                     ))}
                 </div>
@@ -432,17 +448,17 @@ const Checks = () => {
                     </div>
                 )}
 
-                {/* Own Overdue */}
+                {/* Own Checks Table */}
                 {(activeTab === 'own' || activeTab === 'overdue') && (
                     <div className="bg-slate-900/50 border border-slate-800 rounded-2xl backdrop-blur-xl overflow-hidden">
                         <div className="p-4 bg-slate-950/50 flex items-center gap-2 border-b border-slate-800">
                             <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                            <h3 className="font-semibold text-slate-200">Kendi Çeklerimiz (Ödenmemiş)</h3>
-                            <span className="text-xs text-slate-500 bg-slate-900 px-2 py-0.5 rounded-full ml-auto">{checks.filter(c => c.category === 'own_overdue').length} Kayıt</span>
+                            <h3 className="font-semibold text-slate-200">Kendi Çeklerimiz {activeTab === 'overdue' ? '(Ödenmemiş)' : ''}</h3>
+                            <span className="text-xs text-slate-500 bg-slate-900 px-2 py-0.5 rounded-full ml-auto">{checks.filter(c => activeTab === 'own' || c.category === 'own_overdue').length} Kayıt</span>
                         </div>
                         <table className="w-full">
                             <thead className="bg-slate-950/30 text-xs uppercase text-slate-400 font-medium"><tr><th className="px-6 py-3 text-left">Vade</th><th className="px-6 py-3 text-left">Banka</th><th className="px-6 py-3 text-left">Seri No</th><th className="px-6 py-3 text-right">Tutar</th></tr></thead>
-                            <tbody className="divide-y divide-slate-800">{checks.filter(c => c.category === 'own_overdue').map((check) => (
+                            <tbody className="divide-y divide-slate-800">{checks.filter(c => activeTab === 'own' || c.category === 'own_overdue').map((check) => (
                                 <tr key={check.id} onClick={() => setActiveCheck(check)} className="hover:bg-slate-800/30 transition-colors cursor-pointer"><td className="px-6 py-3 text-red-400 font-medium">{formatDate(check.dueDate)}</td><td className="px-6 py-3 text-slate-300">{check.bankName}</td><td className="px-6 py-3 text-slate-400 text-sm">{check.serialNo}</td><td className="px-6 py-3 text-right font-mono text-slate-200">{formatCurrency(check.amount)}</td></tr>
                             ))}</tbody>
                         </table>
@@ -494,7 +510,7 @@ const Checks = () => {
                         </div>
                         <div className="p-6 space-y-6">
                             <div className="grid grid-cols-2 gap-6">
-                                <div><label className="text-xs text-slate-500 uppercase font-semibold">Cari Hesap</label><p className="text-white font-medium text-lg mt-1 truncate">{activeCheck.clientName || 'Cari Yok'}</p></div>
+                                <div><label className="text-xs text-slate-500 uppercase font-semibold">{activeCheck.type === 'own' ? 'Firma (Alıcı)' : 'Cari Hesap'}</label><p className="text-white font-medium text-lg mt-1 truncate">{activeCheck.clientName || 'Cari Yok'}</p></div>
                                 <div className="text-right"><label className="text-xs text-slate-500 uppercase font-semibold">Tutar</label><p className="text-emerald-400 font-bold text-2xl mt-1 font-mono">{formatCurrency(activeCheck.amount)}</p></div>
                             </div>
                             <div className="grid grid-cols-2 gap-6 p-4 bg-slate-950/50 rounded-xl border border-slate-800">

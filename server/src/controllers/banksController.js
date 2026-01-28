@@ -136,7 +136,10 @@ exports.getBankFinanceTransactions = async (req, res) => {
                     C.DEFINITION_ as clientName,
                     B.DEFINITION_ as bankAccount,
                     L.AMOUNT as amount,
-                    L.SIGN as sign
+                    L.SIGN as sign,
+                    L.LINEEXP as description,
+                    L.TRANNO as ficheNo,
+                    L.SPECODE as speCode
                 FROM ${clfTable} L
                 LEFT JOIN ${clcardTable} C ON L.CLIENTREF = C.LOGICALREF
                 LEFT JOIN ${bankaccTable} B ON L.BANKACCREF = B.LOGICALREF
@@ -157,7 +160,10 @@ exports.getBankFinanceTransactions = async (req, res) => {
                     C.DEFINITION_ as clientName,
                     B.DEFINITION_ as bankAccount,
                     L.AMOUNT as amount,
-                    L.SIGN as sign
+                    L.SIGN as sign,
+                    L.LINEEXP as description,
+                    L.TRANNO as ficheNo,
+                    L.SPECODE as speCode
                 FROM ${bnfTable} L
                 LEFT JOIN ${clcardTable} C ON L.CLIENTREF = C.LOGICALREF
                 LEFT JOIN ${bankaccTable} B ON L.BNACCREF = B.LOGICALREF

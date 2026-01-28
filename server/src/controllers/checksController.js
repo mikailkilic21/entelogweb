@@ -258,6 +258,7 @@ exports.getUpcomingChecks = async (req, res) => {
         const cscardTable = `LG_${firm}_${period}_CSCARD`;
         const clcardTable = `LG_${firm}_CLCARD`;
         const cstransTable = `LG_${firm}_${period}_CSTRANS`;
+        const csrollTable = `LG_${firm}_${period}_CSROLL`;
 
         const query = `
             SELECT 
@@ -268,31 +269,45 @@ exports.getUpcomingChecks = async (req, res) => {
                 C.CURRSTAT as status,
                 C.BANKNAME as bankName,
                 C.DOC as cardType,
-                CA.DEFINITION_ as clientName
+                C.OWING as debtorName,
+                CAE.DEFINITION_ as endorseeName,
+                CASE 
+                    WHEN C.DOC IN (3, 4) THEN COALESCE(CAR.DEFINITION_, C.OWING)
+                    ELSE COALESCE(CA.DEFINITION_, C.OWING)
+                END as derivedClientName
             FROM ${cscardTable} C
             OUTER APPLY (
-                SELECT TOP 1 CARDREF FROM ${cstransTable} 
-                WHERE CSREF = C.LOGICALREF AND STATUS IN (1, 7)
-                ORDER BY DATE_ ASC, LOGICALREF ASC
+                SELECT TOP 1 CARDREF, ROLLREF FROM ${cstransTable} 
+                WHERE CSREF = C.LOGICALREF AND STATUS IN (1, 7) AND ROLLREF > 0
+                ORDER BY DATE_ DESC, LOGICALREF DESC
             ) T
             LEFT JOIN ${clcardTable} CA ON T.CARDREF = CA.LOGICALREF
+            LEFT JOIN ${csrollTable} R ON T.ROLLREF = R.LOGICALREF
+            LEFT JOIN ${clcardTable} CAR ON R.CARDREF = CAR.LOGICALREF
+            OUTER APPLY (
+                SELECT TOP 1 CARDREF FROM ${cstransTable} 
+                WHERE CSREF = C.LOGICALREF AND STATUS = 2
+                ORDER BY DATE_ DESC, LOGICALREF DESC
+            ) TE
+            LEFT JOIN ${clcardTable} CAE ON TE.CARDREF = CAE.LOGICALREF
             WHERE 
                 C.CURRSTAT NOT IN (4, 8, 12, 13) 
                 AND C.CURRSTAT IN (1, 2, 3, 7, 9) 
-                AND C.DOC = 1 
+                AND C.DOC IN (1, 2, 3, 4) 
             ORDER BY C.DUEDATE ASC
         `;
 
         const result = await sql.query(query);
         const checks = result.recordset.map(c => {
             const checkType = (c.status >= 7 && c.status <= 13) ? 'own' : 'customer';
+
             return {
                 ...c,
                 dueDate: c.dueDate ? c.dueDate.toISOString().split('T')[0] : null,
                 statusLabel: (c.status === 1) ? 'Portföyde' : (c.status === 2 ? 'Ciro Edildi' : 'Bekliyor'),
                 type: checkType,
-                clientName: c.clientName || 'Bilinmeyen Cari',
-                endorseeName: '-'
+                clientName: c.derivedClientName || 'Bilinmeyen Cari',
+                endorseeName: c.endorseeName || '-'
             };
         });
 
