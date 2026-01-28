@@ -1,0 +1,86 @@
+[
+  {
+    "CARDTYPE": 1,
+    "CODE": "01    564",
+    "DEFINITION_": "ŞEHMUŞ YAKIŞIKLI.",
+    "ACTIVE": 0
+  },
+  {
+    "CARDTYPE": 2,
+    "CODE": "01    564",
+    "DEFINITION_": "ŞEHMUZ YAKIŞIKLI",
+    "ACTIVE": 0
+  },
+  {
+    "CARDTYPE": 1,
+    "CODE": "02    02",
+    "DEFINITION_": "MEHMET YAKIŞIKLI",
+    "ACTIVE": 0
+  },
+  {
+    "CARDTYPE": 1,
+    "CODE": "022   022",
+    "DEFINITION_": "HALK BANKASI",
+    "ACTIVE": 0
+  },
+  {
+    "CARDTYPE": 1,
+    "CODE": "3333  333",
+    "DEFINITION_": "",
+    "ACTIVE": 0
+  },
+  {
+    "CARDTYPE": 1,
+    "CODE": "001   00000001",
+    "DEFINITION_": "YAKISIKLI ELEKTRİK LDT.ŞTİ.",
+    "ACTIVE": 0
+  },
+  {
+    "CARDTYPE": 1,
+    "CODE": "04    04",
+    "DEFINITION_": "ALBARAKA",
+    "ACTIVE": 0
+  },
+  {
+    "CARDTYPE": 1,
+    "CODE": "022   023",
+    "DEFINITION_": "HALK BANKASI - 10100375",
+    "ACTIVE": 0
+  },
+  {
+    "CARDTYPE": 1,
+    "CODE": "05    01",
+    "DEFINITION_": "ZİRAAT BANKASI - YUSUF YAKIŞIKLI",
+    "ACTIVE": 0
+  },
+  {
+    "CARDTYPE": 1,
+    "CODE": "01    A01",
+    "DEFINITION_": "YAPI KREDİ BANKASI - ÖZCAN YAKIŞIKLI",
+    "ACTIVE": 0
+  },
+  {
+    "CARDTYPE": 1,
+    "CODE": "03    01",
+    "DEFINITION_": "QNB - YUSUF YAKIŞIKLI",
+    "ACTIVE": 0
+  },
+  {
+    "CARDTYPE": 1,
+    "CODE": "022   24",
+    "DEFINITION_": "ÖZCAN YAKIŞIKLI - 1065 48",
+    "ACTIVE": 0
+  },
+  {
+    "CARDTYPE": 1,
+    "CODE": "022   024",
+    "DEFINITION_": "HALK BANKASI - HAMİLİNE",
+    "ACTIVE": 0
+  },
+  {
+    "CARDTYPE": 1,
+    "CODE": "06    01",
+    "DEFINITION_": "AHMET YAKIŞIKLI - 484725",
+    "ACTIVE": 0
+  }
+]

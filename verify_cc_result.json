@@ -1,0 +1,56 @@
+{
+  "stats": {
+    "stats": {
+      "totalBalance": 3740878.7900000014,
+      "totalIncoming": 8000755.140000001,
+      "totalOutgoing": 4259876.35,
+      "dailyIncoming": 60608,
+      "dailyOutgoing": 9000,
+      "totalPOS": 2738223.5,
+      "totalFirmCC": 691391.46
+    },
+    "chart": [
+      {
+        "date": "2026-01-22T00:00:00.000Z",
+        "incoming": 103141.4,
+        "outgoing": 0
+      },
+      {
+        "date": "2026-01-23T00:00:00.000Z",
+        "incoming": 98857,
+        "outgoing": 0
+      },
+      {
+        "date": "2026-01-24T00:00:00.000Z",
+        "incoming": 175285,
+        "outgoing": 364585
+      },
+      {
+        "date": "2026-01-26T00:00:00.000Z",
+        "incoming": 480901.58999999997,
+        "outgoing": 1615151.0599999998
+      },
+      {
+        "date": "2026-01-27T00:00:00.000Z",
+        "incoming": 200000,
+        "outgoing": 33982.2
+      },
+      {
+        "date": "2026-01-28T00:00:00.000Z",
+        "incoming": 60608,
+        "outgoing": 9000
+      }
+    ]
+  },
+  "transactionsCount": 77,
+  "firstTx": {
+    "id": 4816,
+    "date": "2026-01-28T00:00:00.000Z",
+    "trcode": 70,
+    "type": "Müşteri KK Tahsilatı (POS)",
+    "clientName": "ALATAŞ ELK.İNŞ.MET. GIDA NAK.SAN.TİC.LTD.ŞTİ.",
+    "bankAccount": "HALK BANKASI - DAĞKAPI -375",
+    "amount": 175,
+    "sign": 1
+  }
+}

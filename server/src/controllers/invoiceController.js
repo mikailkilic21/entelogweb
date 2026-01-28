@@ -328,6 +328,7 @@ exports.getInvoiceStats = async (req, res) => {
       }
     }
 
+    // Existing stats query
     const result = await sql.query(`
             SELECT 
                 ISNULL(SUM(CASE WHEN TRCODE IN (7, 8, 9) THEN NETTOTAL ELSE 0 END), 0) as totalSales,
@@ -337,6 +338,35 @@ exports.getInvoiceStats = async (req, res) => {
             FROM ${invoiceTable}
             WHERE ${whereClause}
         `);
+
+    // Top Customers by Sales Amount
+    const topCustomersQuery = `
+         SELECT TOP 5
+            C.DEFINITION_ as name,
+            SUM(S.NETTOTAL) as value
+         FROM ${invoiceTable} S
+         JOIN ${clcardTable} C ON S.CLIENTREF = C.LOGICALREF
+         WHERE S.TRCODE IN (7, 8, 9) AND S.CANCELLED = 0 AND ${whereClause.replace('DATE_', 'S.DATE_')}
+         GROUP BY C.DEFINITION_
+         ORDER BY value DESC
+    `;
+
+    // Top Suppliers by Purchase Amount
+    const topSuppliersQuery = `
+         SELECT TOP 5
+            C.DEFINITION_ as name,
+            SUM(S.NETTOTAL) as value
+         FROM ${invoiceTable} S
+         JOIN ${clcardTable} C ON S.CLIENTREF = C.LOGICALREF
+         WHERE S.TRCODE IN (1, 2, 3) AND S.CANCELLED = 0 AND ${whereClause.replace('DATE_', 'S.DATE_')}
+         GROUP BY C.DEFINITION_
+         ORDER BY value DESC
+    `;
+
+    const [topCustomersRes, topSuppliersRes] = await Promise.all([
+      sql.query(topCustomersQuery),
+      sql.query(topSuppliersQuery)
+    ]);
 
     // Daily Sales
     const dailyResult = await sql.query(`
@@ -353,7 +383,9 @@ exports.getInvoiceStats = async (req, res) => {
       totalPurchases: stats.totalPurchases || 0,
       salesCount: stats.salesCount || 0,
       purchaseCount: stats.purchaseCount || 0,
-      dailySales: dailySales
+      dailySales: dailySales,
+      topCustomers: topCustomersRes.recordset,
+      topSuppliers: topSuppliersRes.recordset
     });
 
   } catch (err) {
@@ -364,7 +396,21 @@ exports.getInvoiceStats = async (req, res) => {
       totalPurchases: Math.floor(Math.random() * 300000) + 50000,
       salesCount: Math.floor(Math.random() * 50) + 10,
       purchaseCount: Math.floor(Math.random() * 20) + 5,
-      dailySales: Math.floor(Math.random() * 20000) + 1000
+      dailySales: Math.floor(Math.random() * 20000) + 1000,
+      topCustomers: [
+        { name: 'Ahmet Yılmaz', value: 150000 },
+        { name: 'TeknoFlow', value: 120000 },
+        { name: 'Mega Market', value: 90000 },
+        { name: 'Ayşe Demir', value: 75000 },
+        { name: 'Ali Veli', value: 50000 }
+      ],
+      topSuppliers: [
+        { name: 'Global Tedarik', value: 200000 },
+        { name: 'Hızlı Lojistik', value: 150000 },
+        { name: 'ABC Toptan', value: 100000 },
+        { name: 'XYZ Dağıtım', value: 80000 },
+        { name: '123 İthalat', value: 60000 }
+      ]
     });
   }
 };

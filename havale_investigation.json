@@ -1,0 +1,47 @@
+[
+  {
+    "LOGICALREF": 1138,
+    "DATE_": "2026-01-28T00:00:00.000Z",
+    "TRCODE": 4,
+    "AMOUNT": 9000,
+    "SIGN": 1,
+    "clientName": "ORHAN HANÇERLİ",
+    "LINEEXP": ""
+  },
+  {
+    "LOGICALREF": 1134,
+    "DATE_": "2026-01-27T00:00:00.000Z",
+    "TRCODE": 4,
+    "AMOUNT": 33982.2,
+    "SIGN": 1,
+    "clientName": "NAKLİYE - ALİ RIZA SÜT",
+    "LINEEXP": ""
+  },
+  {
+    "LOGICALREF": 1128,
+    "DATE_": "2026-01-26T00:00:00.000Z",
+    "TRCODE": 4,
+    "AMOUNT": 53360,
+    "SIGN": 1,
+    "clientName": "NAKLİYECİ-MACİT BEYOĞLU",
+    "LINEEXP": ""
+  },
+  {
+    "LOGICALREF": 1127,
+    "DATE_": "2026-01-26T00:00:00.000Z",
+    "TRCODE": 4,
+    "AMOUNT": 73080,
+    "SIGN": 1,
+    "clientName": "NAKLİYECİ - EMİNE ÇAKIR",
+    "LINEEXP": ""
+  },
+  {
+    "LOGICALREF": 1131,
+    "DATE_": "2026-01-26T00:00:00.000Z",
+    "TRCODE": 4,
+    "AMOUNT": 78574.66,
+    "SIGN": 1,
+    "clientName": "ORHAN HANÇERLİ",
+    "LINEEXP": ""
+  }
+]

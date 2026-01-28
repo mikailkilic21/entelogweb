@@ -9,7 +9,8 @@ import {
     Banknote,
     Settings,
     LogOut,
-    User
+    User,
+    Landmark
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -159,6 +160,7 @@ const Sidebar = () => {
         { path: '/invoices', name: 'Faturalar', icon: <FileText size={20} /> },
         { path: '/orders', name: 'Siparişler', icon: <ShoppingCart size={20} /> },
         { path: '/checks', name: 'Çek / Senet', icon: <Banknote size={20} /> },
+        { path: '/banks', name: 'Bankalar', icon: <Landmark size={20} /> },
         { path: '/settings', name: 'Ayarlar', icon: <Settings size={20} /> },
     ];
 

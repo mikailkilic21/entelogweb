@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AccountDetailModal from '../components/AccountDetailModal';
+import TopAccountsChart from '../components/TopAccountsChart';
 import { Users, Building2, TrendingUp, TrendingDown, Search, Loader2, RefreshCw } from 'lucide-react';
 
 const Accounts = () => {
@@ -58,9 +59,9 @@ const Accounts = () => {
     }
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 animate-fade-in pb-20">
+        <div className="p-6 w-full space-y-8 animate-fade-in pb-20">
             {/* Header */}
-            <div className="flex justify-between items-start mb-8">
+            <div className="flex justify-between items-start mb-4">
                 <div>
                     <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                         Cari Hesaplar
@@ -75,55 +76,90 @@ const Accounts = () => {
                 </button>
             </div>
 
-            {/* Stats Cards */}
-            {stats && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="bg-gradient-to-br from-blue-600/20 to-blue-600/5 border border-blue-500/30 rounded-xl p-6">
-                        <div className="flex items-center gap-3 mb-2">
-                            <Users className="text-blue-400" size={24} />
-                            <span className="text-sm text-slate-300">Toplam Müşteri</span>
-                        </div>
-                        <p className="text-3xl font-bold text-white">{stats.totalCustomers || 0}</p>
-                    </div>
+            {/* Top Section: Charts & Stats */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left: Financial Summary Cards */}
+                <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {stats && (
+                        <>
+                            <div className="bg-gradient-to-br from-blue-600/20 to-blue-600/5 border border-blue-500/30 rounded-xl p-6 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <Users className="text-blue-400" size={24} />
+                                        <span className="text-sm text-slate-300">Toplam Müşteri</span>
+                                    </div>
+                                    <p className="text-4xl font-bold text-white mt-2">{stats.totalCustomers || 0}</p>
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-white/10">
+                                    <span className="text-xs text-slate-400">Aktif Müşteri Sayısı</span>
+                                </div>
+                            </div>
 
-                    <div className="bg-gradient-to-br from-purple-600/20 to-purple-600/5 border border-purple-500/30 rounded-xl p-6">
-                        <div className="flex items-center gap-3 mb-2">
-                            <Building2 className="text-purple-400" size={24} />
-                            <span className="text-sm text-slate-300">Toplam Tedarikçi</span>
-                        </div>
-                        <p className="text-3xl font-bold text-white">{stats.totalSuppliers || 0}</p>
-                    </div>
+                            <div className="bg-gradient-to-br from-purple-600/20 to-purple-600/5 border border-purple-500/30 rounded-xl p-6 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <Building2 className="text-purple-400" size={24} />
+                                        <span className="text-sm text-slate-300">Toplam Tedarikçi</span>
+                                    </div>
+                                    <p className="text-4xl font-bold text-white mt-2">{stats.totalSuppliers || 0}</p>
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-white/10">
+                                    <span className="text-xs text-slate-400">Aktif Tedarikçi Sayısı</span>
+                                </div>
+                            </div>
 
-                    <div className="bg-gradient-to-br from-green-600/20 to-green-600/5 border border-green-500/30 rounded-xl p-6">
-                        <div className="flex items-center gap-3 mb-2">
-                            <TrendingUp className="text-green-400" size={24} />
-                            <span className="text-sm text-slate-300">Toplam Alacak</span>
-                        </div>
-                        <p className="text-2xl font-bold text-green-400">
-                            {(stats.totalReceivables || 0).toLocaleString('tr-TR', {
-                                style: 'currency',
-                                currency: 'TRY'
-                            })}
-                        </p>
-                    </div>
+                            <div className="bg-gradient-to-br from-green-600/20 to-green-600/5 border border-green-500/30 rounded-xl p-6 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <TrendingUp className="text-green-400" size={24} />
+                                        <span className="text-sm text-slate-300">Toplam Alacak</span>
+                                    </div>
+                                    <p className="text-3xl font-bold text-green-400 mt-2">
+                                        {(stats.totalReceivables || 0).toLocaleString('tr-TR', {
+                                            style: 'currency',
+                                            currency: 'TRY'
+                                        })}
+                                    </p>
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-white/10">
+                                    <span className="text-xs text-slate-400">Piyasadan Alacaklar</span>
+                                </div>
+                            </div>
 
-                    <div className="bg-gradient-to-br from-red-600/20 to-red-600/5 border border-red-500/30 rounded-xl p-6">
-                        <div className="flex items-center gap-3 mb-2">
-                            <TrendingDown className="text-red-400" size={24} />
-                            <span className="text-sm text-slate-300">Toplam Borç</span>
-                        </div>
-                        <p className="text-2xl font-bold text-red-400">
-                            {(stats.totalPayables || 0).toLocaleString('tr-TR', {
-                                style: 'currency',
-                                currency: 'TRY'
-                            })}
-                        </p>
-                    </div>
+                            <div className="bg-gradient-to-br from-red-600/20 to-red-600/5 border border-red-500/30 rounded-xl p-6 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <TrendingDown className="text-red-400" size={24} />
+                                        <span className="text-sm text-slate-300">Toplam Borç</span>
+                                    </div>
+                                    <p className="text-3xl font-bold text-red-400 mt-2">
+                                        {(stats.totalPayables || 0).toLocaleString('tr-TR', {
+                                            style: 'currency',
+                                            currency: 'TRY'
+                                        })}
+                                    </p>
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-white/10">
+                                    <span className="text-xs text-slate-400">Piyasaya Borçlar</span>
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
-            )}
+
+                {/* Right: Charts */}
+                <div className="lg:col-span-1 h-[450px]">
+                    {stats && (
+                        <TopAccountsChart
+                            customersData={stats.topCustomers || []}
+                            suppliersData={stats.topSuppliers || []}
+                        />
+                    )}
+                </div>
+            </div>
 
             {/* Tabs and Search */}
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between pt-4">
                 {/* Tabs */}
                 <div className="flex gap-2 bg-slate-900/50 p-1 rounded-lg border border-slate-800">
                     <button

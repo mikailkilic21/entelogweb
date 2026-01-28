@@ -1,0 +1,581 @@
+[
+  {
+    "table_name": "LG_001_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_001_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_001_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_001_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_001_BNCARD"
+  },
+  {
+    "table_name": "LG_001_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_001_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_003_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_003_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_003_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_003_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_003_BNCARD"
+  },
+  {
+    "table_name": "LG_003_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_003_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_010_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_010_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_010_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_010_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_010_BNCARD"
+  },
+  {
+    "table_name": "LG_010_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_010_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_011_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_011_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_011_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_011_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_011_BNCARD"
+  },
+  {
+    "table_name": "LG_011_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_011_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_100_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_100_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_100_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_100_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_100_BNCARD"
+  },
+  {
+    "table_name": "LG_100_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_100_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_101_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_101_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_101_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_101_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_101_BNCARD"
+  },
+  {
+    "table_name": "LG_101_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_101_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_102_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_102_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_102_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_102_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_102_BNCARD"
+  },
+  {
+    "table_name": "LG_102_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_102_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_103_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_103_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_103_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_103_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_103_BNCARD"
+  },
+  {
+    "table_name": "LG_103_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_103_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_103_BNCRROTINTRATE"
+  },
+  {
+    "table_name": "LG_104_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_104_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_104_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_104_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_104_BNCARD"
+  },
+  {
+    "table_name": "LG_104_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_104_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_104_BNCRROTINTRATE"
+  },
+  {
+    "table_name": "LG_105_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_105_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_105_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_105_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_105_BNCARD"
+  },
+  {
+    "table_name": "LG_105_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_105_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_105_BNCRROTINTRATE"
+  },
+  {
+    "table_name": "LG_106_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_106_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_106_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_106_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_106_02_BNFICHE"
+  },
+  {
+    "table_name": "LG_106_02_BNFLINE"
+  },
+  {
+    "table_name": "LG_106_02_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_106_02_GNTOTBN"
+  },
+  {
+    "table_name": "LG_106_03_BNFICHE"
+  },
+  {
+    "table_name": "LG_106_03_BNFLINE"
+  },
+  {
+    "table_name": "LG_106_03_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_106_03_GNTOTBN"
+  },
+  {
+    "table_name": "LG_106_04_BNFICHE"
+  },
+  {
+    "table_name": "LG_106_04_BNFLINE"
+  },
+  {
+    "table_name": "LG_106_04_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_106_04_GNTOTBN"
+  },
+  {
+    "table_name": "LG_106_BNCARD"
+  },
+  {
+    "table_name": "LG_106_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_106_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_106_BNCRROTINTRATE"
+  },
+  {
+    "table_name": "LG_107_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_107_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_107_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_107_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_107_02_BNFICHE"
+  },
+  {
+    "table_name": "LG_107_02_BNFLINE"
+  },
+  {
+    "table_name": "LG_107_02_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_107_02_GNTOTBN"
+  },
+  {
+    "table_name": "LG_107_03_BNFICHE"
+  },
+  {
+    "table_name": "LG_107_03_BNFLINE"
+  },
+  {
+    "table_name": "LG_107_03_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_107_03_GNTOTBN"
+  },
+  {
+    "table_name": "LG_107_04_BNFICHE"
+  },
+  {
+    "table_name": "LG_107_04_BNFLINE"
+  },
+  {
+    "table_name": "LG_107_04_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_107_04_GNTOTBN"
+  },
+  {
+    "table_name": "LG_107_BNCARD"
+  },
+  {
+    "table_name": "LG_107_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_107_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_107_BNCRROTINTRATE"
+  },
+  {
+    "table_name": "LG_108_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_108_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_108_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_108_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_108_02_BNFICHE"
+  },
+  {
+    "table_name": "LG_108_02_BNFLINE"
+  },
+  {
+    "table_name": "LG_108_02_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_108_02_GNTOTBN"
+  },
+  {
+    "table_name": "LG_108_BNCARD"
+  },
+  {
+    "table_name": "LG_108_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_108_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_109_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_109_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_109_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_109_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_109_BNCARD"
+  },
+  {
+    "table_name": "LG_109_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_109_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_110_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_110_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_110_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_110_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_110_BNCARD"
+  },
+  {
+    "table_name": "LG_110_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_110_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_110_BNCRROTINTRATE"
+  },
+  {
+    "table_name": "LG_111_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_111_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_111_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_111_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_111_BNCARD"
+  },
+  {
+    "table_name": "LG_111_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_111_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_112_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_112_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_112_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_112_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_112_BNCARD"
+  },
+  {
+    "table_name": "LG_112_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_112_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_112_BNCRROTINTRATE"
+  },
+  {
+    "table_name": "LG_113_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_113_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_113_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_113_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_113_BNCARD"
+  },
+  {
+    "table_name": "LG_113_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_113_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_113_BNCRROTINTRATE"
+  },
+  {
+    "table_name": "LG_114_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_114_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_114_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_114_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_114_BNCARD"
+  },
+  {
+    "table_name": "LG_114_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_114_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_114_BNCRROTINTRATE"
+  },
+  {
+    "table_name": "LG_115_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_115_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_115_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_115_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_115_BNCARD"
+  },
+  {
+    "table_name": "LG_115_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_115_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_115_BNCRROTINTRATE"
+  },
+  {
+    "table_name": "LG_118_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_118_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_118_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_118_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_118_BNCARD"
+  },
+  {
+    "table_name": "LG_118_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_118_BNCREPAYTR"
+  },
+  {
+    "table_name": "LG_118_BNCRROTINTRATE"
+  },
+  {
+    "table_name": "LG_885_01_BNFICHE"
+  },
+  {
+    "table_name": "LG_885_01_BNFLINE"
+  },
+  {
+    "table_name": "LG_885_01_BNTOTFIL"
+  },
+  {
+    "table_name": "LG_885_01_GNTOTBN"
+  },
+  {
+    "table_name": "LG_885_BNCARD"
+  },
+  {
+    "table_name": "LG_885_BNCREDITCARD"
+  },
+  {
+    "table_name": "LG_885_BNCREPAYTR"
+  }
+]

@@ -15,14 +15,14 @@ const CustomTooltip = ({ active, payload, label }) => {
     return null;
 };
 
-const TopProductsChart = ({ data }) => {
+const TopProductsChart = ({ data, title, subtitle, className }) => {
     const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316'];
 
     return (
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-6 shadow-lg h-[400px] flex flex-col">
+        <div className={`bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-6 shadow-lg flex flex-col ${className || 'h-[400px]'}`}>
             <div className="mb-4 flex-none">
-                <h3 className="text-xl font-bold text-white">En Çok Satanlar</h3>
-                <p className="text-slate-400 text-sm">Ciro bazında ilk 5 ürün</p>
+                <h3 className="text-xl font-bold text-white">{title || 'En Çok Satanlar'}</h3>
+                <p className="text-slate-400 text-sm">{subtitle || 'Ürün bazlı performans'}</p>
             </div>
 
             <div className="flex-1 min-h-0">

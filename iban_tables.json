@@ -1,0 +1,242 @@
+[
+  {
+    "TABLE_NAME": "LG_107_02_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_118_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_118_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_111_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_010_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_107_04_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_106_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_001_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_885_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_107_02_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_110_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_118_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_111_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_010_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_101_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_105_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_107_04_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_108_02_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_106_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_100_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_885_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_106_02_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_885_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_110_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_101_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_108_02_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_111_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_106_02_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_003_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_108_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_102_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_106_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_115_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_110_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_114_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_011_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_103_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_104_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_115_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_114_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_106_03_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_106_04_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_108_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_107_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_115_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_114_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_103_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_104_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_001_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_106_03_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_106_04_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_107_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_113_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_113_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_108_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_010_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_100_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_113_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_109_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_101_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_105_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_100_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_107_03_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_107_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_003_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_109_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_112_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_105_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_103_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_107_03_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_011_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_104_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_003_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_112_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_011_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_102_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_109_BANKACC"
+  },
+  {
+    "TABLE_NAME": "LG_102_01_CSCARD"
+  },
+  {
+    "TABLE_NAME": "LG_001_01_BNFLINE"
+  },
+  {
+    "TABLE_NAME": "LG_112_BANKACC"
+  }
+]

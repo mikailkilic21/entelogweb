@@ -7,6 +7,7 @@ const statsController = require('../controllers/statsController');
 const settingsController = require('../controllers/settingsController');
 const authController = require('../controllers/authController');
 const licenseController = require('../controllers/licenseController');
+const banksController = require('../controllers/banksController');
 
 // Auth Routes
 // Auth Routes
@@ -79,5 +80,10 @@ router.get('/stats/top-customers', statsController.getTopCustomers);
 router.get('/stats/top-suppliers', statsController.getTopSuppliers);
 
 
+
+// Bank Routes
+router.get('/banks', banksController.getBanks);
+router.get('/banks/stats', banksController.getBankStats);
+router.get('/banks/finance-transactions', banksController.getBankFinanceTransactions);
 
 module.exports = router;

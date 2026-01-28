@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ProductDetailModal from '../components/ProductDetailModal';
+import TopProductsChart from '../components/TopProductsChart';
+import StockDistributionChart from '../components/StockDistributionChart';
 import { Package, Search, Loader2, RefreshCw, AlertTriangle, CheckCircle, Box } from 'lucide-react';
 
 const Products = () => {
@@ -52,9 +54,9 @@ const Products = () => {
     }
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 animate-fade-in pb-20">
+        <div className="p-6 w-full space-y-8 animate-fade-in pb-20">
             {/* Header */}
-            <div className="flex justify-between items-start mb-8">
+            <div className="flex justify-between items-start mb-4">
                 <div>
                     <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
                         Stok Yönetimi
@@ -69,37 +71,98 @@ const Products = () => {
                 </button>
             </div>
 
-            {/* Stats Cards */}
-            {stats && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-gradient-to-br from-indigo-600/20 to-indigo-600/5 border border-indigo-500/30 rounded-xl p-6">
-                        <div className="flex items-center gap-3 mb-2">
-                            <Package className="text-indigo-400" size={24} />
-                            <span className="text-sm text-slate-300">Toplam Kart</span>
-                        </div>
-                        <p className="text-3xl font-bold text-white">{stats.totalProducts || 0}</p>
+            {/* Top Section: Checks & Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column: Summary Cards + Main Chart */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {stats && (
+                            <>
+                                <div className="bg-gradient-to-br from-indigo-600/20 to-indigo-600/5 border border-indigo-500/30 rounded-xl p-6 flex flex-col justify-between h-32">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <Package className="text-indigo-400" size={24} />
+                                        <span className="text-sm text-slate-300">Toplam Kart</span>
+                                    </div>
+                                    <p className="text-3xl font-bold text-white">{stats.totalProducts || 0}</p>
+                                </div>
+
+                                <div className="bg-gradient-to-br from-emerald-600/20 to-emerald-600/5 border border-emerald-500/30 rounded-xl p-6 flex flex-col justify-between h-32">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <CheckCircle className="text-emerald-400" size={24} />
+                                        <span className="text-sm text-slate-300">Stoktaki Ürünler</span>
+                                    </div>
+                                    <p className="text-3xl font-bold text-white">{stats.productsInStock || 0}</p>
+                                </div>
+
+                                <div className="bg-gradient-to-br from-amber-600/20 to-amber-600/5 border border-amber-500/30 rounded-xl p-6 flex flex-col justify-between h-32">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <AlertTriangle className="text-amber-400" size={24} />
+                                        <span className="text-sm text-slate-300">Negatif Stok</span>
+                                    </div>
+                                    <p className="text-3xl font-bold text-white">{stats.criticalStock || 0}</p>
+                                </div>
+                            </>
+                        )}
                     </div>
 
-                    <div className="bg-gradient-to-br from-emerald-600/20 to-emerald-600/5 border border-emerald-500/30 rounded-xl p-6">
-                        <div className="flex items-center gap-3 mb-2">
-                            <CheckCircle className="text-emerald-400" size={24} />
-                            <span className="text-sm text-slate-300">Stoktaki Ürünler</span>
+                    {/* Main Bar Chart with Header Controls - En Çok Satanlar */}
+                    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-6 shadow-lg">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="text-xl font-bold text-white">
+                                    {sortBy === 'amount' ? 'En Yüksek Ciro' : 'En Çok Satanlar (Adet)'}
+                                </h3>
+                                <p className="text-slate-400 text-sm">
+                                    {sortBy === 'amount' ? 'Ciro bazında ilk 5 ürün' : 'Satış adedi bazında ilk 5 ürün'}
+                                </p>
+                            </div>
+                            <div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700">
+                                <button
+                                    onClick={() => setSortBy('quantity')}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${sortBy === 'quantity'
+                                        ? 'bg-emerald-600 text-white shadow-lg'
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                                        }`}
+                                >
+                                    Adet
+                                </button>
+                                <button
+                                    onClick={() => setSortBy('amount')}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${sortBy === 'amount'
+                                        ? 'bg-emerald-600 text-white shadow-lg'
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                                        }`}
+                                >
+                                    Tutar
+                                </button>
+                            </div>
                         </div>
-                        <p className="text-3xl font-bold text-white">{stats.productsInStock || 0}</p>
-                    </div>
 
-                    <div className="bg-gradient-to-br from-amber-600/20 to-amber-600/5 border border-amber-500/30 rounded-xl p-6">
-                        <div className="flex items-center gap-3 mb-2">
-                            <AlertTriangle className="text-amber-400" size={24} />
-                            <span className="text-sm text-slate-300">Kritik Stok (&lt;0)</span>
+                        <div className="h-[300px]">
+                            {stats && (
+                                <TopProductsChart
+                                    data={sortBy === 'amount' ? (stats.topByAmount || []) : (stats.topByQuantity || [])}
+                                    title=""
+                                    subtitle=""
+                                    className="h-full !p-0 !bg-transparent !border-none !shadow-none"
+                                />
+                            )}
                         </div>
-                        <p className="text-3xl font-bold text-white">{stats.criticalStock || 0}</p>
                     </div>
                 </div>
-            )}
+
+                {/* Right Column: Pie Chart + General Overview */}
+                <div className="lg:col-span-1 space-y-6">
+                    {/* Pie Chart: Stock Distribution by Account */}
+                    {stats && <StockDistributionChart data={stats.topAccounts || []} className="h-[540px]" />}
+
+
+                </div>
+            </div>
 
             {/* Search and Sort Controls */}
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-4">
                 <div className="relative w-full md:w-96">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                     <input
@@ -116,8 +179,8 @@ const Products = () => {
                     <button
                         onClick={() => setSortBy('quantity')}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${sortBy === 'quantity'
-                                ? 'bg-emerald-600 text-white shadow-lg'
-                                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                            ? 'bg-emerald-600 text-white shadow-lg'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-700'
                             }`}
                     >
                         Satış Miktarına Göre
@@ -125,8 +188,8 @@ const Products = () => {
                     <button
                         onClick={() => setSortBy('amount')}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${sortBy === 'amount'
-                                ? 'bg-emerald-600 text-white shadow-lg'
-                                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                            ? 'bg-emerald-600 text-white shadow-lg'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-700'
                             }`}
                     >
                         Satış Tutarına Göre

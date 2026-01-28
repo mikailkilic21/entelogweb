@@ -102,29 +102,98 @@ exports.getAccounts = async (req, res) => {
 exports.getAccountStats = async (req, res) => {
   try {
     const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+
     if (isDemo) {
       // Mock stats
       return res.json({
         total: 50,
         customers: 45,
-        suppliers: 5
+        suppliers: 5,
+        totalReceivables: 1250000.50,
+        totalPayables: 450000.25,
+        topCustomers: [
+          { name: 'ABC Teknoloji A.Ş.', value: 450000 },
+          { name: 'XYZ İnşaat Ltd.', value: 320000 },
+          { name: 'Mehmet Yılmaz', value: 150000 },
+          { name: 'Delta Dağıtım', value: 120000 },
+          { name: 'Beta Market', value: 90000 }
+        ],
+        topSuppliers: [
+          { name: 'Global Tedarik A.Ş.', value: 250000 },
+          { name: 'Süper Toptan', value: 180000 },
+          { name: 'Mega Plastik', value: 120000 }
+        ]
       });
     }
 
     const config = getConfig();
     const firm = config.firmNo || '113';
+    const period = config.periodNo || '01';
     const clcardTable = `LG_${firm}_CLCARD`;
+    const clflineTable = `LG_${firm}_${period}_CLFLINE`;
 
-    const query = `
+    // 1. Basic Counts & Totals
+    // Note: Real balance calculation requires expensive summation from CLFLINE
+    // For performance, we'll do a single optimized query or use Totals table if available (LG_XXX_01_GNTOTCL)
+    // For accurate results, we sum from CLFLINE
+
+    const totalsQuery = `
+            WITH AccountBalances AS (
+                SELECT 
+                    C.LOGICALREF,
+                    C.CARDTYPE,
+                    (SELECT SUM(CASE WHEN L.SIGN = 0 THEN L.AMOUNT ELSE -L.AMOUNT END) 
+                     FROM ${clflineTable} L 
+                     WHERE L.CLIENTREF = C.LOGICALREF AND L.CANCELLED = 0) as Balance
+                FROM ${clcardTable} C
+                WHERE C.ACTIVE = 0
+            )
             SELECT 
-                COUNT(*) as total,
-                SUM(CASE WHEN CARDTYPE IN (1, 3) THEN 1 ELSE 0 END) as customers,
-                SUM(CASE WHEN CARDTYPE IN (2, 3) THEN 1 ELSE 0 END) as suppliers
-            FROM ${clcardTable}
+                COUNT(*) as totalAccounts,
+                SUM(CASE WHEN CARDTYPE IN (1, 3) THEN 1 ELSE 0 END) as totalCustomers,
+                SUM(CASE WHEN CARDTYPE IN (2, 3) THEN 1 ELSE 0 END) as totalSuppliers,
+                ISNULL(SUM(CASE WHEN Balance > 0 THEN Balance ELSE 0 END), 0) as totalReceivables,
+                ISNULL(ABS(SUM(CASE WHEN Balance < 0 THEN Balance ELSE 0 END)), 0) as totalPayables
+            FROM AccountBalances
         `;
 
-    const result = await sql.query(query);
-    res.json(result.recordset[0]);
+    // 2. Top Customers (Debtors - Borçlular - Bizim Alacaklı Olduklarımız)
+    const topCustomersQuery = `
+            SELECT TOP 5 
+                C.DEFINITION_ as name,
+                (SELECT SUM(CASE WHEN L.SIGN = 0 THEN L.AMOUNT ELSE -L.AMOUNT END) 
+                 FROM ${clflineTable} L 
+                 WHERE L.CLIENTREF = C.LOGICALREF AND L.CANCELLED = 0) as value
+            FROM ${clcardTable} C
+            WHERE C.CARDTYPE IN (1, 3) AND C.ACTIVE = 0
+            ORDER BY value DESC -- Highest positive balance
+        `;
+
+    // 3. Top Suppliers (Creditors - Alacaklılar - Bizim Borçlu Olduklarımız)
+    const topSuppliersQuery = `
+            SELECT TOP 5 
+                C.DEFINITION_ as name,
+                ABS((SELECT SUM(CASE WHEN L.SIGN = 0 THEN L.AMOUNT ELSE -L.AMOUNT END) 
+                 FROM ${clflineTable} L 
+                 WHERE L.CLIENTREF = C.LOGICALREF AND L.CANCELLED = 0)) as value
+            FROM ${clcardTable} C
+            WHERE C.CARDTYPE IN (2, 3) AND C.ACTIVE = 0
+            ORDER BY value DESC -- Highest (absolute) negative balance
+        `;
+
+    const [totalsResult, topCustResult, topSuppResult] = await Promise.all([
+      sql.query(totalsQuery),
+      sql.query(topCustomersQuery),
+      sql.query(topSuppliersQuery)
+    ]);
+
+    const stats = {
+      ...totalsResult.recordset[0],
+      topCustomers: topCustResult.recordset.filter(i => i.value > 0),
+      topSuppliers: topSuppResult.recordset.filter(i => i.value > 0)
+    };
+
+    res.json(stats);
 
   } catch (err) {
     console.error('❌ getAccountStats Error:', err.message);

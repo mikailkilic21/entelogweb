@@ -93,12 +93,26 @@ exports.getProducts = async (req, res) => {
 exports.getProductStats = async (req, res) => {
     try {
         const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+
         if (isDemo) {
-            // Calculate stats from mock file if needed, or return static
             return res.json({
                 totalProducts: 15,
                 productsInStock: 12,
-                criticalStock: 3
+                criticalStock: 3,
+                topByAmount: [
+                    { name: 'iPhone 15 Pro', value: 450000 },
+                    { name: 'MacBook Air', value: 320000 },
+                    { name: 'iPad Pro', value: 150000 },
+                    { name: 'Samsung S24', value: 120000 },
+                    { name: 'AirPods Pro', value: 90000 }
+                ],
+                topByQuantity: [
+                    { name: 'USB Kablo', value: 150 },
+                    { name: 'Ekran Koruyucu', value: 120 },
+                    { name: 'Kılıf', value: 95 },
+                    { name: 'Şarj Başlığı', value: 80 },
+                    { name: 'AirPods Pro', value: 30 }
+                ]
             });
         }
 
@@ -107,16 +121,66 @@ exports.getProductStats = async (req, res) => {
         const period = config.periodNo || '01';
         const itemsTable = `LG_${firm}_ITEMS`;
         const gntotstTable = `LG_${firm}_${period}_GNTOTST`;
+        const stlineTable = `LG_${firm}_${period}_STLINE`;
+        const clcardTable = `LG_${firm}_CLCARD`;
 
-        const query = `
+        // 1. Basic Counts
+        const countsQuery = `
             SELECT 
-                (SELECT COUNT(*) FROM ${itemsTable} WHERE ACTIVE = 0) as totalProducts,
-                (SELECT COUNT(*) FROM ${gntotstTable} WHERE ONHAND > 0 AND INVENNO = -1) as productsInStock,
-                (SELECT COUNT(*) FROM ${gntotstTable} WHERE ONHAND < 0 AND INVENNO = -1) as criticalStock
+                (SELECT COUNT(*) FROM ${itemsTable} WHERE ACTIVE = 0 AND CARDTYPE <> 22) as totalProducts, 
+                (SELECT COUNT(DISTINCT STOCKREF) FROM ${gntotstTable} WHERE ONHAND > 0 AND INVENNO = -1) as productsInStock,
+                (SELECT COUNT(DISTINCT STOCKREF) FROM ${gntotstTable} WHERE ONHAND < 0 AND INVENNO = -1) as criticalStock
         `;
 
-        const result = await sql.query(query);
-        res.json(result.recordset[0]);
+        // 2. Top Selling By Amount (Ciro)
+        const topAmountQuery = `
+             SELECT TOP 5
+                I.NAME as name,
+                SUM(S.TOTAL) as value
+             FROM ${stlineTable} S
+             JOIN ${itemsTable} I ON S.STOCKREF = I.LOGICALREF
+             WHERE S.TRCODE IN (7, 8) AND S.CANCELLED = 0 AND S.LINETYPE = 0
+             GROUP BY I.NAME
+             ORDER BY value DESC
+        `;
+
+        // 3. Top Selling By Quantity (Miktar)
+        const topQuantityQuery = `
+             SELECT TOP 5
+                I.NAME as name,
+                SUM(S.AMOUNT) as value
+             FROM ${stlineTable} S
+             JOIN ${itemsTable} I ON S.STOCKREF = I.LOGICALREF
+             WHERE S.TRCODE IN (7, 8) AND S.CANCELLED = 0 AND S.LINETYPE = 0
+             GROUP BY I.NAME
+             ORDER BY value DESC
+        `;
+
+        // 4. Top Accounts By Sales Volume (Cari Dağılımı)
+        const topAccountsQuery = `
+             SELECT TOP 5
+                C.DEFINITION_ as name,
+                SUM(S.TOTAL) as value
+             FROM ${stlineTable} S
+             JOIN ${clcardTable} C ON S.CLIENTREF = C.LOGICALREF
+             WHERE S.TRCODE IN (7, 8) AND S.CANCELLED = 0
+             GROUP BY C.DEFINITION_
+             ORDER BY value DESC
+        `;
+
+        const [countsRes, topAmountRes, topQtyRes, topAccountsRes] = await Promise.all([
+            sql.query(countsQuery),
+            sql.query(topAmountQuery),
+            sql.query(topQuantityQuery),
+            sql.query(topAccountsQuery)
+        ]);
+
+        res.json({
+            ...countsRes.recordset[0],
+            topByAmount: topAmountRes.recordset,
+            topByQuantity: topQtyRes.recordset,
+            topAccounts: topAccountsRes.recordset
+        });
 
     } catch (err) {
         console.error('❌ getProductStats Error:', err.message);

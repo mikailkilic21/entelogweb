@@ -1,0 +1,15 @@
+{
+  "havaleIncoming": 5262531.64,
+  "havaleOutgoing": 3568484.8900000006,
+  "havaleCount": 39,
+  "sampleHavale": {
+    "id": 1138,
+    "date": "2026-01-28T00:00:00.000Z",
+    "trcode": 4,
+    "type": "Gönderilen Havale",
+    "clientName": "ORHAN HANÇERLİ",
+    "bankAccount": "YAKIŞIKLI ELEKTRİK ELEKTRONİK İNŞ. NAK. LTD.ŞTİ.",
+    "amount": 9000,
+    "sign": 1
+  }
+}
