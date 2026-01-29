@@ -52,17 +52,14 @@ export default function SupportScreen() {
 
         const fullMessage = `*Destek Talebi*\n\n*Konu:* ${topicLabel}\n*Açıklama:* ${message || 'Belirtilmedi'}${corporateInfo}\n\n_Entelog Mobile üzerinden gönderildi._`;
 
-        const url = `whatsapp://send?phone=${SUPPORT_PHONE}&text=${encodeURIComponent(fullMessage)}`;
+        // Use Universal Link (wa.me) instead of custom scheme (whatsapp://) for better reliability without whitelist
+        const url = `https://wa.me/${SUPPORT_PHONE}?text=${encodeURIComponent(fullMessage)}`;
 
         try {
-            const supported = await Linking.canOpenURL(url);
-            if (supported) {
-                await Linking.openURL(url);
-            } else {
-                Alert.alert('Hata', 'WhatsApp uygulaması cihazınızda yüklü değil.');
-            }
+            // Universal links are handled by the OS and don't strictly require canOpenURL check for the app scheme
+            await Linking.openURL(url);
         } catch {
-            Alert.alert('Hata', 'WhatsApp açılamadı.');
+            Alert.alert('Hata', 'WhatsApp veya tarayıcı açılamadı.');
         }
     };
 

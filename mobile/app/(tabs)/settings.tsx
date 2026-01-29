@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Alert, Pressable, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Building2, Calendar, Check, LogOut, ChevronRight, X, Briefcase, FileText, MessageCircle } from 'lucide-react-native';
+import { Building2, Calendar, Check, LogOut, ChevronRight, X, Briefcase, FileText, MessageCircle, Settings } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -200,6 +200,20 @@ export default function MenuScreen() {
                     </MenuCard>
 
                     <Text className="text-slate-500 font-bold text-xs uppercase tracking-widest mb-4 mt-2 ml-1">Uygulama Ayarları</Text>
+
+                    {/* System Settings - NEW */}
+                    <MenuCard onPress={() => router.push('/system-settings')} colors={['#4f46e5', '#4338ca']}>
+                        <View className="flex-row items-center">
+                            <View className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                                <Settings size={24} color="white" />
+                            </View>
+                            <View className="flex-1 ml-4">
+                                <Text className="text-white text-lg font-bold">Sistem Ayarları</Text>
+                                <Text className="text-indigo-100 text-xs opacity-80">Kurumsal, Kullanıcı ve Veritabanı</Text>
+                            </View>
+                            <ChevronRight size={24} color="white" opacity={0.5} />
+                        </View>
+                    </MenuCard>
 
                     {/* License Application - ONLY FOR DEMO */}
                     {isDemo && (
