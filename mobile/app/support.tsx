@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { MessageCircle, ChevronLeft, HelpCircle, AlertTriangle, Settings, FileQuestion } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { API_URL } from '@/constants/Config';
 
 const SUPPORT_PHONE = '905533912286';
 
@@ -18,6 +19,23 @@ export default function SupportScreen() {
     const router = useRouter();
     const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
     const [message, setMessage] = useState('');
+    const [dbConfig, setDbConfig] = useState<any>(null);
+
+    useEffect(() => {
+        fetchDbConfig();
+    }, []);
+
+    const fetchDbConfig = async () => {
+        try {
+            const res = await fetch(`${API_URL}/settings/db`);
+            if (res.ok) {
+                const data = await res.json();
+                setDbConfig(data);
+            }
+        } catch (err) {
+            console.error('Config fetch error:', err);
+        }
+    };
 
     const handleSend = async () => {
         if (!selectedTopic) {
@@ -26,7 +44,13 @@ export default function SupportScreen() {
         }
 
         const topicLabel = TOPICS.find(t => t.id === selectedTopic)?.label;
-        const fullMessage = `*Destek Talebi*\n\n*Konu:* ${topicLabel}\n*Açıklama:* ${message || 'Belirtilmedi'}\n\n_Entelog Mobile üzerinden gönderildi._`;
+
+        let corporateInfo = '';
+        if (dbConfig) {
+            corporateInfo = `\n\n*Kurumsal Bilgiler:*\nFirma: ${dbConfig.firmName || '-'} (${dbConfig.firmNo || '-'})\nDönem: ${dbConfig.periodNo || '-'}`;
+        }
+
+        const fullMessage = `*Destek Talebi*\n\n*Konu:* ${topicLabel}\n*Açıklama:* ${message || 'Belirtilmedi'}${corporateInfo}\n\n_Entelog Mobile üzerinden gönderildi._`;
 
         const url = `whatsapp://send?phone=${SUPPORT_PHONE}&text=${encodeURIComponent(fullMessage)}`;
 

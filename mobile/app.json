@@ -4,7 +4,7 @@
     "slug": "entelog-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/siyahlogo_opt.png",
     "scheme": "entelog-mobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -16,21 +16,21 @@
       "package": "com.entelog.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
-        "foregroundImage": "./assets/images/icon.png"
+        "foregroundImage": "./assets/images/siyahlogo_opt.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/beyazlogo.png"
+      "favicon": "./assets/images/siyahlogo_opt.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/beyazlogo.png",
+          "image": "./assets/images/beyazlogo_opt.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#020617",
