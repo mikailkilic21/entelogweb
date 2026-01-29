@@ -27,6 +27,7 @@ const saveUsersData = (users) => {
 };
 
 exports.login = (req, res) => {
+    console.log('🔔 LOGIN REQUEST RECEIVED:', req.body);
     const { username, password } = req.body;
     const users = getUsersData();
 

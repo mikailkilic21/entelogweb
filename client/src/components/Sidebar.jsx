@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Logo from '../assets/logo.png';
 import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard,
@@ -177,6 +178,7 @@ const Sidebar = () => {
                         </h1>
                         <p className="text-slate-500 text-[10px] tracking-wide">WEB DASHBOARD</p>
                     </div>
+                    <img src={Logo} alt="Logo" className="w-12 h-12 object-contain" />
                 </div>
 
                 {/* Compact Firm Switcher */}

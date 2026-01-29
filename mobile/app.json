@@ -33,7 +33,7 @@
           "image": "./assets/images/beyazlogo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#020617",
           "dark": {
             "backgroundColor": "#020617"
           }

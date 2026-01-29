@@ -33,25 +33,45 @@ export default function LoginScreen() {
             }
 
             // Real Login
-            // Note: Since we are in development, ensure your phone can reach this IP.
             const response = await fetch(`${API_URL}/auth/login`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Bypass-Tunnel-Reminder': 'true'
+                },
                 body: JSON.stringify({ username, password })
             });
 
-            const data = await response.json();
+            const text = await response.text();
+            console.log('Login Response Status:', response.status);
+            console.log('Login Response Body:', text);
 
-            if (data.success) {
-                signIn(data.user.username, data.user.role, data.token);
-                router.replace('/(tabs)');
-            } else {
-                Alert.alert('Hata', data.message || 'Giriş başarısız.');
+            try {
+                if (!text || text.trim() === '') {
+                    throw new Error(`Sunucudan BOŞ yanıt döndü (Status: ${response.status}).`);
+                }
+                const data = JSON.parse(text);
+
+                if (data.success) {
+                    signIn(data.user.username, data.user.role, data.token);
+                    router.replace('/(tabs)');
+                } else {
+                    Alert.alert('Giriş Başarısız', data.message || 'Kullanıcı adı veya şifre hatalı.');
+                }
+            } catch (e) {
+                console.error('JSON Parse Error:', e);
+                const isHtml = text && (text.includes('<html') || text.includes('<!DOCTYPE'));
+
+                if (isHtml) {
+                    Alert.alert('Sunucu Hatası (HTML)', 'Sunucu bir web sayfası döndürdü. Muhtemelen Tünel/Proxy hatası.');
+                } else {
+                    Alert.alert('Veri Hatası', e.message || 'Yanıt işlenemedi.');
+                }
             }
 
         } catch (error) {
-            console.error(error);
-            Alert.alert('Hata', 'Sunucuya bağlanılamadı.');
+            console.error('Network Error:', error);
+            Alert.alert('Bağlantı Hatası', 'Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin.');
         } finally {
             setLoading(false);
         }

@@ -349,10 +349,10 @@ const DBSInvoiceList = () => {
             </div>
 
             {/* Print View Layout */}
-            <div id="dbs-print-section" className="hidden print:block bg-white text-black p-8 min-h-screen">
+            <div id="dbs-print-section" className="hidden print:block bg-white text-black p-0 min-h-screen">
                 <style type="text/css" media="print">
                     {`
-                        @page { size: auto; margin: 0mm; }
+                        @page { size: A4; margin: 10mm; }
                         body * {
                             visibility: hidden;
                         }
@@ -368,76 +368,89 @@ const DBSInvoiceList = () => {
                             z-index: 9999;
                             background: white;
                         }
+                        .print-exact {
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
                     `}
                 </style>
-                {/* Print Header */}
-                <div className="flex justify-between items-start mb-8 pb-6 border-b-2 border-black">
-                    <div className="flex items-center gap-6">
+
+                {/* Stylish Header Banner */}
+                <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-slate-800 print-exact bg-slate-100 p-6 rounded-xl">
+                    <div className="flex items-center gap-5">
                         {company?.logoPath && (
-                            <img src={company.logoPath} alt="Logo" className="h-20 w-auto object-contain" />
+                            <img src={company.logoPath} alt="Logo" className="h-12 w-auto object-contain mix-blend-multiply" />
                         )}
-                        <div>
-                            <h1 className="text-2xl font-bold uppercase tracking-tight">{company?.companyName || 'DBS Sistemi'}</h1>
-                            <div className="text-sm text-gray-600 space-y-0.5">
+                        <div className="space-y-0.5 border-l-2 border-slate-300 pl-4">
+                            <h1 className="text-lg font-bold uppercase tracking-tight text-slate-900">{company?.companyName || 'FİRMA ADI'}</h1>
+                            <div className="text-[10px] text-slate-500 leading-tight">
                                 {company?.address && <p>{company.address}</p>}
-                                {company?.phone && <p>Tel: {company.phone}</p>}
-                                {company?.email && <p>E-posta: {company.email}</p>}
+                                <div className="flex gap-3">
+                                    {company?.phone && <p>Tel: {company.phone}</p>}
+                                    {company?.email && <p>E-posta: {company.email}</p>}
+                                </div>
                             </div>
                         </div>
                     </div>
+
                     <div className="text-right">
-                        <div className="px-3 py-1 bg-black text-white text-sm font-bold inline-block mb-2">RAPOR</div>
-                        <h2 className="text-xl font-bold uppercase">DBS ÖDEME LİSTESİ</h2>
-                        <p className="text-lg font-medium mt-1 text-gray-800">{getFilterLabel(dateFilter)}</p>
-                        <p className="text-sm text-gray-500 mt-2">Oluşturulma: {new Date().toLocaleDateString('tr-TR')}</p>
+                        <div className="inline-block px-3 py-1 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider rounded mb-1 print-exact">
+                            DBS Ödeme Raporu
+                        </div>
+                        <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">{getFilterLabel(dateFilter)}</h2>
+                        <div className="text-[10px] text-slate-400 mt-1 font-mono">
+                            Tarih: {new Date().toLocaleDateString('tr-TR')}
+                        </div>
                     </div>
                 </div>
 
                 {/* Print Table */}
-                {/* Print Table */}
-                <table className="w-full text-sm">
+                <table className="w-full text-xs">
                     <thead>
-                        <tr className="border-b-2 border-black">
-                            <th className="text-left py-2 font-bold uppercase">Tarih</th>
-                            <th className="text-left py-2 font-bold uppercase">Fiş No</th>
-                            <th className="text-left py-2 font-bold uppercase">Cari Hesap</th>
-                            <th className="text-left py-2 font-bold uppercase">Dönem</th>
-                            <th className="text-left py-2 font-bold uppercase">Vade Kuralı</th>
-                            <th className="text-center py-2 font-bold uppercase">DBS Vadesi</th>
-                            <th className="text-right py-2 font-bold uppercase">Tutar</th>
+                        <tr className="border-b border-slate-800 bg-slate-50 print-exact">
+                            <th className="text-left py-2 px-2 font-bold uppercase text-slate-700">Fatura Tarihi</th>
+                            <th className="text-left py-2 px-2 font-bold uppercase text-slate-700">Fiş No</th>
+                            <th className="text-left py-2 px-2 font-bold uppercase text-slate-700">Cari Hesap</th>
+                            <th className="text-left py-2 px-2 font-bold uppercase text-slate-700">Dönem</th>
+                            <th className="text-left py-2 px-2 font-bold uppercase text-slate-700">Vade Kuralı</th>
+                            <th className="text-center py-2 px-2 font-bold uppercase text-slate-700">DBS Vadesi</th>
+                            <th className="text-right py-2 px-2 font-bold uppercase text-slate-700">Tutar</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-slate-200">
                         {filteredInvoices.map((inv, idx) => (
-                            <tr key={inv.id || idx} className="border-b border-gray-200">
-                                <td className="py-2.5">{formatDate(inv.date)}</td>
-                                <td className="py-2.5 font-mono">{inv.ficheno}</td>
-                                <td className="py-2.5 font-medium">{inv.clientName}</td>
-                                <td className="py-2.5 text-xs text-gray-500">{inv.sourceYear}</td>
-                                <td className="py-2.5 text-xs text-gray-600">
+                            <tr key={inv.id || idx} className="break-inside-avoid">
+                                <td className="py-2 px-2 text-slate-600 font-mono">{formatDate(inv.date)}</td>
+                                <td className="py-2 px-2 text-slate-900 font-bold font-mono">{inv.ficheno}</td>
+                                <td className="py-2 px-2 text-slate-800">{inv.clientName}</td>
+                                <td className="py-2 px-2 text-[10px] text-slate-500">{inv.sourceYear}</td>
+                                <td className="py-2 px-2 text-[10px] text-slate-500">
                                     {(inv.configTerm || inv.configDay) ? (
                                         <div className="flex flex-col">
                                             {inv.configTerm > 0 && <span>+{inv.configTerm} Gün</span>}
-                                            {getDayLabel(inv.configDay) && <span>{getDayLabel(inv.configDay)} Günü</span>}
+                                            {getDayLabel(inv.configDay) && <span>{getDayLabel(inv.configDay)}</span>}
                                         </div>
                                     ) : <span>-</span>}
                                 </td>
-                                <td className="py-2.5 text-center">{formatDate(inv.dbsDate)}</td>
-                                <td className="py-2.5 text-right font-bold font-mono">{formatCurrency(inv.amount)}</td>
+                                <td className="py-2 px-2 text-center text-slate-900 font-medium">{formatDate(inv.dbsDate)}</td>
+                                <td className="py-2 px-2 text-right text-slate-900 font-bold font-mono text-sm">{formatCurrency(inv.amount)}</td>
                             </tr>
                         ))}
                     </tbody>
                     <tfoot>
-                        <tr className="border-t-2 border-black font-bold text-lg">
-                            <td colSpan="6" className="text-right py-4 pr-4">GENEL TOPLAM</td>
-                            <td className="text-right py-4">{formatCurrency(totalAmount)}</td>
+                        <tr className="border-t-2 border-slate-800 bg-slate-50 print-exact">
+                            <td colSpan="6" className="text-right py-3 px-2 font-bold uppercase text-slate-700 text-sm">GENEL TOPLAM</td>
+                            <td className="text-right py-3 px-2 font-bold text-slate-900 text-base">{formatCurrency(totalAmount)}</td>
                         </tr>
                     </tfoot>
                 </table>
 
-                <div className="mt-8 pt-4 border-t border-gray-200 flex justify-between text-xs text-gray-400">
-                    <p>Entelog DBS Sistemi tarafından oluşturulmuştur.</p>
-                    <p>Sayfa 1/1</p>
+                <div className="fixed bottom-8 left-0 w-full text-center">
+                    <div className="border-t border-slate-200 pt-2 inline-flex gap-8 text-[10px] text-slate-400 uppercase tracking-widest">
+                        <span>Entelog DBS Sistemi</span>
+                        <span>•</span>
+                        <span>{new Date().toLocaleDateString('tr-TR')} {new Date().toLocaleTimeString('tr-TR')}</span>
+                    </div>
                 </div>
             </div>
         </>

@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image, Modal, StyleSheet, Alert, Button } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Package, TrendingUp, AlertTriangle, CheckCircle, Box } from 'lucide-react-native';
+import { Search, Package, TrendingUp, AlertTriangle, CheckCircle, Box, ScanLine, X, Camera as CameraIcon } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '@/context/AuthContext';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 
 export default function ProductsScreen() {
     const { isDemo } = useAuth();
@@ -17,6 +18,11 @@ export default function ProductsScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [searchText, setSearchText] = useState('');
     const [sortBy, setSortBy] = useState('amount'); // 'amount' | 'quantity'
+
+    // Camera State
+    const [permission, requestPermission] = useCameraPermissions();
+    const [isScanning, setIsScanning] = useState(false);
+    const [scanned, setScanned] = useState(false);
 
     const fetchData = useCallback(async () => {
         try {
@@ -54,6 +60,28 @@ export default function ProductsScreen() {
     const onRefresh = () => {
         setRefreshing(true);
         fetchData();
+    };
+
+    const handleScan = () => {
+        if (!permission) {
+            // Camera permissions are still loading
+            return;
+        }
+
+        if (!permission.granted) {
+            requestPermission();
+            return;
+        }
+
+        setScanned(false);
+        setIsScanning(true);
+    };
+
+    const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
+        setScanned(true);
+        setIsScanning(false);
+        setSearchText(data);
+        Alert.alert("Barkod Okundu", `Ürün Kodu: ${data}`);
     };
 
     const renderHeader = () => (
@@ -100,7 +128,7 @@ export default function ProductsScreen() {
         </View>
     );
 
-    const renderItem = ({ item, index }) => (
+    const renderItem = ({ item, index }: { item: any; index: number }) => (
         <Animated.View entering={FadeInDown.delay(index * 100).springify()} className="mb-3">
             <TouchableOpacity onPress={() => router.push(`/products/${item.id}`)}>
                 <View className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl mb-3 flex-row items-center">
@@ -141,20 +169,28 @@ export default function ProductsScreen() {
                     />
                     <View>
                         <Text className="text-3xl font-black text-white">Stok & Ürün</Text>
-                        <Text className="text-slate-400 text-[10px] font-medium tracking-wide uppercase">Entelog Mobile</Text>
+                        <Text className="text-slate-400 text-xs font-medium tracking-wide uppercase">Entelog Mobile</Text>
                     </View>
                 </View>
 
-                {/* Search Bar */}
-                <View className="bg-slate-900 border border-slate-800 rounded-xl flex-row items-center px-4 py-3 mb-4">
-                    <Search size={20} color="#94a3b8" />
-                    <TextInput
-                        placeholder="Ürün ara..."
-                        placeholderTextColor="#64748b"
-                        value={searchText}
-                        onChangeText={setSearchText}
-                        className="flex-1 ml-3 text-white font-medium"
-                    />
+                {/* Search Bar & Scan Button */}
+                <View className="flex-row gap-3 mb-4">
+                    <View className="bg-slate-900 border border-slate-800 rounded-xl flex-1 flex-row items-center px-4 py-3">
+                        <Search size={20} color="#94a3b8" />
+                        <TextInput
+                            placeholder="Ürün ara veya barkod tara..."
+                            placeholderTextColor="#64748b"
+                            value={searchText}
+                            onChangeText={setSearchText}
+                            className="flex-1 ml-3 text-white font-medium"
+                        />
+                    </View>
+                    <TouchableOpacity
+                        onPress={handleScan}
+                        className="bg-blue-600 rounded-xl justify-center items-center w-14 border border-blue-500"
+                    >
+                        <ScanLine size={24} color="white" />
+                    </TouchableOpacity>
                 </View>
 
                 {loading && !refreshing && !products.length ? (
@@ -176,6 +212,46 @@ export default function ProductsScreen() {
                     />
                 )}
             </SafeAreaView>
+
+            {/* Camera Modal */}
+            <Modal visible={isScanning} animationType="slide" presentationStyle="fullScreen">
+                <View style={StyleSheet.absoluteFill}>
+                    {!permission ? (
+                        <View className="flex-1 bg-black justify-center items-center">
+                            <ActivityIndicator size="large" color="#fff" />
+                        </View>
+                    ) : !permission.granted ? (
+                        <View className="flex-1 bg-black justify-center items-center p-6">
+                            <Text className="text-white text-center mb-4 text-lg">Kamera izni gerekiyor</Text>
+                            <Button onPress={requestPermission} title="İzin Ver" />
+                            <Button onPress={() => setIsScanning(false)} title="İptal" color="red" />
+                        </View>
+                    ) : (
+                        <CameraView
+                            style={StyleSheet.absoluteFill}
+                            facing="back"
+                            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+                            barcodeScannerSettings={{
+                                barcodeTypes: ["qr", "ean13", "ean8", "upc_e", "code128", "code39"],
+                            }}
+                        >
+                            <View className="flex-1 bg-black/50 justify-center items-center">
+                                <View className="w-80 h-80 border-2 border-white/50 rounded-3xl justify-center items-center overflow-hidden">
+                                    <View className="w-full h-1 bg-red-500 opacity-50 absolute top-1/2" />
+                                    <Text className="text-white/80 font-bold bg-black/50 px-4 py-2 mt-48 rounded-full overflow-hidden">Barkodu Çerçeveye Hizalayın</Text>
+                                </View>
+
+                                <TouchableOpacity
+                                    onPress={() => setIsScanning(false)}
+                                    className="absolute bottom-12 bg-red-600 rounded-full p-4"
+                                >
+                                    <X size={32} color="white" />
+                                </TouchableOpacity>
+                            </View>
+                        </CameraView>
+                    )}
+                </View>
+            </Modal>
         </View>
     );
 }

@@ -18,7 +18,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType>({
-    user: null,
+    user: { username: 'entelog', role: 'user', name: 'Entelog User' }, // Temp Auto-Login
     isLoading: true,
     signIn: () => { },
     signOut: () => { },
@@ -32,7 +32,7 @@ export function useAuth() {
 
 // Provider component
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<User | null>({ username: 'entelog', role: 'user', name: 'Entelog User' }); // Temp Auto-Login
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
     const segments = useSegments();
@@ -41,10 +41,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Check for persisted user
         const loadUser = async () => {
             try {
+                // FORCE AUTO LOGIN (TEMPORARY)
+                const bypassUser = { username: 'entelog', role: 'user', name: 'Entelog User' };
+                setUser(bypassUser);
+                await SecureStore.setItemAsync('user', JSON.stringify(bypassUser));
+                await SecureStore.setItemAsync('token', 'mock-jwt-token-user-user');
+
+                /* 
+                // Original Logic Disabled for Bypass
                 const storedUser = await SecureStore.getItemAsync('user');
                 if (storedUser) {
                     setUser(JSON.parse(storedUser));
                 }
+                */
             } catch (e) {
                 console.error('Failed to load user', e);
             } finally {

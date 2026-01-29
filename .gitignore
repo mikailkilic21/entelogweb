@@ -9,6 +9,10 @@ server/src/config/db-config.json
 
 # Company Data
 server/data/
+!server/data/dbs-config.json
+!server/data/dbs-global-config.json
+!server/data/company-db.json
+
 server/public/uploads/
 
 # Environment files

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Image, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_URL } from '@/constants/Config';
 import { SalesTrendChart, TopProductsChart, TopCustomersChart } from '@/components/DashboardCharts';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Bell, Search, TrendingUp, TrendingDown, Package, Users, AlertCircle, LayoutDashboard, Receipt, RefreshCcw } from 'lucide-react-native';
+import { Bell, Search, TrendingUp, TrendingDown, Package, Users, AlertCircle, LayoutDashboard, Receipt, RefreshCcw, X } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 
 export default function DashboardScreen() {
@@ -12,6 +12,7 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAboutModal, setShowAboutModal] = useState(false);
 
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
   const [customerType, setCustomerType] = useState<'sales' | 'purchases'>('sales');
@@ -24,7 +25,10 @@ export default function DashboardScreen() {
   const fetchData = async () => {
     setError(null);
     try {
-      const headers = { 'x-demo-mode': isDemo ? 'true' : 'false' };
+      const headers = {
+        'x-demo-mode': isDemo ? 'true' : 'false',
+        'Bypass-Tunnel-Reminder': 'true'
+      };
       // Parallel Fetching for Perforamnce
       const [statsRes, trendRes, productsRes, customersRes] = await Promise.all([
         fetch(`${API_URL}/stats?period=${period}`, { headers }),
@@ -98,12 +102,15 @@ export default function DashboardScreen() {
                 <Text className="text-2xl font-bold text-white tracking-tight">
                   Entelog Mobile
                 </Text>
-                <Text className="text-slate-400 text-[10px] font-medium tracking-wide uppercase">Premium Dashboard</Text>
+                <Text className="text-slate-400 text-[10px] font-medium tracking-wide uppercase">PREMIUM PANEL</Text>
               </View>
             </View>
-            <View className="bg-slate-800/50 p-2.5 rounded-full border border-slate-700/50">
+            <TouchableOpacity
+              onPress={() => setShowAboutModal(true)}
+              className="bg-slate-800/50 p-2.5 rounded-full border border-slate-700/50 active:bg-slate-700/50"
+            >
               <LayoutDashboard size={24} color="#60a5fa" />
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -119,7 +126,7 @@ export default function DashboardScreen() {
 
           {/* Period Selector */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-6 mb-6 max-h-12">
-            {['daily', 'weekly', 'monthly', 'yearly'].map((p) => (
+            {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((p) => (
               <TouchableOpacity
                 key={p}
                 onPress={() => setPeriod(p)}
@@ -231,6 +238,68 @@ export default function DashboardScreen() {
           </View>
 
         </ScrollView>
+        {/* About Us Modal */}
+        <Modal visible={showAboutModal} animationType="fade" transparent>
+          <View className="flex-1 bg-black/80 justify-center items-center p-6">
+            <View className="bg-slate-900 w-full rounded-3xl border border-slate-800 p-6 shadow-2xl shadow-blue-900/20">
+
+              <View className="flex-row justify-between items-center mb-6">
+                <Text className="text-2xl font-bold text-white">Hakkımızda</Text>
+                <TouchableOpacity onPress={() => setShowAboutModal(false)} className="bg-slate-800 p-2 rounded-full">
+                  <X size={20} color="white" />
+                </TouchableOpacity>
+              </View>
+
+              <View className="items-center mb-8">
+                <Image
+                  source={require('../../assets/images/siyahlogo.png')}
+                  style={{ width: 80, height: 80, borderRadius: 20, marginBottom: 16 }}
+                  resizeMode="contain"
+                />
+                <Text className="text-white text-xl font-bold">Entelog Mobile</Text>
+                <Text className="text-slate-500 text-sm">v1.0.0</Text>
+              </View>
+
+              <View className="space-y-4">
+                <View className="flex-row items-center bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
+                  <View className="bg-blue-500/20 p-2 rounded-lg mr-4">
+                    <Users size={20} color="#60a5fa" />
+                  </View>
+                  <View>
+                    <Text className="text-slate-400 text-xs uppercase font-bold">Geliştirici</Text>
+                    <Text className="text-white font-medium">Mikail KILIÇ</Text>
+                  </View>
+                </View>
+
+                <View className="flex-row items-center bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
+                  <View className="bg-purple-500/20 p-2 rounded-lg mr-4">
+                    <Package size={20} color="#c084fc" />
+                  </View>
+                  <View>
+                    <Text className="text-slate-400 text-xs uppercase font-bold">E-Posta</Text>
+                    <Text className="text-white font-medium">mikailkilic21@gmail.com</Text>
+                  </View>
+                </View>
+
+                <View className="flex-row items-center bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
+                  <View className="bg-green-500/20 p-2 rounded-lg mr-4">
+                    <Bell size={20} color="#4ade80" />
+                  </View>
+                  <View>
+                    <Text className="text-slate-400 text-xs uppercase font-bold">Telefon</Text>
+                    <Text className="text-white font-medium">+90 553 391 22 86</Text>
+                  </View>
+                </View>
+              </View>
+
+              <Text className="text-slate-600 text-center text-xs mt-8">
+                © 2026 Tüm Hakları Saklıdır.
+              </Text>
+
+            </View>
+          </View>
+        </Modal>
+
       </SafeAreaView>
     </View>
   );

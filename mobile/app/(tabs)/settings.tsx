@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Alert, Pressable, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Building2, Calendar, Check, LogOut, ChevronRight, X, Briefcase, FileText } from 'lucide-react-native';
+import { Building2, Calendar, Check, LogOut, ChevronRight, X, Briefcase, FileText, MessageCircle } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -257,6 +257,20 @@ export default function MenuScreen() {
                             </MenuCard>
                         </>
                     )}
+
+                    {/* Contact Support */}
+                    <MenuCard onPress={() => router.push('/support')} colors={['#0f766e', '#0d9488']}>
+                        <View className="flex-row items-center">
+                            <View className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                                <MessageCircle size={24} color="white" />
+                            </View>
+                            <View className="flex-1 ml-4">
+                                <Text className="text-white text-lg font-bold">Bize Ulaşın</Text>
+                                <Text className="text-teal-100 text-xs opacity-80">WhatsApp üzerinden destek alın</Text>
+                            </View>
+                            <ChevronRight size={24} color="white" opacity={0.5} />
+                        </View>
+                    </MenuCard>
 
                     {/* Logout */}
                     <MenuCard onPress={signOut} colors={['#7f1d1d', '#991b1b']}>
