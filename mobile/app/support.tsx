@@ -37,7 +37,7 @@ export default function SupportScreen() {
             } else {
                 Alert.alert('Hata', 'WhatsApp uygulaması cihazınızda yüklü değil.');
             }
-        } catch (err) {
+        } catch {
             Alert.alert('Hata', 'WhatsApp açılamadı.');
         }
     };
@@ -91,8 +91,8 @@ export default function SupportScreen() {
                                     key={topic.id}
                                     onPress={() => setSelectedTopic(topic.id)}
                                     className={`w-[48%] p-4 rounded-2xl border transition-all ${isSelected
-                                            ? 'bg-blue-600 border-blue-500 shadow-lg shadow-blue-500/30'
-                                            : 'bg-slate-900 border-slate-800'
+                                        ? 'bg-blue-600 border-blue-500 shadow-lg shadow-blue-500/30'
+                                        : 'bg-slate-900 border-slate-800'
                                         }`}
                                 >
                                     <Icon size={24} color={isSelected ? 'white' : '#94a3b8'} className="mb-3" />
@@ -128,8 +128,8 @@ export default function SupportScreen() {
                     <TouchableOpacity
                         onPress={handleSend}
                         className={`p-4 rounded-xl flex-row items-center justify-center gap-3 shadow-lg ${selectedTopic
-                                ? 'bg-[#25D366] shadow-green-900/40'
-                                : 'bg-slate-800'
+                            ? 'bg-[#25D366] shadow-green-900/40'
+                            : 'bg-slate-800'
                             }`}
                         disabled={!selectedTopic}
                     >

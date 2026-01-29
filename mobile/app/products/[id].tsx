@@ -3,7 +3,7 @@ import { View, Text, ActivityIndicator, ScrollView, TouchableOpacity } from 'rea
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Package, User, FileText, Box, TrendingUp, ShoppingCart } from 'lucide-react-native';
+import { ArrowLeft, User, Box, TrendingUp, ShoppingCart } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { useAuth } from '@/context/AuthContext';
 
@@ -35,7 +35,7 @@ export default function ProductDetailScreen() {
         };
 
         if (id) fetchDetails();
-    }, [id]);
+    }, [id, isDemo]);
 
     if (loading) {
         return (
@@ -58,7 +58,7 @@ export default function ProductDetailScreen() {
             case 'transactions':
                 return (
                     <View className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden mb-6">
-                        {product.transactions?.map((tr, index) => (
+                        {product.transactions?.map((tr: any, index: number) => (
                             <View key={index} className="p-4 border-b border-slate-800 last:border-0 hover:bg-slate-800/30">
                                 <View className="flex-row justify-between mb-2">
                                     <Text className="text-slate-400 text-xs">{tr.date}</Text>
@@ -160,7 +160,7 @@ export default function ProductDetailScreen() {
                             <Text className="text-slate-400 text-xs uppercase mb-3 font-bold tracking-wider">Ambar Stokları</Text>
                             {product.warehouses?.length > 0 ? (
                                 <View className="space-y-2">
-                                    {product.warehouses.map((wh, idx) => (
+                                    {product.warehouses.map((wh: any, idx: number) => (
                                         <View key={idx} className="flex-row justify-between items-center bg-slate-800/30 p-3 rounded-lg">
                                             <View className="flex-row items-center gap-2">
                                                 <Box size={16} color="#94a3b8" />

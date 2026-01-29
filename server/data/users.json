@@ -1,0 +1,18 @@
+[
+    {
+        "id": 1769675780205,
+        "username": "entelog",
+        "password": "1234",
+        "name": "Mikail KILIÇ",
+        "role": "admin",
+        "created_at": "2026-01-29T08:36:20.205Z"
+    },
+    {
+        "id": 1769675800236,
+        "username": "demo",
+        "password": "demo",
+        "name": "Demo",
+        "role": "demo",
+        "created_at": "2026-01-29T08:36:40.236Z"
+    }
+]

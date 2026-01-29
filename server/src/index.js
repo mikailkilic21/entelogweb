@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { connectDB } = require('./config/db');
 const apiRoutes = require('./routes/api');
+const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -13,6 +14,9 @@ app.use(express.static('public')); // Serve static files like uploaded logos
 
 // Routes
 app.use('/api', apiRoutes);
+
+// Error Handling (Must be last)
+app.use(errorHandler);
 
 // Connect to Database and start server
 connectDB().then(() => {

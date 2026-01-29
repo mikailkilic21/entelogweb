@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, Dimensions, TouchableOpacity } from 'react-native';
 import { LineChart, BarChart, PieChart } from 'react-native-gifted-charts';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 

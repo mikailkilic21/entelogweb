@@ -18,7 +18,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType>({
-    user: { username: 'entelog', role: 'user', name: 'Entelog User' }, // Temp Auto-Login
+    user: null,
     isLoading: true,
     signIn: () => { },
     signOut: () => { },
@@ -32,7 +32,7 @@ export function useAuth() {
 
 // Provider component
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User | null>({ username: 'entelog', role: 'user', name: 'Entelog User' }); // Temp Auto-Login
+    const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
     const segments = useSegments();
