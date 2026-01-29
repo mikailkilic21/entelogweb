@@ -48,6 +48,9 @@ router.get('/accounts', accountsController.getAccounts);
 router.get('/accounts/stats', accountsController.getAccountStats);
 router.get('/accounts/:id', accountsController.getAccountDetails);
 router.get('/accounts/:id/orders', accountsController.getAccountOrders);
+router.get('/accounts/:id/turnover', accountsController.getClientPurchaseTurnover);
+
+
 
 // Check Routes
 const checksController = require('../controllers/checksController');

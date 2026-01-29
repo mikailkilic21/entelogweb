@@ -258,19 +258,28 @@ exports.getAccountDetails = async (req, res) => {
                 SOURCEFREF as sourceRef,
                 MODULENR as moduleNr,
                 CASE 
-                     -- Map common invoice types
-                    WHEN TRCODE IN (37, 38, 8) THEN 'Satış Faturası'
-                    WHEN TRCODE IN (1, 2) THEN 'Alım Faturası'
+                    -- Map common invoice types
+                    WHEN TRCODE IN (37, 38, 39) THEN 'Satış Faturası'
+                    WHEN TRCODE IN (32, 33, 34) THEN 'Satış İade Faturası'
+                    WHEN TRCODE IN (1, 31, 35) THEN 
+                         CASE 
+                             WHEN TRCODE = 1 THEN 'Nakit Tahsilat'
+                             ELSE 'Satınalma Faturası'
+                         END
+                    WHEN TRCODE IN (6, 36) THEN 
+                        CASE
+                            WHEN TRCODE = 6 THEN 'Kur Farkı' -- Or specific Purchase Return if context implies, but usually 36 in CLFLINE
+                            ELSE 'Satınalma İade Faturası'
+                        END
                     WHEN TRCODE = 14 THEN 'Devir'
-                    WHEN TRCODE = 1 THEN 'Nakit Tahsilat'
                     WHEN TRCODE = 2 THEN 'Nakit Ödeme'
                     WHEN TRCODE = 3 THEN 'Borç Dekontu'
                     WHEN TRCODE = 4 THEN 'Alacak Dekontu'
                     WHEN TRCODE = 5 THEN 'Virman'
-                    WHEN TRCODE = 6 THEN 'Kur Farkı'
                     WHEN TRCODE IN (61, 62) THEN 'Çek'
                     WHEN TRCODE IN (71, 72) THEN 'Senet'
                     ELSE 'Diğer'
+
                 END as type
             FROM ${clflineTable}
             WHERE CLIENTREF = ${accountInfo.id} AND CANCELLED = 0
@@ -360,6 +369,89 @@ exports.getAccountOrders = async (req, res) => {
 
   } catch (err) {
     console.error('❌ getAccountOrders Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getClientTurnover = async (req, res) => {
+  try {
+    const config = getConfig();
+    const firm = config.firmNo || '113';
+    const period = config.periodNo || '01';
+    const invoiceTable = `LG_${firm}_${period}_INVOICE`;
+
+    // Resolve ID (LogicalRef vs Code)
+    // Assuming Frontend sends LOGICALREF from the Account Card
+    const { id } = req.params;
+    let clientRef = id;
+
+    if (!id) return res.status(400).json({ error: 'Client ID required' });
+
+    // Ciro: Total Sales (TRCODE 7,8,9), excluding Cancelled
+    // Net Total (KDV Hariç)
+
+    const query = `
+      SELECT 
+        ISNULL(SUM(NETTOTAL), 0) as totalTurnover,
+        COUNT(LOGICALREF) as invoiceCount
+      FROM ${invoiceTable}
+      WHERE CLIENTREF = ${clientRef}
+        AND TRCODE IN (7, 8, 9)
+        AND CANCELLED = 0
+    `;
+
+    const result = await sql.query(query);
+    const stats = result.recordset[0];
+
+    res.json({
+      totalTurnover: stats.totalTurnover || 0,
+      invoiceCount: stats.invoiceCount || 0
+    });
+
+  } catch (err) {
+    console.error('❌ getClientTurnover Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+
+exports.getClientPurchaseTurnover = async (req, res) => {
+  try {
+    const config = getConfig();
+    const firm = config.firmNo || '113';
+    const period = config.periodNo || '01';
+    const invoiceTable = `LG_${firm}_${period}_INVOICE`;
+
+    // Resolve ID (LogicalRef vs Code)
+    const { id } = req.params;
+    let clientRef = id;
+
+    if (!id) return res.status(400).json({ error: 'Client ID required' });
+
+    // Ciro: Total Purchase (TRCODE 1) - Purchase Return (TRCODE 6)
+    // Net Total (KDV Hariç)
+
+    const query = `
+      SELECT 
+        ISNULL(SUM(CASE WHEN TRCODE = 1 THEN NETTOTAL WHEN TRCODE = 6 THEN -NETTOTAL ELSE 0 END), 0) as totalTurnover,
+        COUNT(LOGICALREF) as invoiceCount
+      FROM ${invoiceTable}
+      WHERE CLIENTREF = ${clientRef}
+        AND TRCODE IN (1, 6)
+        AND CANCELLED = 0
+    `;
+
+    const result = await sql.query(query);
+    const stats = result.recordset[0];
+
+    res.json({
+      totalTurnover: stats.totalTurnover || 0,
+      invoiceCount: stats.invoiceCount || 0
+    });
+
+  } catch (err) {
+    console.error('❌ getClientPurchaseTurnover Error:', err.message);
     res.status(500).json({ error: err.message });
   }
 };

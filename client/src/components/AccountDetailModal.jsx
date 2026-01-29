@@ -10,6 +10,8 @@ const AccountDetailModal = ({ accountId, onClose }) => {
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [selectedPayroll, setSelectedPayroll] = useState(null);
     const [activeTab, setActiveTab] = useState('summary'); // 'summary', 'transactions', 'orders'
+    const [turnover, setTurnover] = useState(null);
+    const [loadingTurnover, setLoadingTurnover] = useState(false);
 
     useEffect(() => {
         if (!accountId) return;
@@ -36,7 +38,25 @@ const AccountDetailModal = ({ accountId, onClose }) => {
         };
 
         fetchAccountDetails();
+        // Reset turnover on open
+        setTurnover(null);
     }, [accountId]);
+
+    const fetchTurnover = async () => {
+        setLoadingTurnover(true);
+        try {
+            const res = await fetch(`/api/accounts/${accountId}/turnover`);
+            if (res.ok) {
+                setTurnover(await res.json());
+            }
+        } catch (error) {
+            console.error('Error fetching turnover:', error);
+        } finally {
+            setLoadingTurnover(false);
+        }
+    };
+
+
 
     if (!accountId) return null;
 
@@ -64,6 +84,7 @@ const AccountDetailModal = ({ accountId, onClose }) => {
                         <X size={24} className="text-slate-400" />
                     </button>
                 </div>
+
 
                 {/* Tabs */}
                 <div className="flex border-b border-slate-800 px-6 shrink-0 bg-slate-900/50">
@@ -142,6 +163,51 @@ const AccountDetailModal = ({ accountId, onClose }) => {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Turnover Section */}
+                                    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                                    <TrendingUp size={20} className="text-blue-400" />
+                                                    Ciro Bilgisi
+                                                </h3>
+                                                <p className="text-sm text-slate-400 mt-1">
+                                                    Net Satınalma (KDV Hariç) ve Fiş Adedi
+                                                </p>
+
+                                            </div>
+
+                                            {!turnover ? (
+                                                <button
+                                                    onClick={() => {
+                                                        setLoadingTurnover(true);
+                                                        fetch(`/api/accounts/${accountId}/turnover`)
+                                                            .then(res => res.json())
+                                                            .then(data => setTurnover(data))
+                                                            .catch(err => console.error(err))
+                                                            .finally(() => setLoadingTurnover(false));
+                                                    }}
+                                                    disabled={loadingTurnover}
+                                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
+                                                >
+                                                    {loadingTurnover ? <Loader2 className="animate-spin" size={18} /> : null}
+                                                    {loadingTurnover ? 'Hesaplanıyor...' : 'Ciro Hesapla'}
+                                                </button>
+                                            ) : (
+                                                <div className="text-right">
+                                                    <div className="text-2xl font-bold text-white">
+                                                        {turnover.totalTurnover?.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
+                                                    </div>
+                                                    <div className="text-sm text-slate-400">
+                                                        {turnover.invoiceCount} Adet Fatura
+                                                    </div>
+
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
 
                                     {/* Info Grid */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
