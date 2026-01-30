@@ -1,4 +1,31 @@
 const { sql, getConfig } = require('../config/db');
+const fs = require('fs');
+const path = require('path');
+
+const PLANS_FILE = path.join(__dirname, '../../data/check-plans.json');
+
+// Helper: Read Plans
+const readPlans = () => {
+    try {
+        if (!fs.existsSync(PLANS_FILE)) return [];
+        const data = fs.readFileSync(PLANS_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (err) {
+        console.error('Error reading check plans:', err);
+        return [];
+    }
+};
+
+// Helper: Save Plans
+const writePlans = (plans) => {
+    try {
+        fs.writeFileSync(PLANS_FILE, JSON.stringify(plans, null, 2));
+        return true;
+    } catch (err) {
+        console.error('Error saving check plans:', err);
+        return false;
+    }
+};
 
 exports.getPayrollDetails = async (req, res) => {
     try {
@@ -633,6 +660,80 @@ exports.getTopCheckIssuers = async (req, res) => {
         res.json(formatted);
     } catch (err) {
         console.error('❌ getTopCheckIssuers Error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+};
+
+/* --- PLAN PERSISTENCE --- */
+
+exports.getPlans = (req, res) => {
+    try {
+        const plans = readPlans();
+        // Sort by date desc
+        plans.sort((a, b) => new Date(b.date) - new Date(a.date));
+        res.json(plans);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.savePlan = (req, res) => {
+    try {
+        const { id, name, receiverName, checks, date } = req.body;
+
+        if (!name || !checks || !Array.isArray(checks)) {
+            return res.status(400).json({ error: 'Invalid plan data' });
+        }
+
+        const plans = readPlans();
+
+        // Use provided ID or generate
+        const planId = id || Date.now().toString();
+        const existingIndex = plans.findIndex(p => p.id === planId);
+
+        const newPlan = {
+            id: planId,
+            name,
+            receiverName,
+            date: date || new Date().toISOString(),
+            checks, // Array of check objects
+            totalAmount: checks.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0),
+            count: checks.length
+        };
+
+        if (existingIndex >= 0) {
+            plans[existingIndex] = newPlan;
+        } else {
+            plans.push(newPlan);
+        }
+
+        if (writePlans(plans)) {
+            res.json({ success: true, plan: newPlan });
+        } else {
+            res.status(500).json({ error: 'Failed to save plan' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.deletePlan = (req, res) => {
+    try {
+        const { id } = req.params;
+        let plans = readPlans();
+        const initialLen = plans.length;
+        plans = plans.filter(p => p.id !== id);
+
+        if (plans.length === initialLen) {
+            return res.status(404).json({ error: 'Plan not found' });
+        }
+
+        if (writePlans(plans)) {
+            res.json({ success: true });
+        } else {
+            res.status(500).json({ error: 'Failed to delete plan' });
+        }
+    } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };

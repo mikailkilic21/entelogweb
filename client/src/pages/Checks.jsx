@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     FileText, Search, Calendar, ArrowUpRight, ArrowDownLeft, History, Filter,
-    CheckCircle, AlertCircle, Clock, Briefcase, Building2, Users, Loader2, RotateCw
+    CheckCircle, AlertCircle, Clock, Briefcase, Building2, Users, Loader2, RotateCw,
+    Save, FolderOpen, Trash2
 } from 'lucide-react';
 import {
     Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Sector
 } from 'recharts';
+import html2pdf from 'html2pdf.js';
 import StatCard from '../components/StatCard';
 
 const Checks = () => {
     const [activeTab, setActiveTab] = useState('customer'); // 'customer' | 'own' | 'overdue' | 'recent'
+    const printRef = React.useRef(); // Ref for the PDF Template
     const [checks, setChecks] = useState([]);
     const [upcomingChecks, setUpcomingChecks] = useState([]);
     const [activeCheck, setActiveCheck] = useState(null);
@@ -26,6 +29,43 @@ const Checks = () => {
     const [topIssuers, setTopIssuers] = useState([]);
     const [activePieIndex, setActivePieIndex] = useState(0);
 
+    // Payment Planning State
+    const [isPlanningMode, setIsPlanningMode] = useState(false);
+    const [targetAmount, setTargetAmount] = useState('');
+    const [targetDate, setTargetDate] = useState('');
+
+    // PDF Metadata State
+    const [receiverName, setReceiverName] = useState('');
+    const [giverName, setGiverName] = useState('ŞEHMUS YAKIŞIKLI ( 533 741 7765 )'); // Default from image
+    const [bankName, setBankName] = useState('');
+
+    const [portfolioChecks, setPortfolioChecks] = useState([]);
+    const [selectedPaymentChecks, setSelectedPaymentChecks] = useState([]);
+    const [planningSearchVal, setPlanningSearchVal] = useState('');
+
+    // Plan Persistence State
+    const [showSaveModal, setShowSaveModal] = useState(false);
+    const [showLoadModal, setShowLoadModal] = useState(false);
+    const [planName, setPlanName] = useState('');
+    const [savedPlans, setSavedPlans] = useState([]);
+
+    // ... existing effects
+
+    // --- PDF Generation (html2pdf) ---
+    const generatePDF = () => {
+        const element = printRef.current;
+        const opt = {
+            margin: [5, 5, 5, 5], // MM
+            filename: `Odeme_Plani_${new Date().toISOString().slice(0, 10)}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        };
+
+        html2pdf().set(opt).from(element).save();
+    };
+
+    // --- Payment Planning Logic ---
     useEffect(() => {
         fetchChecks();
         fetchUpcomingChecks();
@@ -80,6 +120,74 @@ const Checks = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const fetchPlans = async () => {
+        try {
+            const res = await fetch('/api/checks/plans');
+            if (res.ok) {
+                setSavedPlans(await res.json());
+            }
+        } catch (err) {
+            console.error('Error fetching plans:', err);
+        }
+    };
+
+    const handleSavePlan = async () => {
+        if (!planName.trim()) return;
+        try {
+            const checksToSave = selectedPaymentChecks.map(c => ({
+                id: c.id,
+                amount: c.amount,
+                serialNo: c.serialNo,
+                bankName: c.bankName,
+                dueDate: c.dueDate,
+                clientName: c.clientName // Ensure client name is saved
+            }));
+
+            const res = await fetch('/api/checks/plans', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: planName,
+                    receiverName,
+                    checks: checksToSave
+                })
+            });
+
+            if (res.ok) {
+                setShowSaveModal(false);
+                setPlanName('');
+                fetchPlans();
+            }
+        } catch (err) {
+            console.error('Error saving plan:', err);
+        }
+    };
+
+    const handleLoadPlan = (plan) => {
+        if (!plan) return;
+        setReceiverName(plan.receiverName || '');
+        setSelectedPaymentChecks(plan.checks);
+        setShowLoadModal(false);
+    };
+
+    const handleDeletePlan = async (id, e) => {
+        e.stopPropagation();
+        if (!window.confirm('Bu planı silmek istediğinize emin misiniz?')) return;
+        try {
+            const res = await fetch(`/api/checks/plans/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                fetchPlans();
+            }
+        } catch (err) {
+            console.error('Error deleting plan:', err);
+        }
+    };
+
+    const openLoadModal = () => {
+        fetchPlans();
+        setShowLoadModal(true);
     };
 
     const fetchUpcomingChecks = async () => {
@@ -177,6 +285,147 @@ const Checks = () => {
         });
     }, [upcomingChecks, upcomingFilter]);
 
+    // --- Payment Planning Logic ---
+    const togglePlanningMode = async () => {
+        if (!isPlanningMode) {
+            setLoading(true);
+            try {
+                // Fetch all portfolio checks for planning
+                const res = await fetch('/api/checks?type=customer&status=portfolio&limit=1000');
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    setPortfolioChecks(data.map(c => ({ ...c, selected: false })));
+                }
+            } catch (err) {
+                console.error('Error fetching portfolio for planning:', err);
+            } finally {
+                setLoading(false);
+            }
+        } else {
+            // Reset
+            setTargetAmount('');
+            setTargetDate('');
+            setSelectedPaymentChecks([]);
+        }
+        setIsPlanningMode(!isPlanningMode);
+    };
+
+    const handleCheckSelect = (check) => {
+        if (selectedPaymentChecks.find(c => c.id === check.id)) {
+            // Deselect
+            setSelectedPaymentChecks(prev => prev.filter(c => c.id !== check.id));
+        } else {
+            // Select
+            setSelectedPaymentChecks(prev => [...prev, check]);
+        }
+    };
+
+    const autoSelectChecks = () => {
+        if (!targetAmount || !portfolioChecks.length) return;
+
+        const target = parseFloat(targetAmount);
+        const tDate = targetDate ? new Date(targetDate) : null;
+
+        // --- Improved Algorithm with Strict Constraints ---
+        // Constraint 1: Avg Date Deviation <= 5 Days
+        // Constraint 2: if Target >= 5M, Max Overshoot = 200k. Else approx 5%.
+
+        const now = new Date();
+        const maxDateDev = 5; // days
+        const maxOvershoot = target >= 5000000 ? 200000 : target * 0.05;
+
+        let bestSelection = [];
+        let bestScore = Number.MAX_VALUE;
+        const iterations = 1000; // Increased iterations for harder constraints
+
+        const calculateScore = (selection) => {
+            if (selection.length === 0) return Number.MAX_VALUE;
+
+            const total = selection.reduce((sum, c) => sum + c.amount, 0);
+
+            // Hard Constraint: Amount Overshoot
+            if (total > target + maxOvershoot) return Number.MAX_VALUE;
+            // Hard Constraint: Amount Undershoot (Optional, but let's say we don't want check total < 90% of target unless impossible)
+            // But main goal is proximity. Calculate deviations.
+
+            const amountDiff = Math.abs(total - target);
+
+            let dateDiff = 0;
+            if (tDate) {
+                let weightedSum = 0;
+                selection.forEach(c => {
+                    const due = new Date(c.dueDate);
+                    const diffDays = (due - now) / (1000 * 60 * 60 * 24);
+                    weightedSum += (diffDays * c.amount);
+                });
+                const avgDays = weightedSum / total;
+                const targetDays = (tDate - now) / (1000 * 60 * 60 * 24);
+
+                dateDiff = Math.abs(avgDays - targetDays);
+
+                // Hard Constraint: Date Deviation > 5 days -> Discard
+                if (dateDiff > maxDateDev) return Number.MAX_VALUE;
+            }
+
+            // Score Calculation
+            // Priority 1: Amount Proximity (Higher weight)
+            // Priority 2: Date Proximity
+
+            const amountPenalty = (amountDiff / target) * 10000;
+            const datePenalty = dateDiff * 100;
+
+            return amountPenalty + datePenalty;
+        };
+
+        const available = [...portfolioChecks];
+
+        for (let i = 0; i < iterations; i++) {
+            const shuffled = [...available].sort(() => 0.5 - Math.random());
+            const currentSelection = [];
+            let currentSum = 0;
+
+            for (const check of shuffled) {
+                // Peek if adding check breaks max overshoot
+                if (currentSum + check.amount <= target + maxOvershoot) {
+                    currentSelection.push(check);
+                    currentSum += check.amount;
+                }
+            }
+
+            const score = calculateScore(currentSelection);
+            if (score < bestScore) {
+                bestScore = score;
+                bestSelection = currentSelection;
+            }
+        }
+
+        setSelectedPaymentChecks(bestSelection);
+    };
+
+    const planStats = useMemo(() => {
+        const total = selectedPaymentChecks.reduce((sum, c) => sum + c.amount, 0);
+        const count = selectedPaymentChecks.length;
+
+        let avgDays = 0;
+        let weightedSum = 0;
+        const now = new Date();
+
+        if (total > 0) {
+            selectedPaymentChecks.forEach(c => {
+                const due = new Date(c.dueDate);
+                const diffTime = Math.abs(due - now);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                weightedSum += (diffDays * c.amount);
+            });
+            avgDays = Math.ceil(weightedSum / total);
+        }
+
+        const avgDate = new Date();
+        avgDate.setDate(now.getDate() + avgDays);
+
+        return { total, count, avgDate, avgDays };
+    }, [selectedPaymentChecks]);
+
     // RENDER
     return (
         <div className="p-8 max-w-full mx-auto space-y-8 text-slate-100 pb-24">
@@ -193,8 +442,231 @@ const Checks = () => {
                         </button>
                     ))}
                     <button onClick={() => { fetchChecks(); fetchStats(); }} className="p-2 ml-2 text-slate-400 hover:text-white transition-colors" title="Yenile"><RotateCw size={18} /></button>
+                    <button
+                        onClick={togglePlanningMode}
+                        className={`ml-4 px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${isPlanningMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-orange-600 text-white hover:bg-orange-500 shadow-lg shadow-orange-500/30'}`}
+                    >
+                        <Filter size={16} />
+                        {isPlanningMode ? 'Planlamayı Kapat' : 'Ödeme Planla'}
+                    </button>
                 </div>
             </div>
+
+            {/* Payment Planning Overlay */}
+            {isPlanningMode && (
+                <div className="bg-slate-900/50 border border-indigo-500/30 rounded-2xl p-6 backdrop-blur-xl animate-fade-in shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {/* Left: Input & Selected */}
+                        <div className="space-y-6">
+                            <div>
+                                <h2 className="text-xl font-bold text-white mb-1">Ödeme Hedefi</h2>
+                                <p className="text-slate-400 text-sm">Ödemek istediğiniz tutar ve vadeyi girin.</p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs text-slate-500 font-semibold uppercase">Hedef Tutar</label>
+                                    <input
+                                        type="number"
+                                        value={targetAmount}
+                                        onChange={e => setTargetAmount(e.target.value)}
+                                        placeholder="0.00"
+                                        className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono focus:border-indigo-500 outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-slate-500 font-semibold uppercase">Hedef Vade</label>
+                                    <input
+                                        type="date"
+                                        value={targetDate}
+                                        onChange={e => setTargetDate(e.target.value)}
+                                        className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono focus:border-indigo-500 outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* PDF Inputs */}
+                            <div className="space-y-4 pt-4 border-t border-slate-800/50">
+                                <div>
+                                    <label className="text-xs text-slate-500 font-semibold uppercase">Alıcı Ünvanı (PDF)</label>
+                                    <input
+                                        type="text"
+                                        value={receiverName}
+                                        onChange={e => setReceiverName(e.target.value.toLocaleUpperCase('tr-TR'))}
+                                        placeholder="ÖZNUR KABLO A.Ş."
+                                        className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-indigo-500 outline-none uppercase"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs text-slate-500 font-semibold uppercase">Teslim Alan Banka</label>
+                                        <input
+                                            type="text"
+                                            value={bankName}
+                                            onChange={e => setBankName(e.target.value)}
+                                            placeholder="BANKA ADI..."
+                                            className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-indigo-500 outline-none uppercase"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-slate-500 font-semibold uppercase">Teslim Eden</label>
+                                        <input
+                                            type="text"
+                                            value={giverName}
+                                            onChange={e => setGiverName(e.target.value)}
+                                            className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-indigo-500 outline-none uppercase"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={autoSelectChecks}
+                                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-900/20 transition-all active:scale-[0.98]"
+                            >
+                                ✨ Uygun Çekleri Seç (Otomatik)
+                            </button>
+
+                            <div className="bg-slate-950/50 rounded-xl p-6 border border-slate-800 space-y-4">
+                                <h3 className="text-sm font-semibold text-slate-400 border-b border-slate-800 pb-2">Seçilenler Özeti</h3>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-slate-400">Seçilen Adet</span>
+                                    <span className="text-white font-bold">{planStats.count}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-slate-400">Toplam Tutar</span>
+                                    <span className="text-2xl font-mono font-bold text-emerald-400">{formatCurrency(planStats.total)}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-slate-400">Ortalama Vade</span>
+                                    <div className="text-right">
+                                        <div className="text-white font-bold">{planStats.total > 0 ? planStats.avgDate.toLocaleDateString('tr-TR') : '-'}</div>
+                                        <div className="text-xs text-slate-500">{planStats.avgDays} Gün</div>
+                                    </div>
+                                </div>
+
+                                {targetAmount && (
+                                    <div className="pt-2 border-t border-slate-800 mt-2">
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="text-slate-500">Hedef Farkı</span>
+                                            <span className={`${(planStats.total - parseFloat(targetAmount)) > 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                                                {formatCurrency(planStats.total - parseFloat(targetAmount))}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <button
+                                onClick={generatePDF}
+                                disabled={selectedPaymentChecks.length === 0}
+                                className="w-full py-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl border border-slate-700 flex items-center justify-center gap-2 transition-all"
+                            >
+                                <FileText size={18} />
+                                PDF Çıktısı Oluştur
+                            </button>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => setShowSaveModal(true)}
+                                    disabled={selectedPaymentChecks.length === 0}
+                                    className="py-3 bg-indigo-900/50 hover:bg-indigo-900/80 disabled:opacity-50 disabled:cursor-not-allowed text-indigo-200 font-bold rounded-xl border border-indigo-800 flex items-center justify-center gap-2 transition-all"
+                                >
+                                    <Save size={18} />
+                                    Planı Kaydet
+                                </button>
+                                <button
+                                    onClick={openLoadModal}
+                                    className="py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl border border-slate-700 flex items-center justify-center gap-2 transition-all"
+                                >
+                                    <FolderOpen size={18} />
+                                    Plan Yükle
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Middle/Right: List */}
+                        <div className="lg:col-span-2 flex flex-col h-[500px]">
+                            <div className="flex justify-between items-center mb-4">
+                                <div>
+                                    <h3 className="font-bold text-white">Portföydeki Çekler</h3>
+                                    <div className="text-xs text-slate-400">
+                                        Tıklayarak manuel ekle/çıkar yapabilirsiniz.
+                                    </div>
+                                </div>
+                                <div className="relative flex items-center gap-2">
+                                    {selectedPaymentChecks.length > 0 && (
+                                        <button
+                                            onClick={() => setSelectedPaymentChecks([])}
+                                            className="px-3 py-1.5 text-xs font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg transition-colors flex items-center gap-1"
+                                        >
+                                            <RotateCw size={12} className={loading ? 'animate-spin' : ''} />
+                                            Temizle
+                                        </button>
+                                    )}
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={14} />
+                                        <input
+                                            type="text"
+                                            value={planningSearchVal}
+                                            onChange={e => setPlanningSearchVal(e.target.value)}
+                                            placeholder="Çek No ile Ara..."
+                                            className="bg-slate-950/50 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-sm text-white focus:border-indigo-500 outline-none w-48"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto bg-slate-950/30 rounded-xl border border-slate-800">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-slate-900 sticky top-0 text-xs uppercase text-slate-400 font-medium z-10">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left">Seç</th>
+                                            <th className="px-4 py-3 text-left">Çek No</th>
+                                            <th className="px-4 py-3 text-left">Vade</th>
+                                            <th className="px-4 py-3 text-left">Cari / Banka</th>
+                                            <th className="px-4 py-3 text-right">Tutar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-800">
+                                        {/* Filter then Sort */}
+                                        {[...portfolioChecks].filter(c => c.serialNo.toLowerCase().includes(planningSearchVal.toLowerCase())).sort((a, b) => {
+                                            const isSelectedA = selectedPaymentChecks.find(c => c.id === a.id);
+                                            const isSelectedB = selectedPaymentChecks.find(c => c.id === b.id);
+                                            if (isSelectedA && !isSelectedB) return -1;
+                                            if (!isSelectedA && isSelectedB) return 1;
+                                            return new Date(a.dueDate) - new Date(b.dueDate); // Secondary Sort: Date Asc
+                                        }).map(check => {
+                                            const isSelected = selectedPaymentChecks.find(c => c.id === check.id);
+                                            return (
+                                                <tr
+                                                    key={check.id}
+                                                    onClick={() => handleCheckSelect(check)}
+                                                    className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-600/20 hover:bg-indigo-600/30' : 'hover:bg-slate-800/50 text-slate-400'}`}
+                                                >
+                                                    <td className="px-4 py-3">
+                                                        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-slate-600'}`}>
+                                                            {isSelected && <CheckCircle size={14} className="text-white" />}
+                                                        </div>
+                                                    </td>
+                                                    <td className={`px-4 py-3 font-mono text-xs ${isSelected ? 'text-white' : 'text-slate-400'}`}>{check.serialNo}</td>
+                                                    <td className={`px-4 py-3 font-medium ${isSelected ? 'text-white' : 'text-slate-300'}`}>{formatDate(check.dueDate)}</td>
+                                                    <td className="px-4 py-3">
+                                                        <div className={isSelected ? 'text-slate-200' : ''}>{check.clientName}</div>
+                                                        <div className="text-xs opacity-60">{check.bankName}</div>
+                                                    </td>
+                                                    <td className={`px-4 py-3 text-right font-mono ${isSelected ? 'text-emerald-400 font-bold' : ''}`}>{formatCurrency(check.amount)}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -525,6 +997,215 @@ const Checks = () => {
                     </div>
                 </div>
             )}
+            {/* --- HTML PRINT TEMPLATE (Hidden but Rendered) --- */}
+            {/* --- Modals --- */}
+
+            {/* Save Plan Modal */}
+            {showSaveModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+                        <h3 className="text-xl font-bold text-white mb-4">Planı Kaydet</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-sm text-slate-400 block mb-1">Plan İsmi</label>
+                                <input
+                                    type="text"
+                                    value={planName}
+                                    onChange={e => setPlanName(e.target.value)}
+                                    placeholder="Örn: X Firması Kasım Ödemesi"
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-indigo-500 outline-none"
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button onClick={() => setShowSaveModal(false)} className="flex-1 py-2 text-slate-400 hover:text-white font-medium">İptal</button>
+                                <button onClick={handleSavePlan} className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold">Kaydet</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Load Plan Modal */}
+            {showLoadModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-2xl shadow-2xl h-[80vh] flex flex-col">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold text-white">Kayıtlı Planlar</h3>
+                            <button onClick={() => setShowLoadModal(false)} className="text-slate-400 hover:text-white">Kapat</button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+                            {savedPlans.length === 0 ? (
+                                <div className="text-center text-slate-500 py-10">Henüz kayıtlı plan bulunmamaktadır.</div>
+                            ) : (
+                                savedPlans.map(plan => (
+                                    <div key={plan.id} onClick={() => handleLoadPlan(plan)} className="bg-slate-950/50 border border-slate-800 hover:border-indigo-500/50 hover:bg-indigo-900/10 rounded-xl p-4 cursor-pointer transition-all group">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h4 className="font-bold text-white text-lg">{plan.name}</h4>
+                                                <div className="flex items-center gap-4 mt-1 text-xs text-slate-400">
+                                                    <span>{new Date(plan.date).toLocaleDateString('tr-TR')}</span>
+                                                    <span>•</span>
+                                                    <span>{plan.count} Çek</span>
+                                                    <span>•</span>
+                                                    <span className="text-emerald-400 font-mono">{formatCurrency(plan.totalAmount)}</span>
+                                                </div>
+                                                <div className="text-xs text-slate-500 mt-1 uppercase tracking-wide">{plan.receiverName || 'Alıcı Yok'}</div>
+                                            </div>
+                                            <button
+                                                onClick={(e) => handleDeletePlan(plan.id, e)}
+                                                className="p-2 text-slate-600 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- HTML PRINT TEMPLATE (Hidden but Rendered) --- */}
+            <div style={{ position: 'fixed', top: 0, left: 0, width: '0px', height: '0px', overflow: 'hidden' }}>
+                <div ref={printRef} className="w-[280mm] h-auto bg-white text-slate-900 font-sans relative text-sm leading-normal">
+                    {(() => {
+                        const MAX_ROWS_FULL = 22;
+                        const MAX_ROWS_WITH_FOOTER = 15;
+                        const pages = [];
+                        // Sort selected checks by Due Date
+                        let tempChecks = [...selectedPaymentChecks].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+                        // If no checks, create empty page
+                        if (tempChecks.length === 0) {
+                            pages.push({ type: 'last', checks: [], fillCount: MAX_ROWS_WITH_FOOTER, startIndex: 0 });
+                        } else {
+                            while (tempChecks.length > 0) {
+                                let startIndex = selectedPaymentChecks.length - tempChecks.length;
+
+                                // 1. Check if we can fit remaining items on a "last page" (with footer)
+                                if (tempChecks.length <= MAX_ROWS_WITH_FOOTER) {
+                                    pages.push({ type: 'last', checks: [...tempChecks], fillCount: MAX_ROWS_WITH_FOOTER - tempChecks.length, startIndex });
+                                    tempChecks = []; // Done
+                                    break;
+                                }
+
+                                let take = Math.min(tempChecks.length, MAX_ROWS_FULL);
+                                const slice = tempChecks.slice(0, take);
+                                tempChecks = tempChecks.slice(take);
+
+                                pages.push({ type: 'full', checks: slice, fillCount: MAX_ROWS_FULL - slice.length, startIndex });
+                            }
+
+                            // If we finished the loop but the last page added wasn't a 'last' type (with footer),
+                            // we must add an overflow page for the footer.
+                            if (pages.length > 0 && pages[pages.length - 1].type !== 'last') {
+                                pages.push({ type: 'last', checks: [], fillCount: MAX_ROWS_WITH_FOOTER, startIndex: selectedPaymentChecks.length });
+                            }
+                        }
+
+                        return pages.map((page, pIdx) => (
+                            <div key={pIdx} className="w-[280mm] h-[190mm] p-2 relative flex flex-col" style={{ pageBreakAfter: pIdx < pages.length - 1 ? 'always' : 'auto' }}>
+                                {/* Header: Date + Company Name */}
+                                <div className="flex items-center mb-2">
+                                    <div className="font-bold text-slate-900 text-lg w-40">
+                                        {new Date().toLocaleDateString('tr-TR')}
+                                    </div>
+                                    <div className="flex-1 text-center font-bold text-xl text-slate-900">
+                                        {(receiverName || 'ALICI FİRMA BELİRTİLMEDİ').toLocaleUpperCase('tr-TR')}
+                                    </div>
+                                    <div className="w-40"></div> {/* Spacer for balance */}
+                                </div>
+
+
+                                {/* Table Container */}
+                                <div className={`w-full border-4 border-slate-900 rounded-lg overflow-hidden flex-1 flex flex-col`}>
+                                    {/* Table Header */}
+                                    <div className="flex bg-slate-100 border-b border-slate-300 font-bold text-slate-700 uppercase text-xs h-[32px] items-center shrink-0">
+                                        <div className="w-[5%] border-r border-slate-200 h-full flex items-center justify-center text-center">NO</div>
+                                        <div className="w-[30%] px-4 border-r border-slate-200 h-full flex items-center">BANKA ADI</div>
+                                        <div className="w-[20%] px-4 border-r border-slate-200 h-full flex items-center justify-center text-center">ÇEK NO</div>
+                                        <div className="w-[20%] px-4 border-r border-slate-200 h-full flex items-center justify-center text-center">VADE</div>
+                                        <div className="w-[25%] px-4 h-full flex items-center justify-end text-right">TUTAR</div>
+                                    </div>
+
+                                    {/* Checks Rows */}
+                                    {page.checks.map((check, i) => (
+                                        <div key={i} className="flex border-b border-slate-200 h-[28px] items-center text-sm font-semibold odd:bg-white even:bg-slate-50 shrink-0">
+                                            <div className="w-[5%] border-r border-slate-200 h-full flex items-center justify-center text-slate-500 text-xs">{page.startIndex + i + 1}</div>
+                                            <div className="w-[30%] px-4 border-r border-slate-200 uppercase truncate h-full flex items-center text-slate-800">{check.bankName}</div>
+                                            <div className="w-[20%] px-4 border-r border-slate-200 h-full flex items-center justify-center font-mono text-slate-700">{check.serialNo}</div>
+                                            <div className="w-[20%] px-4 border-r border-slate-200 h-full flex items-center justify-center text-slate-700">{formatDate(check.dueDate)}</div>
+                                            <div className="w-[25%] px-4 h-full flex items-center justify-end font-bold font-mono text-slate-900 text-base">{formatCurrency(check.amount)}</div>
+                                        </div>
+                                    ))}
+
+                                    {/* Filler Rows */}
+                                    {Array.from({ length: page.fillCount }).map((_, i) => (
+                                        <div key={`empty-${i}`} className="flex border-b border-slate-200 h-[28px] odd:bg-white even:bg-slate-50 shrink-0">
+                                            <div className="w-[5%] border-r border-slate-200 h-full"></div>
+                                            <div className="w-[30%] px-4 border-r border-slate-200 h-full"></div>
+                                            <div className="w-[20%] px-4 border-r border-slate-200 h-full"></div>
+                                            <div className="w-[20%] px-4 border-r border-slate-200 h-full"></div>
+                                            <div className="w-[25%] px-4 h-full"></div>
+                                        </div>
+                                    ))}
+
+                                    {/* Footer (Only if last page) */}
+                                    {page.type === 'last' && (
+                                        <>
+                                            {/* Footer Row 1: TOTAL */}
+                                            <div className="flex border-b border-slate-300 h-[32px] items-center text-sm font-bold shrink-0 bg-slate-50">
+                                                <div className="w-[5%] border-r border-slate-200 h-full"></div>
+                                                <div className="w-[30%] border-r border-slate-200 h-full"></div>
+                                                <div className="w-[20%] border-r border-slate-200 h-full"></div>
+                                                <div className="w-[20%] border-r border-slate-200 h-full flex items-center justify-end px-2 text-slate-700">TOPLAM TUTAR</div>
+                                                <div className="w-[25%] px-4 h-full flex items-center justify-end bg-slate-200 text-slate-900 border-slate-300 text-xl font-extrabold">
+                                                    {formatCurrency(planStats.total)}
+                                                </div>
+                                            </div>
+
+                                            {/* Footer Row 2: COMPANY NAME */}
+                                            <div className="flex border-b border-slate-300 h-[28px] items-center px-4 text-xs font-bold text-slate-900 uppercase bg-white shrink-0">
+                                                YAKIŞIKLI ELEKTRİK ELEKTRONİK NAK.SAN.TİC.LTD.ŞTİ.
+                                            </div>
+
+                                            {/* Footer Row 3: Signature Headers */}
+                                            <div className="flex border-b border-slate-300 h-[28px] items-center text-xs font-bold text-slate-900 uppercase bg-white shrink-0">
+                                                <div className="w-1/2 px-4 border-r border-slate-300 h-full flex items-center justify-between">
+                                                    <span>TESLİM EDEN:</span>
+                                                    <span className="font-extrabold">{giverName}</span>
+                                                </div>
+                                                <div className="w-1/2 px-4 h-full flex items-center justify-between">
+                                                    <span>TESLİM ALAN BANKA BİLGİLERİ:</span>
+                                                    <span className="font-extrabold">{bankName}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Footer Row 4: Signature Values (Space for Stamp/Sign) */}
+                                            <div className="flex h-[80px] items-start pt-2 text-xs font-bold text-slate-900 uppercase bg-white border-b border-slate-300 shrink-0">
+                                                <div className="w-1/2 px-4 border-r border-slate-300 h-full flex items-start pt-2 opacity-50">
+                                                    (İmza / Kaşe)
+                                                </div>
+                                                <div className="w-1/2 px-4 h-full flex items-start pt-2 opacity-50">
+                                                    (İmza / Kaşe)
+                                                </div>
+                                            </div>
+
+                                            {/* Footer Row 5: Empty Space (Visual) */}
+                                            <div className="flex h-[20px] items-center text-xs font-bold text-slate-900 uppercase bg-white border-b-4 border-slate-900 shrink-0">
+                                                <div className="w-1/2 px-4 border-r border-slate-300 h-full"></div>
+                                                <div className="w-1/2 px-4 h-full"></div>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        ));
+                    })()}
+                </div>
+            </div>
         </div>
     );
 };

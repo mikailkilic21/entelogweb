@@ -49,8 +49,6 @@ exports.getAccounts = async (req, res) => {
 
     // Base conditions
     let baseWhere = '1=1';
-    if (type === 'customer') baseWhere += ' AND C.CARDTYPE IN (1, 3)'; // Alıcı
-    else if (type === 'supplier') baseWhere += ' AND C.CARDTYPE IN (2, 3)'; // Satıcı
 
     if (search) {
       baseWhere += ` AND (C.CODE LIKE '%${search}%' OR C.DEFINITION_ LIKE '%${search}%')`;
@@ -108,18 +106,18 @@ exports.getAccountStats = async (req, res) => {
       // Mock stats
       return res.json({
         total: 50,
-        customers: 45,
-        suppliers: 5,
+        totalDebtors: 45,
+        totalCreditors: 5,
         totalReceivables: 1250000.50,
         totalPayables: 450000.25,
-        topCustomers: [
+        topDebtors: [
           { name: 'ABC Teknoloji A.Ş.', value: 450000 },
           { name: 'XYZ İnşaat Ltd.', value: 320000 },
           { name: 'Mehmet Yılmaz', value: 150000 },
           { name: 'Delta Dağıtım', value: 120000 },
           { name: 'Beta Market', value: 90000 }
         ],
-        topSuppliers: [
+        topCreditors: [
           { name: 'Global Tedarik A.Ş.', value: 250000 },
           { name: 'Süper Toptan', value: 180000 },
           { name: 'Mega Plastik', value: 120000 }
@@ -142,7 +140,6 @@ exports.getAccountStats = async (req, res) => {
             WITH AccountBalances AS (
                 SELECT 
                     C.LOGICALREF,
-                    C.CARDTYPE,
                     (SELECT SUM(CASE WHEN L.SIGN = 0 THEN L.AMOUNT ELSE -L.AMOUNT END) 
                      FROM ${clflineTable} L 
                      WHERE L.CLIENTREF = C.LOGICALREF AND L.CANCELLED = 0) as Balance
@@ -151,47 +148,49 @@ exports.getAccountStats = async (req, res) => {
             )
             SELECT 
                 COUNT(*) as totalAccounts,
-                SUM(CASE WHEN CARDTYPE IN (1, 3) THEN 1 ELSE 0 END) as totalCustomers,
-                SUM(CASE WHEN CARDTYPE IN (2, 3) THEN 1 ELSE 0 END) as totalSuppliers,
+                SUM(CASE WHEN Balance > 0 THEN 1 ELSE 0 END) as totalDebtors, -- Borçlular (Bakiye > 0)
+                SUM(CASE WHEN Balance < 0 THEN 1 ELSE 0 END) as totalCreditors, -- Alacaklılar (Bakiye < 0)
                 ISNULL(SUM(CASE WHEN Balance > 0 THEN Balance ELSE 0 END), 0) as totalReceivables,
                 ISNULL(ABS(SUM(CASE WHEN Balance < 0 THEN Balance ELSE 0 END)), 0) as totalPayables
             FROM AccountBalances
         `;
 
-    // 2. Top Customers (Debtors - Borçlular - Bizim Alacaklı Olduklarımız)
-    const topCustomersQuery = `
+    // 2. Top Debtors (Borçlular - Positive Balance - Bizim Alacaklı Olduklarımız)
+    const topDebtorsQuery = `
             SELECT TOP 5 
                 C.DEFINITION_ as name,
                 (SELECT SUM(CASE WHEN L.SIGN = 0 THEN L.AMOUNT ELSE -L.AMOUNT END) 
                  FROM ${clflineTable} L 
                  WHERE L.CLIENTREF = C.LOGICALREF AND L.CANCELLED = 0) as value
             FROM ${clcardTable} C
-            WHERE C.CARDTYPE IN (1, 3) AND C.ACTIVE = 0
-            ORDER BY value DESC -- Highest positive balance
+            WHERE C.ACTIVE = 0
+            AND (SELECT SUM(CASE WHEN L.SIGN = 0 THEN L.AMOUNT ELSE -L.AMOUNT END) FROM ${clflineTable} L WHERE L.CLIENTREF = C.LOGICALREF AND L.CANCELLED = 0) > 0
+            ORDER BY value DESC
         `;
 
-    // 3. Top Suppliers (Creditors - Alacaklılar - Bizim Borçlu Olduklarımız)
-    const topSuppliersQuery = `
+    // 3. Top Creditors (Alacaklılar - Negative Balance - Bizim Borçlu Olduklarımız)
+    const topCreditorsQuery = `
             SELECT TOP 5 
                 C.DEFINITION_ as name,
                 ABS((SELECT SUM(CASE WHEN L.SIGN = 0 THEN L.AMOUNT ELSE -L.AMOUNT END) 
                  FROM ${clflineTable} L 
                  WHERE L.CLIENTREF = C.LOGICALREF AND L.CANCELLED = 0)) as value
             FROM ${clcardTable} C
-            WHERE C.CARDTYPE IN (2, 3) AND C.ACTIVE = 0
-            ORDER BY value DESC -- Highest (absolute) negative balance
+            WHERE C.ACTIVE = 0
+            AND (SELECT SUM(CASE WHEN L.SIGN = 0 THEN L.AMOUNT ELSE -L.AMOUNT END) FROM ${clflineTable} L WHERE L.CLIENTREF = C.LOGICALREF AND L.CANCELLED = 0) < 0
+            ORDER BY value DESC
         `;
 
-    const [totalsResult, topCustResult, topSuppResult] = await Promise.all([
+    const [totalsResult, topDebtorsResult, topCreditorsResult] = await Promise.all([
       sql.query(totalsQuery),
-      sql.query(topCustomersQuery),
-      sql.query(topSuppliersQuery)
+      sql.query(topDebtorsQuery),
+      sql.query(topCreditorsQuery)
     ]);
 
     const stats = {
       ...totalsResult.recordset[0],
-      topCustomers: topCustResult.recordset.filter(i => i.value > 0),
-      topSuppliers: topSuppResult.recordset.filter(i => i.value > 0)
+      topDebtors: topDebtorsResult.recordset,
+      topCreditors: topCreditorsResult.recordset
     };
 
     res.json(stats);

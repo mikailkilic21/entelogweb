@@ -8,7 +8,7 @@ import {
 
 const Accounts = () => {
     // UI State
-    const [activeTab, setActiveTab] = useState('all'); // 'all', 'customers', 'suppliers'
+    const [activeTab, setActiveTab] = useState('all'); // 'all', 'debtors', 'creditors'
     const [searchTerm, setSearchTerm] = useState('');
     const [period, setPeriod] = useState('weekly'); // 'daily', 'weekly', 'monthly', 'yearly'
     const [selectedAccountId, setSelectedAccountId] = useState(null);
@@ -41,9 +41,9 @@ const Accounts = () => {
         setLoading(true);
         try {
             const searchParam = searchTerm ? `&search=${searchTerm}` : '';
-            const typeParam = activeTab === 'customers' ? '&type=customer' : activeTab === 'suppliers' ? '&type=supplier' : '';
+            const listingTypeParam = activeTab === 'debtors' ? '&listingType=debtor' : activeTab === 'creditors' ? '&listingType=creditor' : '';
 
-            const res = await fetch(`/api/accounts?limit=50${searchParam}${typeParam}`);
+            const res = await fetch(`/api/accounts?limit=50${searchParam}${listingTypeParam}`);
             if (res.ok) {
                 const data = await res.json();
                 setAccounts(Array.isArray(data) ? data : []);
@@ -123,15 +123,14 @@ const Accounts = () => {
     // Combine Top Data for Bar Chart
     const topAccountsData = useMemo(() => {
         if (!stats) return [];
-        // Combine top Customers (Receivables) and Suppliers (Payables)
-        // We'll show top 3 of each or just top 5 overall magnitude
+        // Combine top Debtors (Receivables) and Creditors (Payables)
 
         // Transform to common format
-        const customers = (stats.topCustomers || []).map(c => ({ name: c.name, value: c.value, type: 'Alacak', color: '#10b981' }));
-        const suppliers = (stats.topSuppliers || []).map(s => ({ name: s.name, value: s.value, type: 'Borç', color: '#ef4444' }));
+        const debtors = (stats.topDebtors || []).map(c => ({ name: c.name, value: c.value, type: 'Alacak', color: '#10b981' }));
+        const creditors = (stats.topCreditors || []).map(s => ({ name: s.name, value: s.value, type: 'Borç', color: '#ef4444' }));
 
         // Merge and sort
-        return [...customers, ...suppliers]
+        return [...debtors, ...creditors]
             .sort((a, b) => b.value - a.value)
             .slice(0, 5); // Take top 5
     }, [stats]);
@@ -172,30 +171,30 @@ const Accounts = () => {
             {/* Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <StatCard
-                    title="Toplam Müşteri"
-                    value={stats?.totalCustomers || 0}
+                    title="Borçlu Sayısı"
+                    value={stats?.totalDebtors || 0}
                     icon="users"
                     color="blue"
                 />
                 <StatCard
-                    title="Toplam Tedarikçi"
-                    value={stats?.totalSuppliers || 0}
-                    icon="briefcase" // or building
+                    title="Alacaklı Sayısı"
+                    value={stats?.totalCreditors || 0}
+                    icon="briefcase"
                     color="purple"
                 />
                 <StatCard
-                    title="Toplam Alacak"
+                    title="Toplam Alacağımız"
                     value={stats?.totalReceivables || 0}
                     isCurrency={true}
                     icon="trending-up"
                     color="green"
                 />
                 <StatCard
-                    title="Toplam Borç"
+                    title="Toplam Borcumuz"
                     value={stats?.totalPayables || 0}
                     isCurrency={true}
-                    icon="trending-down" // Map this or use alert-circle
-                    color="orange" // Using orange as warning/debt
+                    icon="trending-down"
+                    color="orange"
                 />
             </div>
 
@@ -288,15 +287,15 @@ const Accounts = () => {
             {/* Main Tabs and Search */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-8">
                 <div className="flex p-1 bg-slate-900/50 rounded-xl border border-slate-800">
-                    {['all', 'customers', 'suppliers'].map((tab) => (
+                    {['all', 'debtors', 'creditors'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                         >
                             {tab === 'all' && 'Tümü'}
-                            {tab === 'customers' && 'Müşteriler'}
-                            {tab === 'suppliers' && 'Tedarikçiler'}
+                            {tab === 'debtors' && 'Borçlular (Bize Borçlu)'}
+                            {tab === 'creditors' && 'Alacaklılar (Bizim Borçlu)'}
                         </button>
                     ))}
                 </div>

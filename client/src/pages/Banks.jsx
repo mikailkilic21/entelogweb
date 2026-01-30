@@ -13,7 +13,10 @@ import {
     Receipt,
     SendHorizontal,
     DownloadCloud,
-    History
+    History,
+    ChevronDown,
+    ChevronRight,
+    Building
 } from 'lucide-react';
 import {
     Tooltip,
@@ -27,11 +30,57 @@ import FinanceDetailModal from '../components/FinanceDetailModal';
 import DBSSettings from '../components/DBSSettings';
 import DBSInvoiceList from '../components/DBSInvoiceList';
 
+// Bank Logos
+import akbankLogo from '../assets/akbank.png';
+import halkbankLogo from '../assets/Halkbank.png';
+import vakifLogo from '../assets/Vakıfbank.png';
+import yapiKrediLogo from '../assets/Yapi_Kredi.png';
+import ziraatLogo from '../assets/ziraat.png';
+import qnbLogo from '../assets/qnbfinans.png';
+import albarakaLogo from '../assets/albaraka.png';
+
+const BankLogo = ({ bankName }) => {
+
+    const getLogo = (name) => {
+        if (!name) return null;
+        const n = name.toLocaleLowerCase('tr-TR');
+        if (n.includes('akbank')) return akbankLogo;
+        if (n.includes('halk')) return halkbankLogo;
+        if (n.includes('vakif') || n.includes('vakıf')) return vakifLogo;
+        if (n.includes('yapı') || n.includes('yapi')) return yapiKrediLogo;
+        if (n.includes('ziraat')) return ziraatLogo;
+        if (n.includes('qnb') || n.includes('finans')) return qnbLogo;
+        if (n.includes('albaraka')) return albarakaLogo;
+        return null; // Fallback
+    };
+
+    const logoSrc = getLogo(bankName);
+
+    if (!logoSrc) {
+        return (
+            <div className="w-32 h-14 rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 flex items-center justify-center text-white font-bold text-lg shadow-sm mr-6">
+                {bankName?.charAt(0) || 'B'}
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-32 h-14 rounded-lg bg-white px-2 py-1 border border-slate-700 flex items-center justify-center shadow-sm overflow-hidden mr-6">
+            <img
+                src={logoSrc}
+                alt={bankName}
+                className="w-full h-full object-contain"
+            />
+        </div>
+    );
+};
+
 const Banks = () => {
     const [viewMode, setViewMode] = useState('list'); // 'modern', 'list'
     const [activeTab, setActiveTab] = useState('accounts'); // 'accounts', 'pos', 'cc', 'havale-in', 'havale-out'
     const [activeDBSTab, setActiveDBSTab] = useState('list'); // 'list' | 'settings'
     const [search, setSearch] = useState('');
+    const [expandedBanks, setExpandedBanks] = useState({}); // { 'Akbank': true }
 
     // Modal State
     const [selectedTransaction, setSelectedTransaction] = useState(null);
@@ -322,8 +371,80 @@ const Banks = () => {
                             ))}
                         </div>
                     ) : (
-                        <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden backdrop-blur-sm">
-                            <DataTable columns={bankColumns} data={banks} searchKey="bankName" />
+                        <div className="space-y-4">
+                            {/* Grouped List View */}
+                            {(() => {
+                                // 1. Group Banks
+                                const grouped = banks.reduce((acc, bank) => {
+                                    const name = bank.bankName || 'Diğer';
+                                    if (!acc[name]) acc[name] = { name, accounts: [], totalBalance: 0 };
+                                    acc[name].accounts.push(bank);
+                                    acc[name].totalBalance += bank.balance;
+                                    return acc;
+                                }, {});
+
+                                return Object.values(grouped).map((group, idx) => {
+                                    const isExpanded = expandedBanks[group.name];
+                                    return (
+                                        <div key={idx} className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden backdrop-blur-sm">
+                                            {/* Header Row */}
+                                            <div
+                                                onClick={() => setExpandedBanks(prev => ({ ...prev, [group.name]: !prev[group.name] }))}
+                                                className="flex items-center p-4 cursor-pointer hover:bg-slate-800/50 transition-colors"
+                                            >
+                                                <div className="mr-4 text-slate-500">
+                                                    {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                                                </div>
+
+                                                <BankLogo bankName={group.name} />
+
+                                                <div className="flex-1">
+                                                    <h3 className="font-bold text-lg text-white">{group.name}</h3>
+                                                    <p className="text-xs text-slate-500">{group.accounts.length} Alt Hesap</p>
+                                                </div>
+
+                                                <div className="text-right px-4">
+                                                    <p className="text-xs text-slate-500 font-bold uppercase">Toplam Bakiye</p>
+                                                    <p className={`text-xl font-bold font-mono ${group.totalBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                        {formatCurrency(group.totalBalance)}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Expanded Content */}
+                                            {isExpanded && (
+                                                <div className="border-t border-slate-800 bg-slate-950/30">
+                                                    <table className="w-full text-left text-sm">
+                                                        <thead className="text-xs uppercase text-slate-500 font-medium bg-slate-900/50">
+                                                            <tr>
+                                                                <th className="px-6 py-3 pl-20">Şube / Hesap Adı</th>
+                                                                <th className="px-6 py-3">IBAN</th>
+                                                                <th className="px-6 py-3 text-right">Bakiye</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-slate-800/50">
+                                                            {group.accounts.map(account => (
+                                                                <tr key={account.id} className="hover:bg-slate-800/30 transition-colors">
+                                                                    <td className="px-6 py-4 pl-20">
+                                                                        <div className="font-medium text-slate-200">{account.name}</div>
+                                                                        <div className="text-xs text-slate-500">{account.branch} - {account.code}</div>
+                                                                    </td>
+                                                                    <td className="px-6 py-4 font-mono text-slate-400 text-xs">
+                                                                        {account.iban}
+                                                                    </td>
+                                                                    <td className={`px-6 py-4 text-right font-mono font-bold ${account.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                                        {formatCurrency(account.balance)}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                });
+                            })()}
                         </div>
                     )
                 ) : activeTab === 'dbs' ? (

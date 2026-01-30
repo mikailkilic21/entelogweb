@@ -62,6 +62,9 @@ router.get('/checks', checksController.getChecks);
 router.get('/checks/recent', checksController.getRecentChecks);
 router.get('/checks/upcoming', checksController.getUpcomingChecks);
 router.get('/checks/overdue', checksController.getOverdueChecks);
+router.get('/checks/plans', checksController.getPlans);
+router.post('/checks/plans', checksController.savePlan);
+router.delete('/checks/plans/:id', checksController.deletePlan);
 
 // Order Routes
 const ordersController = require('../controllers/ordersController');
