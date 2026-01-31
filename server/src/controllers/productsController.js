@@ -33,6 +33,7 @@ exports.getProducts = async (req, res) => {
         const itemsTable = `LG_${firm}_ITEMS`;
         const gntotstTable = `LG_${firm}_${period}_GNTOTST`;
         const stlineTable = `LG_${firm}_${period}_STLINE`;
+        const prclistTable = `LG_${firm}_PRCLIST`;
 
         const limit = parseInt(req.query.limit) || 50;
         const search = req.query.search || '';
@@ -63,15 +64,20 @@ exports.getProducts = async (req, res) => {
                     -- Sales Quantity (Toplam Satış Miktarı) - TRCODE 7,8 (Perakende/Toptan Satış)
                     ISNULL((SELECT SUM(AMOUNT) FROM ${stlineTable} WHERE STOCKREF = I.LOGICALREF AND TRCODE IN (7, 8) AND LINETYPE = 0 AND CANCELLED = 0), 0) as salesQuantity,
                     -- Sales Amount (Toplam Satış Tutarı)
-                    ISNULL((SELECT SUM(TOTAL) FROM ${stlineTable} WHERE STOCKREF = I.LOGICALREF AND TRCODE IN (7, 8) AND LINETYPE = 0 AND CANCELLED = 0), 0) as salesAmount
+                    ISNULL((SELECT SUM(TOTAL) FROM ${stlineTable} WHERE STOCKREF = I.LOGICALREF AND TRCODE IN (7, 8) AND LINETYPE = 0 AND CANCELLED = 0), 0) as salesAmount,
+                    -- Fixed Sales Price (Sabit Satış Fiyatı) - PTYPE 2 (Satış)
+                    ISNULL((SELECT TOP 1 PRICE FROM ${prclistTable} WHERE CARDREF = I.LOGICALREF AND PTYPE = 2 AND (CLIENTCODE = '' OR CLIENTCODE IS NULL) ORDER BY PRIORITY DESC, LOGICALREF DESC), 0) as fixedPrice
                 FROM ${itemsTable} I
                 LEFT JOIN LG_${firm}_UNITSETL U ON I.UNITSETREF = U.UNITSETREF AND U.MAINUNIT = 1
                 WHERE ${whereCondition}
             )
             SELECT TOP ${limit} 
                 *,
-                -- Price is derived from total sales / quantity (Optional, but useful)
-                CASE WHEN salesQuantity > 0 THEN salesAmount / salesQuantity ELSE 0 END as avgPrice
+                -- Price is derived from fixedPrice first, then avgPrice (total sales / quantity)
+                CASE WHEN fixedPrice > 0 THEN fixedPrice 
+                     WHEN salesQuantity > 0 THEN salesAmount / salesQuantity 
+                     ELSE 0 END as avgPrice,
+                fixedPrice -- return separately too just in case
             FROM ProductStats
             ORDER BY ${orderByClause}
         `;

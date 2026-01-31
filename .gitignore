@@ -12,6 +12,8 @@ server/data/
 !server/data/dbs-config.json
 !server/data/dbs-global-config.json
 !server/data/company-db.json
+!server/data/mock/
+!server/data/mock/orders.json
 
 server/public/uploads/
 

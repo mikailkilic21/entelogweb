@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Search, RotateCw, Loader2, Filter, FileText, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import OrderDetailModal from '../components/orders/OrderDetailModal'; // This will be created next
-import StatCard from '../components/StatCard'; // Reusing StatCard
+import OrderDetailModal from '../components/orders/OrderDetailModal';
+import AddOrderModal from '../components/orders/AddOrderModal';
+import StatCard from '../components/StatCard';
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
     const [allOrders, setAllOrders] = useState([]); // For charts - unfiltered
     const [loading, setLoading] = useState(true);
+    const [showAddModal, setShowAddModal] = useState(false); // State for Add Modal
+    const [isCopyMode, setIsCopyMode] = useState(false); // NEW: Copy mode state
     const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'proposal', 'approved'
     const [shipmentStatusFilter, setShipmentStatusFilter] = useState(''); // 'S', 'B', 'K'
     const [dateFilter, setDateFilter] = useState('yearly');
@@ -22,7 +25,14 @@ const Orders = () => {
         setLoading(true);
         try {
             const params = new URLSearchParams();
-            if (statusFilter !== 'all') params.append('status', statusFilter);
+
+            // Special handling for Web Orders (Local)
+            if (statusFilter === 'web') {
+                params.append('source', 'local');
+                // We don't append specific status here to see ALL local orders
+            } else {
+                if (statusFilter !== 'all') params.append('status', statusFilter);
+            }
 
             // Add shipment status filter only if Approved is selected
             if (statusFilter === 'approved' && shipmentStatusFilter) {
@@ -75,6 +85,7 @@ const Orders = () => {
                     amount: order.netTotal || order.grossTotal || 0,
                     statusText: order.status === 1 ? 'Öneri' : order.status === 4 ? 'Onaylı' : 'Diğer'
                 }));
+                // Filter local orders here if needed or separate
                 setAllOrders(mappedData);
             }
         } catch (error) {
@@ -263,6 +274,15 @@ const Orders = () => {
                     <p className="text-slate-400 mt-2">Satış siparişlerini ve teklifleri yönetin</p>
                 </div>
                 <div className="flex gap-2">
+                    <button
+                        onClick={() => {
+                            setShowAddModal(true);
+                            setIsCopyMode(false);
+                        }}
+                        className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white transition-all shadow-lg shadow-emerald-500/30 active:scale-95 font-medium flex items-center gap-2"
+                    >
+                        <span>+ Yeni Sipariş</span>
+                    </button>
                     <button
                         onClick={fetchData}
                         className="p-3 bg-orange-600 hover:bg-orange-500 rounded-lg text-white transition-all shadow-lg shadow-orange-500/30 active:scale-95"
@@ -517,6 +537,15 @@ const Orders = () => {
                         >
                             Onaylı
                         </button>
+                        <button
+                            onClick={() => setStatusFilter('web')}
+                            className={`px-6 py-2 rounded-md font-medium transition-all ${statusFilter === 'web'
+                                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30'
+                                : 'text-slate-400 hover:text-purple-400'
+                                }`}
+                        >
+                            Web Siparişleri
+                        </button>
                     </div>
 
                     {/* Sub-filters for Approved Status */}
@@ -598,12 +627,13 @@ const Orders = () => {
                                     <th className="p-4">Tutar</th>
                                     <th className="p-4 text-center">Durum</th>
                                     <th className="p-4 text-center">Sevk Durumu</th>
+                                    <th className="p-4 text-center">İşlem</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/10">
                                 {orders.length === 0 ? (
                                     <tr>
-                                        <td colSpan="7" className="p-8 text-center text-slate-500">
+                                        <td colSpan="8" className="p-8 text-center text-slate-500">
                                             Kayıt bulunamadı.
                                         </td>
                                     </tr>
@@ -611,7 +641,15 @@ const Orders = () => {
                                     orders.map((order, index) => (
                                         <tr
                                             key={index}
-                                            onClick={() => setSelectedOrder(order)}
+                                            onClick={() => {
+                                                // If it is a local order mock, allow editing
+                                                if (order.isLocal) {
+                                                    setShowAddModal(order); // Pass order object to trigger edit mode
+                                                    setIsCopyMode(false);
+                                                } else {
+                                                    setSelectedOrder(order); // Standard view for SQL orders
+                                                }
+                                            }}
                                             className="hover:bg-white/5 transition-colors cursor-pointer group"
                                         >
                                             <td className="p-4 text-slate-300">{order.date}</td>
@@ -648,6 +686,21 @@ const Orders = () => {
                                                     <span className="text-slate-600">-</span>
                                                 )}
                                             </td>
+                                            <td className="p-4 text-center">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation(); // Stop row click
+                                                        setShowAddModal(order);
+                                                        setIsCopyMode(true);
+                                                    }}
+                                                    className="p-2 hover:bg-white/10 rounded-full text-slate-400 hover:text-emerald-400 transition-colors"
+                                                    title="Siparişi Kopyala"
+                                                >
+                                                    <div className="flex items-center gap-1 bg-slate-800 px-2 py-1 rounded border border-slate-700">
+                                                        <span className="text-xs">Kopyala</span>
+                                                    </div>
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))
                                 )}
@@ -666,6 +719,43 @@ const Orders = () => {
                     />
                 )
             }
+
+            {/* Add Order Modal (Used for both ADD and EDIT and COPY) */}
+            {showAddModal && (
+                <AddOrderModal
+                    // If showAddModal is an object (order), pass it as 'editOrder'. If boolean true, it's new.
+                    editOrder={typeof showAddModal === 'object' ? showAddModal : null}
+                    isCopy={isCopyMode} // PASS isCopy FLAG
+                    onClose={() => {
+                        setShowAddModal(false);
+                        setIsCopyMode(false);
+                    }}
+                    onSave={() => {
+                        fetchData();
+                        fetchAllOrders(); // Update charts too
+                        setSelectedOrder(null); // Close detail modal if open
+                        setShowAddModal(false);
+                        setIsCopyMode(false);
+                    }}
+                    onDelete={async (orderId) => {
+                        if (confirm('Bu siparişi silmek istediğinize emin misiniz?')) {
+                            try {
+                                const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' }); // Backend delete route needed
+                                if (res.ok) {
+                                    fetchData();
+                                    fetchAllOrders();
+                                    setShowAddModal(false);
+                                    setSelectedOrder(null);
+                                } else {
+                                    alert('Silinirken hata oluştu');
+                                }
+                            } catch (e) {
+                                console.error('Delete error', e);
+                            }
+                        }
+                    }}
+                />
+            )}
         </div>
     );
 };

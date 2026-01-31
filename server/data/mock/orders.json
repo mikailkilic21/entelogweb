@@ -1,0 +1,154 @@
+[
+  {
+    "id": 1769853108548,
+    "ficheNo": "SIP-108548",
+    "documentNo": "",
+    "date": "2026-01-31",
+    "accountName": "YUSUF YAKIŞIKLI",
+    "accountCode": "YUSUFY",
+    "clientRef": 52413,
+    "netTotal": 7619.9568,
+    "grossTotal": 6349.964,
+    "status": 1,
+    "shipmentStatus": "waiting",
+    "lines": [
+      {
+        "code": "57001001",
+        "name": "KAREA ANAHTAR MODÜL BEYAZ",
+        "quantity": 28,
+        "unit": "ADET",
+        "price": 72.4,
+        "discountRate": 63,
+        "total": 750.0640000000001,
+        "vatRate": 20
+      },
+      {
+        "code": "57001003",
+        "name": "KAREA KOMÜTATÖR MODÜL BEYAZ",
+        "quantity": 50,
+        "unit": "ADET",
+        "price": 98,
+        "discountRate": 63,
+        "total": 1813,
+        "vatRate": 20
+      },
+      {
+        "code": "57111001",
+        "name": "KAREA ANAHTAR MODÜL SİYAH",
+        "quantity": 25,
+        "unit": "ADET",
+        "price": 79.2,
+        "discountRate": 63,
+        "total": 732.5999999999999,
+        "vatRate": 20
+      },
+      {
+        "code": "57050001",
+        "name": "KAREA ANAHTAR MODÜL B.FÜME",
+        "quantity": 15,
+        "unit": "ADET",
+        "price": 101,
+        "discountRate": 63,
+        "total": 560.55,
+        "vatRate": 20
+      },
+      {
+        "code": "A1008",
+        "name": "9W LED AMPUL",
+        "quantity": 150,
+        "unit": "ADET",
+        "price": 17.5,
+        "discountRate": 5,
+        "total": 2493.75,
+        "vatRate": 20
+      }
+    ],
+    "note1": "DENEME",
+    "createdAt": "2026-01-31T09:51:48.548Z",
+    "note": "DENEME",
+    "customer": {
+      "name": "YUSUF YAKIŞIKLI",
+      "code": "YUSUFY"
+    },
+    "generalDiscount": 0,
+    "totalDiscount": 6697.236,
+    "totalVat": 1269.9928,
+    "updatedAt": "2026-01-31T10:12:32.231Z"
+  },
+  {
+    "id": 1769850617296,
+    "ficheNo": "SIP-617296",
+    "documentNo": "",
+    "date": "2026-01-31",
+    "accountName": "AHMET YAKIŞIKLI",
+    "accountCode": "AHMET",
+    "clientRef": 232,
+    "netTotal": 5001.2447999999995,
+    "grossTotal": 4167.704,
+    "status": 4,
+    "shipmentStatus": "waiting",
+    "lines": [
+      {
+        "code": "57001001",
+        "name": "KAREA ANAHTAR MODÜL BEYAZ",
+        "quantity": 14,
+        "unit": "ADET",
+        "price": 72.4,
+        "discountRate": 63,
+        "total": 375.03200000000004,
+        "vatRate": 20
+      },
+      {
+        "code": "57001003",
+        "name": "KAREA KOMÜTATÖR MODÜL BEYAZ",
+        "quantity": 35,
+        "unit": "ADET",
+        "price": 98,
+        "discountRate": 63,
+        "total": 1269.1,
+        "vatRate": 20
+      },
+      {
+        "code": "57111001",
+        "name": "KAREA ANAHTAR MODÜL SİYAH",
+        "quantity": 18,
+        "unit": "ADET",
+        "price": 79.2,
+        "discountRate": 63,
+        "total": 527.4720000000001,
+        "vatRate": 20
+      },
+      {
+        "code": "57050001",
+        "name": "KAREA ANAHTAR MODÜL B.FÜME",
+        "quantity": 30,
+        "unit": "ADET",
+        "price": 101,
+        "discountRate": 63,
+        "total": 1121.1,
+        "vatRate": 20
+      },
+      {
+        "code": "A1008",
+        "name": "9W LED AMPUL",
+        "quantity": 50,
+        "unit": "ADET",
+        "price": 17.5,
+        "discountRate": 0,
+        "total": 875,
+        "vatRate": 20
+      }
+    ],
+    "note1": "DENEME",
+    "createdAt": "2026-01-31T09:10:17.296Z",
+    "note": "DENEME",
+    "customer": {
+      "name": "AHMET YAKIŞIKLI",
+      "code": "AHMET"
+    },
+    "generalDiscount": 0,
+    "totalDiscount": 5606.496000000001,
+    "totalVat": 833.5408,
+    "updatedAt": "2026-01-31T09:58:40.304Z"
+  }
+]

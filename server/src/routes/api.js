@@ -69,8 +69,10 @@ router.delete('/checks/plans/:id', checksController.deletePlan);
 // Order Routes
 const ordersController = require('../controllers/ordersController');
 router.get('/orders', ordersController.getOrders);
+router.post('/orders', ordersController.createOrder);
 router.get('/orders/top-products', ordersController.getTopProducts);
 router.get('/orders/:id', ordersController.getOrderDetails);
+router.delete('/orders/:id', ordersController.deleteOrder);
 
 // Product Routes
 router.get('/products', productsController.getProducts);
