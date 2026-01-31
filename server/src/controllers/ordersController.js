@@ -431,3 +431,59 @@ exports.deleteOrder = async (req, res) => {
         res.status(500).json({ error: 'Silme işleminde hata oluştu.' });
     }
 };
+
+// --- PDF Upload Handling ---
+const multer = require('multer');
+// const pdf = require('pdf-parse'); // Remove global require to avoid issues
+const pdfParseLib = require('pdf-parse');
+
+const pdfStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const uploadDir = path.join(__dirname, '../../public/uploads/discounts');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        cb(null, 'latest-discount-' + Date.now() + '.pdf');
+    }
+});
+
+const uploadPdf = multer({ storage: pdfStorage });
+
+exports.uploadPdfMiddleware = uploadPdf.single('file');
+
+exports.processDiscountPdf = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Dosya yüklenemedi.' });
+        }
+
+        const dataBuffer = fs.readFileSync(req.file.path);
+        const data = await pdfParseLib(dataBuffer);
+
+        // Simple line-by-line parsing strategy (Generic)
+        const lines = data.text.split('\n').filter(line => line.trim().length > 0);
+
+        // Save the raw lines for further analysis
+        const analysisPath = path.join(__dirname, '../../data/mock');
+        if (!fs.existsSync(analysisPath)) fs.mkdirSync(analysisPath, { recursive: true });
+
+        fs.writeFileSync(path.join(analysisPath, 'discount-analysis.json'), JSON.stringify({
+            rawText: data.text,
+            lines: lines
+        }, null, 2));
+
+        res.json({
+            message: 'PDF başarıyla okundu.',
+            fileName: req.file.filename,
+            textPreview: lines.slice(0, 50), // Show first 50 lines
+            totalLines: lines.length
+        });
+
+    } catch (error) {
+        console.error('PDF Parse Error:', error);
+        res.status(500).json({ error: 'PDF okunamadı: ' + error.message });
+    }
+};

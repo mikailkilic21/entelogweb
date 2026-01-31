@@ -70,6 +70,7 @@ router.delete('/checks/plans/:id', checksController.deletePlan);
 const ordersController = require('../controllers/ordersController');
 router.get('/orders', ordersController.getOrders);
 router.post('/orders', ordersController.createOrder);
+router.post('/orders/upload-discount-pdf', ordersController.uploadPdfMiddleware, ordersController.processDiscountPdf);
 router.get('/orders/top-products', ordersController.getTopProducts);
 router.get('/orders/:id', ordersController.getOrderDetails);
 router.delete('/orders/:id', ordersController.deleteOrder);

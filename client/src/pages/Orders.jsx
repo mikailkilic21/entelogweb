@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Search, RotateCw, Loader2, Filter, FileText, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Search, RotateCw, Loader2, Filter, FileText, CheckCircle, Clock, XCircle, Upload } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import OrderDetailModal from '../components/orders/OrderDetailModal';
 import AddOrderModal from '../components/orders/AddOrderModal';
+import DiscountUploadModal from '../components/orders/DiscountUploadModal';
 import StatCard from '../components/StatCard';
 
 const Orders = () => {
@@ -11,6 +12,7 @@ const Orders = () => {
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false); // State for Add Modal
     const [isCopyMode, setIsCopyMode] = useState(false); // NEW: Copy mode state
+    const [showDiscountModal, setShowDiscountModal] = useState(false); // NEW: Discount Upload Modal
     const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'proposal', 'approved'
     const [shipmentStatusFilter, setShipmentStatusFilter] = useState(''); // 'S', 'B', 'K'
     const [dateFilter, setDateFilter] = useState('yearly');
@@ -282,6 +284,13 @@ const Orders = () => {
                         className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white transition-all shadow-lg shadow-emerald-500/30 active:scale-95 font-medium flex items-center gap-2"
                     >
                         <span>+ Yeni Sipariş</span>
+                    </button>
+                    <button
+                        onClick={() => setShowDiscountModal(true)}
+                        className="px-4 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-all shadow-lg shadow-blue-500/30 active:scale-95 font-medium flex items-center gap-2"
+                        title="İskonto PDF Yükle"
+                    >
+                        <Upload size={18} />
                     </button>
                     <button
                         onClick={fetchData}
@@ -754,6 +763,13 @@ const Orders = () => {
                             }
                         }
                     }}
+                />
+            )}
+
+            {/* Discount Upload Modal */}
+            {showDiscountModal && (
+                <DiscountUploadModal
+                    onClose={() => setShowDiscountModal(false)}
                 />
             )}
         </div>

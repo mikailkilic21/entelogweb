@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Logo from '../assets/logo.png';
+import Logo from '../assets/yenilogo.png';
 import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard,
@@ -171,14 +171,8 @@ const Sidebar = () => {
         <div className="h-screen w-64 bg-slate-900 border-r border-slate-800 flex flex-col fixed left-0 top-0 z-50">
             {/* Logo Area & Firm Switcher */}
             <div className="p-4 border-b border-slate-800">
-                <div className="flex items-center justify-between mb-4">
-                    <div>
-                        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                            ENTELOG
-                        </h1>
-                        <p className="text-slate-500 text-[10px] tracking-wide">WEB DASHBOARD</p>
-                    </div>
-                    <img src={Logo} alt="Logo" className="w-12 h-12 object-contain" />
+                <div className="flex items-center justify-center mb-6">
+                    <img src={Logo} alt="Logo" className="w-auto h-24 object-contain" />
                 </div>
 
                 {/* Compact Firm Switcher */}
