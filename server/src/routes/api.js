@@ -76,6 +76,7 @@ router.get('/orders/:id', ordersController.getOrderDetails);
 router.delete('/orders/:id', ordersController.deleteOrder);
 
 // Product Routes
+router.get('/products/warehouses', productsController.getWarehouses);
 router.get('/products', productsController.getProducts);
 router.get('/products/stats', productsController.getProductStats);
 router.get('/products/:id', productsController.getProductDetails);

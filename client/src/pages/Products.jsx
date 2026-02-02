@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ProductDetailModal from '../components/ProductDetailModal';
 import TopProductsChart from '../components/TopProductsChart';
 import StockDistributionChart from '../components/StockDistributionChart';
-import { Package, Search, Loader2, RefreshCw, AlertTriangle, CheckCircle, Box } from 'lucide-react';
+import { Package, Search, Loader2, RefreshCw, AlertTriangle, CheckCircle, Box, Warehouse } from 'lucide-react';
 
 const Products = () => {
     const [products, setProducts] = useState([]);
@@ -10,6 +10,8 @@ const Products = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProductId, setSelectedProductId] = useState(null);
+    const [warehouses, setWarehouses] = useState([]);
+    const [selectedWarehouse, setSelectedWarehouse] = useState(null);
 
     const [sortBy, setSortBy] = useState('quantity'); // 'quantity' or 'amount'
 
@@ -17,9 +19,10 @@ const Products = () => {
         setLoading(true);
         try {
             const searchParam = searchTerm ? `&search=${searchTerm}` : '';
+            const warehouseParam = selectedWarehouse !== null ? `&warehouse=${selectedWarehouse}` : '';
             const sortParam = `?limit=50&sortBy=${sortBy}`; // Default limit 50 as requested
             const [productsRes, statsRes] = await Promise.all([
-                fetch(`/api/products${sortParam}${searchParam}`),
+                fetch(`/api/products${sortParam}${searchParam}${warehouseParam}`),
                 fetch('/api/products/stats')
             ]);
 
@@ -39,11 +42,21 @@ const Products = () => {
     };
 
     useEffect(() => {
+        // Fetch Warehouses once
+        fetch('/api/products/warehouses')
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) setWarehouses(data);
+            })
+            .catch(err => console.error('Error fetching warehouses:', err));
+    }, []);
+
+    useEffect(() => {
         const timer = setTimeout(() => {
             fetchData();
         }, 500);
         return () => clearTimeout(timer);
-    }, [searchTerm, sortBy]);
+    }, [searchTerm, sortBy, selectedWarehouse]);
 
     if (loading && !products.length) {
         return (
@@ -172,6 +185,26 @@ const Products = () => {
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-3 bg-slate-900/50 border border-slate-800 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 transition-colors"
                     />
+                </div>
+
+                {/* Warehouse Filter */}
+                <div className="relative w-full md:w-64">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                        <Warehouse size={18} />
+                    </div>
+                    <select
+                        value={selectedWarehouse !== null ? selectedWarehouse : ''}
+                        onChange={(e) => setSelectedWarehouse(e.target.value !== '' ? Number(e.target.value) : null)}
+                        className="w-full pl-10 pr-4 py-3 bg-slate-900/50 border border-slate-800 rounded-lg text-white appearance-none focus:outline-none focus:border-emerald-500/50 transition-colors cursor-pointer"
+                    >
+                        <option value="">Tüm Ambarlar</option>
+                        {warehouses.map(w => (
+                            <option key={w.id} value={w.id}>{w.name} (#{w.number})</option>
+                        ))}
+                    </select>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
                 </div>
 
                 {/* Sorting Options */}

@@ -38,6 +38,8 @@ import yapiKrediLogo from '../assets/Yapi_Kredi.png';
 import ziraatLogo from '../assets/ziraat.png';
 import qnbLogo from '../assets/qnbfinans.png';
 import albarakaLogo from '../assets/albaraka.png';
+import isBankasiLogo from '../assets/isbankasi.png';
+import kuveytTurkLogo from '../assets/KuveytTürk.png';
 
 const BankLogo = ({ bankName }) => {
 
@@ -51,6 +53,8 @@ const BankLogo = ({ bankName }) => {
         if (n.includes('ziraat')) return ziraatLogo;
         if (n.includes('qnb') || n.includes('finans')) return qnbLogo;
         if (n.includes('albaraka')) return albarakaLogo;
+        if (n.includes('iş bank') || n.includes('is bank')) return isBankasiLogo;
+        if (n.includes('kuveyt')) return kuveytTurkLogo;
         return null; // Fallback
     };
 

@@ -38,6 +38,7 @@ exports.getProducts = async (req, res) => {
         const limit = parseInt(req.query.limit) || 50;
         const search = req.query.search || '';
         const sortBy = req.query.sortBy || 'quantity'; // 'quantity' (Sales Qty) or 'amount' (Sales Amount)
+        const warehouse = req.query.warehouse || null; // Warehouse ID
 
         let whereCondition = 'I.ACTIVE = 0'; // Only active products
         if (search) {
@@ -50,6 +51,14 @@ exports.getProducts = async (req, res) => {
             orderByClause = 'salesAmount DESC';
         }
 
+        // Warehouse filtering logic
+        // If warehouse is selected, check stock in that warehouse (INVENNO = @id)
+        // If not selected, check total stock (INVENNO = -1)
+        const stockInvenNo = warehouse ? warehouse : -1;
+
+        // Similarly for sales, filter by SOURCEINDEX if warehouse is selected
+        const salesSourceFilter = warehouse ? `AND SOURCEINDEX = ${warehouse}` : '';
+
         const query = `
             WITH ProductStats AS (
                 SELECT
@@ -59,12 +68,12 @@ exports.getProducts = async (req, res) => {
                     I.VAT as vat,
                     I.SPECODE as brand,
                     U.CODE as unit,
-                    -- Stock Level (Keep for display)
-                    ISNULL((SELECT SUM(ONHAND) FROM ${gntotstTable} WHERE STOCKREF = I.LOGICALREF AND INVENNO = -1), 0) as stockLevel,
+                    -- Stock Level
+                    ISNULL((SELECT SUM(ONHAND) FROM ${gntotstTable} WHERE STOCKREF = I.LOGICALREF AND INVENNO = ${stockInvenNo}), 0) as stockLevel,
                     -- Sales Quantity (Toplam Satış Miktarı) - TRCODE 7,8 (Perakende/Toptan Satış)
-                    ISNULL((SELECT SUM(AMOUNT) FROM ${stlineTable} WHERE STOCKREF = I.LOGICALREF AND TRCODE IN (7, 8) AND LINETYPE = 0 AND CANCELLED = 0), 0) as salesQuantity,
+                    ISNULL((SELECT SUM(AMOUNT) FROM ${stlineTable} WHERE STOCKREF = I.LOGICALREF AND TRCODE IN (7, 8) AND LINETYPE = 0 AND CANCELLED = 0 ${salesSourceFilter}), 0) as salesQuantity,
                     -- Sales Amount (Toplam Satış Tutarı)
-                    ISNULL((SELECT SUM(TOTAL) FROM ${stlineTable} WHERE STOCKREF = I.LOGICALREF AND TRCODE IN (7, 8) AND LINETYPE = 0 AND CANCELLED = 0), 0) as salesAmount,
+                    ISNULL((SELECT SUM(TOTAL) FROM ${stlineTable} WHERE STOCKREF = I.LOGICALREF AND TRCODE IN (7, 8) AND LINETYPE = 0 AND CANCELLED = 0 ${salesSourceFilter}), 0) as salesAmount,
                     -- Fixed Sales Price (Sabit Satış Fiyatı) - PTYPE 2 (Satış)
                     ISNULL((SELECT TOP 1 PRICE FROM ${prclistTable} WHERE CARDREF = I.LOGICALREF AND PTYPE = 2 AND (CLIENTCODE = '' OR CLIENTCODE IS NULL) ORDER BY PRIORITY DESC, LOGICALREF DESC), 0) as fixedPrice
                 FROM ${itemsTable} I
@@ -85,13 +94,46 @@ exports.getProducts = async (req, res) => {
         console.log('--- PRODUCT QUERY ---');
         console.log(query);
         const result = await sql.query(query);
-        console.log('--- PRODUCT RESULT SAMPLE (First Item) ---');
-        console.log(JSON.stringify(result.recordset[0], null, 2));
+        // console.log('--- PRODUCT RESULT SAMPLE (First Item) ---');
+        // console.log(JSON.stringify(result.recordset[0], null, 2));
 
         res.json(result.recordset);
 
     } catch (err) {
         console.error('❌ getProducts Error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.getWarehouses = async (req, res) => {
+    try {
+        const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
+        if (isDemo) {
+            return res.json([
+                { id: 0, name: 'Merkez Depo', number: 0 },
+                { id: 1, name: 'Şube Depo', number: 1 }
+            ]);
+        }
+
+        const config = getConfig();
+        const firm = config.firmNo || '113';
+        const warehouseTable = `L_CAPIWHOUSE`;
+
+        const query = `
+            SELECT 
+                NR as id,
+                NAME as name,
+                NR as number
+            FROM ${warehouseTable}
+            WHERE FIRMNR = ${firm}
+            ORDER BY NR
+        `;
+
+        const result = await sql.query(query);
+        res.json(result.recordset);
+
+    } catch (err) {
+        console.error('❌ getWarehouses Error:', err.message);
         res.status(500).json({ error: err.message });
     }
 };
