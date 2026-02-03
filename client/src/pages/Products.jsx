@@ -207,25 +207,36 @@ const Products = () => {
                     </div>
                 </div>
 
-                {/* Sorting Options */}
-                <div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700">
+                <div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700 w-full md:w-auto overflow-x-auto">
                     <button
-                        onClick={() => setSortBy('quantity')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${sortBy === 'quantity'
-                            ? 'bg-emerald-600 text-white shadow-lg'
+                        onClick={() => setSortBy('stock')}
+                        className={`flex-1 md:flex-none px-6 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap ${sortBy === 'stock'
+                            ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
                             : 'text-slate-400 hover:text-white hover:bg-slate-700'
                             }`}
                     >
-                        Satış Miktarına Göre
+                        <Package size={16} />
+                        Gerçek Stok
+                    </button>
+                    <button
+                        onClick={() => setSortBy('quantity')}
+                        className={`flex-1 md:flex-none px-6 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap ${sortBy === 'quantity'
+                            ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                            }`}
+                    >
+                        <Box size={16} />
+                        Satış Miktarı
                     </button>
                     <button
                         onClick={() => setSortBy('amount')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${sortBy === 'amount'
-                            ? 'bg-emerald-600 text-white shadow-lg'
+                        className={`flex-1 md:flex-none px-6 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap ${sortBy === 'amount'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
                             : 'text-slate-400 hover:text-white hover:bg-slate-700'
                             }`}
                     >
-                        Satış Tutarına Göre
+                        <CheckCircle size={16} />
+                        Satış Tutarı
                     </button>
                 </div>
             </div>
@@ -238,10 +249,10 @@ const Products = () => {
                             <tr className="bg-slate-800/80 border-b border-slate-700">
                                 <th className="text-left p-4 text-sm font-medium text-slate-400 uppercase tracking-wider">Kod</th>
                                 <th className="text-left p-4 text-sm font-medium text-slate-400 uppercase tracking-wider">Ürün Adı</th>
+                                <th className="text-right p-4 text-sm font-medium text-slate-400 uppercase tracking-wider">Gerçek Stok</th>
                                 <th className="text-left p-4 text-sm font-medium text-slate-400 uppercase tracking-wider">Marka</th>
                                 <th className="text-right p-4 text-sm font-medium text-slate-400 uppercase tracking-wider">Satış Tutarı</th>
                                 <th className="text-right p-4 text-sm font-medium text-slate-400 uppercase tracking-wider">Satış Miktarı</th>
-                                <th className="text-right p-4 text-sm font-medium text-slate-400 uppercase tracking-wider">Fiili Stok</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800">
@@ -263,6 +274,28 @@ const Products = () => {
                                                 <span className="text-sm font-medium text-white">{product.name}</span>
                                             </div>
                                         </td>
+                                        <td className="p-4 text-right">
+                                            <div className="flex flex-col items-end gap-1">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${product.realStock > 0
+                                                    ? 'bg-purple-500/20 text-purple-400'
+                                                    : product.realStock < 0
+                                                        ? 'bg-red-500/20 text-red-400'
+                                                        : 'bg-slate-700 text-slate-400'
+                                                    }`}>
+                                                    {product.realStock.toLocaleString('tr-TR')}
+                                                </span>
+                                                {product.transitStock > 0 && (
+                                                    <span className="text-[10px] text-amber-500 font-medium">
+                                                        Yolda: {product.transitStock.toLocaleString('tr-TR')}
+                                                    </span>
+                                                )}
+                                                {product.reservedStock > 0 && (
+                                                    <span className="text-[10px] text-slate-500">
+                                                        Rez: {product.reservedStock.toLocaleString('tr-TR')}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
                                         <td className="p-4 text-sm text-slate-400">
                                             {product.brand || '-'}
                                         </td>
@@ -271,16 +304,6 @@ const Products = () => {
                                         </td>
                                         <td className="p-4 text-right text-sm text-slate-300 font-mono">
                                             {product.salesQuantity > 0 ? product.salesQuantity.toLocaleString('tr-TR') : '-'} {product.unit}
-                                        </td>
-                                        <td className="p-4 text-right">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${product.stockLevel > 0
-                                                ? 'bg-blue-500/20 text-blue-400'
-                                                : product.stockLevel < 0
-                                                    ? 'bg-red-500/20 text-red-400'
-                                                    : 'bg-slate-700 text-slate-400'
-                                                }`}>
-                                                {product.stockLevel.toLocaleString('tr-TR')}
-                                            </span>
                                         </td>
                                     </tr>
                                 ))
@@ -301,6 +324,7 @@ const Products = () => {
             {selectedProductId && (
                 <ProductDetailModal
                     productId={selectedProductId}
+                    selectedWarehouse={selectedWarehouse}
                     onClose={() => setSelectedProductId(null)}
                 />
             )}

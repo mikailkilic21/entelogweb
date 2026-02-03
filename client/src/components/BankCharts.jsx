@@ -107,6 +107,8 @@ const BankCharts = ({ stats, banks, dailyMovements }) => {
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
                             <Tooltip
                                 contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '12px' }}
+                                labelStyle={{ color: '#f1f5f9' }}
+                                itemStyle={{ color: '#f1f5f9' }}
                             />
                             <Area type="monotone" dataKey="Giriş" stroke="#10b981" fillOpacity={1} fill="url(#colorIn)" strokeWidth={2} />
                             <Area type="monotone" dataKey="Çıkış" stroke="#f43f5e" fillOpacity={1} fill="url(#colorOut)" strokeWidth={2} />
@@ -131,6 +133,8 @@ const BankCharts = ({ stats, banks, dailyMovements }) => {
                             <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                             <Tooltip
                                 contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '12px', color: '#f8fafc' }}
+                                labelStyle={{ color: '#f1f5f9' }}
+                                itemStyle={{ color: '#f1f5f9' }}
                                 cursor={{ fill: '#334155', opacity: 0.2 }}
                                 formatter={(value) => formatCurrency(value)}
                             />

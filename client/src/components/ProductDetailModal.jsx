@@ -2,12 +2,45 @@ import React, { useEffect, useState } from 'react';
 import { X, Package, Box, RefreshCw, Loader2, ArrowRightLeft, User, FileText, ChevronRight } from 'lucide-react';
 import InvoiceDetailModal from './InvoiceDetailModal';
 
-const ProductDetailModal = ({ productId, onClose }) => {
+const ProductDetailModal = ({ productId, selectedWarehouse, onClose }) => {
     const [product, setProduct] = useState(null);
+
+    // Helper for transaction colors
+    const getTransactionBadgeColor = (type) => {
+        if (!type) return 'bg-slate-700 text-slate-300';
+        const t = type.toLowerCase();
+        if (t.includes('satış')) return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+        if (t.includes('alış') || t.includes('satınalma')) return 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
+        if (t.includes('iade')) return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+        if (t.includes('devir')) return 'bg-purple-500/10 text-purple-400 border border-purple-500/20';
+        if (t.includes('ambar')) return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+        if (t.includes('üretim')) return 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20';
+        if (t.includes('sayım')) return 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20';
+        return 'bg-slate-700 text-slate-300';
+    };
     const [pendingOrders, setPendingOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [activeTab, setActiveTab] = useState('summary'); // 'summary', 'transactions', 'orders'
+    const [warehouseName, setWarehouseName] = useState('');
+
+    useEffect(() => {
+        // Find warehouse name
+        const findWarehouseName = async () => {
+            if (selectedWarehouse !== null) {
+                try {
+                    const res = await fetch('/api/products/warehouses');
+                    const data = await res.json();
+                    const found = data.find(w => w.id === selectedWarehouse);
+                    if (found) setWarehouseName(found.name);
+                    else setWarehouseName(`Ambar #${selectedWarehouse}`);
+                } catch (e) {
+                    setWarehouseName(`Ambar #${selectedWarehouse}`);
+                }
+            }
+        };
+        findWarehouseName();
+    }, [selectedWarehouse]);
 
     useEffect(() => {
         if (!productId) return;
@@ -15,9 +48,10 @@ const ProductDetailModal = ({ productId, onClose }) => {
         const fetchDetails = async () => {
             setLoading(true);
             try {
+                const warehouseParam = selectedWarehouse ? `?warehouse=${selectedWarehouse}` : '';
                 const [productRes, ordersRes] = await Promise.all([
-                    fetch(`/api/products/${productId}`),
-                    fetch(`/api/products/${productId}/orders`)
+                    fetch(`/api/products/${productId}${warehouseParam}`),
+                    fetch(`/api/products/${productId}/orders${warehouseParam}`)
                 ]);
 
                 if (productRes.ok) {
@@ -34,7 +68,7 @@ const ProductDetailModal = ({ productId, onClose }) => {
         };
 
         fetchDetails();
-    }, [productId]);
+    }, [productId, selectedWarehouse]);
 
     if (!productId) return null;
 
@@ -42,7 +76,11 @@ const ProductDetailModal = ({ productId, onClose }) => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
                 {/* Header */}
-                <div className="flex justify-between items-center p-6 border-b border-slate-800 shrink-0">
+                <div className="flex justify-between items-center p-6 border-b border-slate-800 shrink-0 relative overflow-hidden bg-slate-900">
+                    {/* Warehouse Badge - Larger & Centered/Prominent */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-900 px-6 py-1 rounded-b-xl text-sm font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(245,158,11,0.4)] z-10 border-x border-b border-amber-400">
+                        {selectedWarehouse !== null ? (warehouseName || `Ambar #${selectedWarehouse}`) : 'TÜM AMBARLAR'}
+                    </div>
                     <div className="flex items-center gap-3">
                         <div className="p-3 rounded-lg bg-emerald-500/10 text-emerald-400">
                             <Package size={24} />
@@ -162,7 +200,7 @@ const ProductDetailModal = ({ productId, onClose }) => {
                                             {product.transactions?.map((tr, idx) => (
                                                 <tr
                                                     key={idx}
-                                                    className={`hover:bg-slate-800/60 transition-colors ${tr.invoiceId ? 'cursor-pointer' : ''}`}
+                                                    className={`${idx % 2 === 0 ? 'bg-slate-900/40' : 'bg-slate-800/40'} hover:bg-slate-700/50 transition-colors ${tr.invoiceId ? 'cursor-pointer' : ''}`}
                                                     onClick={() => {
                                                         if (tr.invoiceId) {
                                                             setSelectedInvoice({
@@ -190,12 +228,12 @@ const ProductDetailModal = ({ productId, onClose }) => {
                                                     </td>
                                                     <td className="p-3 text-sm text-slate-300 opacity-75">{tr.ficheNo || '-'}</td>
                                                     <td className="p-3">
-                                                        <span className={`text-xs px-2 py-1 rounded ${tr.type === 'Satış' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                                                        <span className={`text-xs px-2 py-1 rounded ${getTransactionBadgeColor(tr.type)}`}>
                                                             {tr.type}
                                                         </span>
                                                     </td>
-                                                    <td className="p-3 text-center text-sm font-bold text-white">
-                                                        {tr.quantity}
+                                                    <td className={`p-3 text-center text-sm font-bold font-mono ${tr.quantity > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                        {tr.quantity > 0 ? '+' : ''}{tr.quantity.toLocaleString('tr-TR')}
                                                     </td>
                                                     <td className="p-3 text-right text-sm text-slate-400">
                                                         {tr.price?.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}

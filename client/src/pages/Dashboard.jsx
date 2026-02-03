@@ -255,6 +255,7 @@ const Dashboard = () => {
                             <Tooltip
                                 contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
                                 labelStyle={{ color: '#f1f5f9' }}
+                                itemStyle={{ color: '#f1f5f9' }}
                                 formatter={(value) => `₺${(value / 1000).toFixed(1)}k`}
                             />
                         </PieChart>
@@ -298,6 +299,7 @@ const Dashboard = () => {
                             <Tooltip
                                 contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
                                 labelStyle={{ color: '#f1f5f9' }}
+                                itemStyle={{ color: '#f1f5f9' }}
                                 formatter={(value) => `₺${(value / 1000).toFixed(1)}k`}
                             />
                             <Area type="monotone" dataKey="sales" stroke="#10b981" fillOpacity={1} fill="url(#colorSales)" strokeWidth={2} />
@@ -324,6 +326,7 @@ const Dashboard = () => {
                                 cursor={{ fill: 'transparent' }}
                                 contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
                                 labelStyle={{ color: '#f1f5f9' }}
+                                itemStyle={{ color: '#f1f5f9' }}
                                 formatter={(value) => `₺${(value / 1000).toFixed(0)}k`}
                             />
                             <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={12}>
@@ -353,6 +356,7 @@ const Dashboard = () => {
                                 cursor={{ fill: 'transparent' }}
                                 contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
                                 labelStyle={{ color: '#f1f5f9' }}
+                                itemStyle={{ color: '#f1f5f9' }}
                                 formatter={(value) => `₺${(value / 1000).toFixed(0)}k`}
                             />
                             <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={12}>

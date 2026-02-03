@@ -45,19 +45,64 @@ exports.getProducts = async (req, res) => {
             whereCondition += ` AND (I.CODE LIKE '%${search}%' OR I.NAME LIKE '%${search}%')`;
         }
 
-        // Sorting Logic Updated: Sales Quantity or Sales Amount
+        // Warehouse filtering logic
+        // Always calculate from STLINE for accuracy, as GNTOTST is unreliable (missing records for Devir items)
+        const stockInvenNo = warehouse ? warehouse : -1;
+
+        // Dynamic Stock Query using STLINE
+        // Filter by Warehouse if selected (SOURCEINDEX)
+        // We rely on standard IOCODE logic: 1,3 (+), 2,4 (-)
+        // Transfers (TRCODE 25) typically generate two rows (Out from Source, In to Dest), both with correct IOCODE/SOURCEINDEX.
+        // So we do NOT need to check DESTINDEX, to avoid double counting.
+        const whCondition = warehouse
+            ? `AND SOURCEINDEX = ${warehouse}`
+            : ''; // Global: include all
+
+        const physicalStockQuery = `
+            ISNULL((
+                SELECT SUM(
+                    CASE 
+                         -- Logic for Warehouse specific calculation
+                        -- Special Case for TRCODE 25 (Transfer): User indicates IOCODE 1,3 behaves as Output (-) and 2,4 as Input (+) for this transaction type in their context.
+                        WHEN ${warehouse || 'NULL'} IS NOT NULL AND SOURCEINDEX = ${warehouse || 0} AND TRCODE = 25 AND IOCODE IN (1, 3) THEN -AMOUNT
+                        WHEN ${warehouse || 'NULL'} IS NOT NULL AND SOURCEINDEX = ${warehouse || 0} AND TRCODE = 25 AND IOCODE IN (2, 4) THEN AMOUNT
+
+                        -- Standard Logic (Non-Transfer or Standard IOCODE behavior)
+                        WHEN ${warehouse || 'NULL'} IS NOT NULL AND SOURCEINDEX = ${warehouse || 0} AND IOCODE IN (1, 3) THEN AMOUNT 
+                        WHEN ${warehouse || 'NULL'} IS NOT NULL AND SOURCEINDEX = ${warehouse || 0} AND IOCODE IN (2, 4) THEN -AMOUNT
+                        
+                        -- Logic for Global calculation (No WAREHOUSE filter)
+                        -- Apply same inversion for TRCODE 25 globally if needed, or keep standard. Assuming consistency:
+                         WHEN ${warehouse ? '1=0' : '1=1'} AND IOCODE IN (1, 3, 2, 4) THEN 
+                             (CASE 
+                                WHEN TRCODE = 25 AND IOCODE IN (1,3) THEN -AMOUNT
+                                WHEN TRCODE = 25 AND IOCODE IN (2,4) THEN AMOUNT
+                                WHEN IOCODE IN (1, 3) THEN AMOUNT 
+                                ELSE -AMOUNT 
+                              END)
+                        
+                        ELSE 0 
+                    END
+                ) FROM ${stlineTable} 
+                WHERE STOCKREF = I.LOGICALREF AND CANCELLED = 0 ${whCondition}
+            ), 0)
+        `;
+
+        // Sorting Logic Updated
         let orderByClause = 'salesQuantity DESC';
         if (sortBy === 'amount') {
             orderByClause = 'salesAmount DESC';
+        } else if (sortBy === 'stock') {
+            // Real Stock = Physical + Transit - Reserved
+            orderByClause = '(physicalStock + transitStock - reservedStock) DESC';
         }
 
-        // Warehouse filtering logic
-        // If warehouse is selected, check stock in that warehouse (INVENNO = @id)
-        // If not selected, check total stock (INVENNO = -1)
-        const stockInvenNo = warehouse ? warehouse : -1;
-
-        // Similarly for sales, filter by SOURCEINDEX if warehouse is selected
         const salesSourceFilter = warehouse ? `AND SOURCEINDEX = ${warehouse}` : '';
+
+        // Add filter for positive real stock when sortBy is 'stock'
+        const realStockFilter = sortBy === 'stock'
+            ? 'WHERE (physicalStock + transitStock - reservedStock) > 0'
+            : '';
 
         const query = `
             WITH ProductStats AS (
@@ -68,8 +113,12 @@ exports.getProducts = async (req, res) => {
                     I.VAT as vat,
                     I.SPECODE as brand,
                     U.CODE as unit,
-                    -- Stock Level
-                    ISNULL((SELECT SUM(ONHAND) FROM ${gntotstTable} WHERE STOCKREF = I.LOGICALREF AND INVENNO = ${stockInvenNo}), 0) as stockLevel,
+                    -- Stock Level (Physical)
+                    ${physicalStockQuery} as physicalStock,
+                    -- Reserved Stock (Rezerve)
+                    ISNULL((SELECT SUM(RESERVED) FROM ${gntotstTable} WHERE STOCKREF = I.LOGICALREF AND INVENNO = ${stockInvenNo}), 0) as reservedStock,
+                    -- Transit Stock (Yoldaki/Transfer)
+                    ISNULL((SELECT SUM(TEMPIN) FROM ${gntotstTable} WHERE STOCKREF = I.LOGICALREF AND INVENNO = ${stockInvenNo}), 0) as transitStock,
                     -- Sales Quantity (Toplam Satış Miktarı) - TRCODE 7,8 (Perakende/Toptan Satış)
                     ISNULL((SELECT SUM(AMOUNT) FROM ${stlineTable} WHERE STOCKREF = I.LOGICALREF AND TRCODE IN (7, 8) AND LINETYPE = 0 AND CANCELLED = 0 ${salesSourceFilter}), 0) as salesQuantity,
                     -- Sales Amount (Toplam Satış Tutarı)
@@ -82,12 +131,17 @@ exports.getProducts = async (req, res) => {
             )
             SELECT TOP ${limit} 
                 *,
+                -- Calculated Real Stock (Gerçek Stok = Fiili + Yolda - Rezerve)
+                (physicalStock + transitStock - reservedStock) as realStock,
+                -- Legacy field mapping for compatibility if needed, though we use realStock now
+                physicalStock as stockLevel,
                 -- Price is derived from fixedPrice first, then avgPrice (total sales / quantity)
                 CASE WHEN fixedPrice > 0 THEN fixedPrice 
                      WHEN salesQuantity > 0 THEN salesAmount / salesQuantity 
                      ELSE 0 END as avgPrice,
                 fixedPrice -- return separately too just in case
             FROM ProductStats
+            ${realStockFilter}
             ORDER BY ${orderByClause}
         `;
 
@@ -240,6 +294,7 @@ exports.getProductDetails = async (req, res) => {
     try {
         const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
         const { id } = req.params;
+        const warehouse = req.query.warehouse || null;
 
         if (isDemo) {
             const mockFile = require('path').join(__dirname, '../../data/mock/products.json');
@@ -299,11 +354,18 @@ exports.getProductDetails = async (req, res) => {
         const clcardTable = `LG_${firm}_CLCARD`;
         const stficheTable = `LG_${firm}_${period}_STFICHE`;
 
+        const whFilter = warehouse ? `AND S.SOURCEINDEX = ${warehouse}` : '';
+
         const transQuery = `
             SELECT TOP 20
                 S.DATE_ as date,
                 S.TRCODE as trcode,
-                S.AMOUNT as quantity,
+                (CASE 
+                    WHEN S.TRCODE = 25 AND S.IOCODE IN (1, 3) THEN -S.AMOUNT 
+                    WHEN S.TRCODE = 25 AND S.IOCODE IN (2, 4) THEN S.AMOUNT
+                    WHEN S.IOCODE IN (1, 3) THEN S.AMOUNT 
+                    ELSE -S.AMOUNT 
+                END) as quantity,
                 S.PRICE as price,
                 S.TOTAL as total,
                 C.DEFINITION_ as accountName,
@@ -311,16 +373,29 @@ exports.getProductDetails = async (req, res) => {
                 F.FICHENO as ficheNo,
                 U.CODE as unit,
                 CASE 
-                    WHEN S.TRCODE IN (1, 2, 3) THEN 'Alış'
-                    WHEN S.TRCODE IN (7, 8) THEN 'Satış'
-                    ELSE 'Diğer'
+                    WHEN S.TRCODE = 1 THEN 'Satınalma Faturası'
+                    WHEN S.TRCODE = 2 THEN 'Perakende Satış İade'
+                    WHEN S.TRCODE = 3 THEN 'Toptan Satış İade'
+                    WHEN S.TRCODE = 4 THEN 'Konsinye Çıkış İade'
+                    WHEN S.TRCODE = 5 THEN 'Konsinye Giriş İade'
+                    WHEN S.TRCODE = 6 THEN 'Satınalma İade'
+                    WHEN S.TRCODE = 7 THEN 'Perakende Satış'
+                    WHEN S.TRCODE = 8 THEN 'Toptan Satış'
+                    WHEN S.TRCODE = 9 THEN 'Konsinye Çıkış'
+                    WHEN S.TRCODE = 10 THEN 'Konsinye Giriş'
+                    WHEN S.TRCODE = 13 THEN 'Üretimden Giriş'
+                    WHEN S.TRCODE = 14 THEN 'Devir'
+                    WHEN S.TRCODE = 25 THEN 'Ambar Fişi'
+                    WHEN S.TRCODE = 50 THEN 'Sayım Fazlası'
+                    WHEN S.TRCODE = 51 THEN 'Sayım Eksiği'
+                    ELSE 'Diğer (' + CAST(S.TRCODE AS VARCHAR) + ')'
                 END as type,
                 S.IOCODE as iocode
             FROM ${stlineTable} S
             LEFT JOIN ${clcardTable} C ON S.CLIENTREF = C.LOGICALREF
             LEFT JOIN ${stficheTable} F ON S.STFICHEREF = F.LOGICALREF
             LEFT JOIN LG_${firm}_UNITSETL U ON S.UOMREF = U.LOGICALREF
-            WHERE S.STOCKREF = ${id} AND S.CANCELLED = 0
+            WHERE S.STOCKREF = ${id} AND S.CANCELLED = 0 ${whFilter}
             ORDER BY S.DATE_ DESC
         `;
         const transResult = await sql.query(transQuery);
@@ -330,12 +405,15 @@ exports.getProductDetails = async (req, res) => {
         }));
 
         // 3. Warehouse Levels
+        // If specific warehouse selected, show only that ONE, otherwise show all
+        const whLevelFilter = warehouse ? `AND INVENNO = ${warehouse}` : 'AND INVENNO <> -1';
+
         const warehouseQuery = `
             SELECT 
                 INVENNO as warehouse,
                 ONHAND as amount
             FROM ${gntotstTable}
-            WHERE STOCKREF = ${id} AND INVENNO <> -1 AND ONHAND <> 0
+            WHERE STOCKREF = ${id} ${whLevelFilter} AND ONHAND <> 0
             ORDER BY INVENNO
         `;
         const whResult = await sql.query(warehouseQuery);
@@ -356,6 +434,7 @@ exports.getProductOrders = async (req, res) => {
     try {
         const isDemo = req.headers['x-demo-mode'] === 'true' || (req.user && req.user.role === 'demo');
         const { id } = req.params;
+        const warehouse = req.query.warehouse || null;
 
         if (isDemo) {
             // Mock Orders
@@ -372,6 +451,10 @@ exports.getProductOrders = async (req, res) => {
         const orficheTable = `LG_${firm}_${period}_ORFICHE`;
         const orflineTable = `LG_${firm}_${period}_ORFLINE`;
         const clcardTable = `LG_${firm}_CLCARD`;
+
+        // Warehouse Support for Orders: SOURCEINDEX (Verilen Sipariş) or Other logic if needed
+        // For orders, usually 'SOURCEINDEX' in ORFLINE indicates the warehouse
+        const whOrderFilter = warehouse ? `AND L.SOURCEINDEX = ${warehouse}` : '';
 
         // Pending (Closed=0) AND Approved (Approve=1)
         const query = `
@@ -392,6 +475,7 @@ exports.getProductOrders = async (req, res) => {
               AND L.AMOUNT > L.SHIPPEDAMOUNT -- Sadece sevk edilmemiş miktarı olanlar
               AND O.STATUS = 4
               AND O.TRCODE IN (1, 2)
+              ${whOrderFilter}
             ORDER BY O.DATE_ DESC
         `;
 

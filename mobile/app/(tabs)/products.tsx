@@ -9,11 +9,58 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '@/context/AuthContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 
+// TypeScript Interfaces
+interface Product {
+    id: number;
+    name: string;
+    code: string;
+    brand?: string;
+    stockLevel: number;
+    salesAmount: number;
+    unit?: string;
+}
+
+interface Stats {
+    totalProducts: number;
+    productsInStock: number;
+    criticalStock: number;
+}
+
+// Memoized Product Item Component
+const ProductItem = React.memo(({ item, index, onPress }: { item: Product; index: number; onPress: (id: number) => void }) => (
+    <Animated.View entering={FadeInDown.delay(index * 100).springify()} className="mb-3">
+        <TouchableOpacity onPress={() => onPress(item.id)}>
+            <View className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl mb-3 flex-row items-center">
+                <View className="p-3 rounded-xl mr-4 bg-slate-800/50">
+                    <Box size={24} color="#94a3b8" />
+                </View>
+
+                <View className="flex-1">
+                    <Text className="text-white font-bold text-base" numberOfLines={1}>{item.name}</Text>
+                    <Text className="text-slate-500 text-xs font-mono mt-1">{item.code}</Text>
+                    <Text className="text-slate-400 text-xs mt-1">{item.brand || '-'}</Text>
+                </View>
+
+                <View className="items-end">
+                    <View className={`px-2 py-1 rounded text-xs font-bold mb-1 ${item.stockLevel > 0 ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>
+                        <Text className={item.stockLevel > 0 ? 'text-blue-400' : 'text-red-400'}>
+                            {item.stockLevel}
+                        </Text>
+                    </View>
+                    <Text className="text-emerald-400 font-bold text-sm">
+                        {item.salesAmount?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                    </Text>
+                </View>
+            </View>
+        </TouchableOpacity>
+    </Animated.View>
+));
+
 export default function ProductsScreen() {
     const { isDemo } = useAuth();
     const router = useRouter();
-    const [products, setProducts] = useState<any[]>([]);
-    const [stats, setStats] = useState<any>(null);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [stats, setStats] = useState<Stats | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [searchText, setSearchText] = useState('');
@@ -44,12 +91,13 @@ export default function ProductsScreen() {
                 setProducts(Array.isArray(data) ? data : []);
             }
         } catch (error) {
-            console.error(error);
+            // Production: Use error logging service instead
+            if (__DEV__) console.error(error);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [searchText, sortBy]);
+    }, [searchText, sortBy, isDemo]);
 
     useEffect(() => {
         setLoading(true);
@@ -128,34 +176,18 @@ export default function ProductsScreen() {
         </View>
     );
 
-    const renderItem = ({ item, index }: { item: any; index: number }) => (
-        <Animated.View entering={FadeInDown.delay(index * 100).springify()} className="mb-3">
-            <TouchableOpacity onPress={() => router.push(`/products/${item.id}`)}>
-                <View className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl mb-3 flex-row items-center">
-                    <View className="p-3 rounded-xl mr-4 bg-slate-800/50">
-                        <Box size={24} color="#94a3b8" />
-                    </View>
+    // Memoized navigation handler
+    const handleProductPress = useCallback((id: number) => {
+        router.push(`/products/${id}`);
+    }, [router]);
 
-                    <View className="flex-1">
-                        <Text className="text-white font-bold text-base" numberOfLines={1}>{item.name}</Text>
-                        <Text className="text-slate-500 text-xs font-mono mt-1">{item.code}</Text>
-                        <Text className="text-slate-400 text-xs mt-1">{item.brand || '-'}</Text>
-                    </View>
+    // Memoized renderItem
+    const renderItem = useCallback(({ item, index }: { item: Product; index: number }) => (
+        <ProductItem item={item} index={index} onPress={handleProductPress} />
+    ), [handleProductPress]);
 
-                    <View className="items-end">
-                        <View className={`px-2 py-1 rounded text-xs font-bold mb-1 ${item.stockLevel > 0 ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>
-                            <Text className={item.stockLevel > 0 ? 'text-blue-400' : 'text-red-400'}>
-                                {item.stockLevel}
-                            </Text>
-                        </View>
-                        <Text className="text-emerald-400 font-bold text-sm">
-                            {item.salesAmount?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
-                        </Text>
-                    </View>
-                </View>
-            </TouchableOpacity>
-        </Animated.View>
-    );
+    // Memoized keyExtractor
+    const keyExtractor = useCallback((item: Product) => item.id.toString(), []);
 
     return (
         <View className="flex-1 bg-slate-950">
@@ -199,7 +231,7 @@ export default function ProductsScreen() {
                     <FlatList
                         data={products}
                         renderItem={renderItem}
-                        keyExtractor={item => item.id.toString()}
+                        keyExtractor={keyExtractor}
                         contentContainerStyle={{ paddingBottom: 100 }}
                         ListHeaderComponent={renderHeader}
                         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />}
