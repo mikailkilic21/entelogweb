@@ -56,6 +56,8 @@ const ProductItem = React.memo(({ item, index, onPress }: { item: Product; index
     </Animated.View>
 ));
 
+ProductItem.displayName = 'ProductItem';
+
 export default function ProductsScreen() {
     const { isDemo } = useAuth();
     const router = useRouter();

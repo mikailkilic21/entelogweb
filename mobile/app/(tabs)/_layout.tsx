@@ -1,7 +1,6 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
-import { Home, Users, Box, Receipt, ShoppingCart, Banknote, Settings } from 'lucide-react-native';
+import { Home, LayoutGrid, Landmark, MoreHorizontal } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -12,84 +11,90 @@ export default function TabLayout() {
           backgroundColor: '#0f172a', // slate-900
           borderTopWidth: 1,
           borderTopColor: '#1e293b', // slate-800
-          // Removed hardcoded height/padding to let Safe Area handle it
+          // Let Safe Area handle height and padding automatically
         },
         tabBarActiveTintColor: '#3b82f6', // blue-500
-        tabBarInactiveTintColor: '#64748b', // slate-500,
+        tabBarInactiveTintColor: '#64748b', // slate-500
         tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '500',
+          fontSize: 11,
+          fontWeight: '600',
         },
       }}>
+      {/* 1. Dashboard */}
       <Tabs.Screen
         name="index"
         options={{
           title: 'Panel',
-          tabBarIcon: ({ color }) => <Home size={24} color={color} />,
+          tabBarIcon: ({ color }) => <Home size={26} color={color} />,
         }}
       />
 
+      {/* 2. Transactions Hub */}
+      <Tabs.Screen
+        name="transactions"
+        options={{
+          title: 'İşlemler',
+          tabBarIcon: ({ color }) => <LayoutGrid size={26} color={color} />,
+        }}
+      />
+
+      {/* 3. Banks (NEW!) */}
+      <Tabs.Screen
+        name="banks"
+        options={{
+          title: 'Bankalar',
+          tabBarIcon: ({ color }) => <Landmark size={26} color={color} />,
+        }}
+      />
+
+      {/* 4. More Menu */}
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: 'Daha Fazla',
+          tabBarIcon: ({ color }) => <MoreHorizontal size={26} color={color} />,
+        }}
+      />
+
+      {/* Hidden tabs - accessible via router but not in tab bar */}
       <Tabs.Screen
         name="accounts"
-        options={{
-          title: 'Cariler',
-          tabBarIcon: ({ color }) => <Users size={24} color={color} />,
-        }}
+        options={{ href: null }}
       />
 
       <Tabs.Screen
         name="products"
-        options={{
-          title: 'Stok',
-          tabBarIcon: ({ color }) => <Box size={24} color={color} />,
-        }}
+        options={{ href: null }}
       />
 
       <Tabs.Screen
         name="invoices"
-        options={{
-          title: 'Faturalar',
-          tabBarIcon: ({ color }) => <Receipt size={24} color={color} />,
-        }}
+        options={{ href: null }}
       />
 
       <Tabs.Screen
         name="orders"
-        options={{
-          title: 'Sipariş',
-          tabBarIcon: ({ color }) => <ShoppingCart size={24} color={color} />,
-        }}
+        options={{ href: null }}
       />
 
       <Tabs.Screen
         name="checks"
-        options={{
-          title: 'Çek/Senet',
-          tabBarIcon: ({ color }) => <Banknote size={24} color={color} />,
-        }}
+        options={{ href: null }}
       />
 
-      {/* Hide explore from tab bar if not needed, or replace it. I'll hide it. */}
       <Tabs.Screen
         name="explore"
-        options={{
-          href: null,
-        }}
+        options={{ href: null }}
       />
 
       <Tabs.Screen
         name="settings"
-        options={{
-          title: 'Ayarlar',
-          tabBarIcon: ({ color }) => <Settings size={24} color={color} />,
-        }}
+        options={{ href: null }}
       />
 
       <Tabs.Screen
         name="menu"
-        options={{
-          href: null,
-        }}
+        options={{ href: null }}
       />
     </Tabs>
   );

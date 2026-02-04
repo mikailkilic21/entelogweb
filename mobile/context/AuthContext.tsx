@@ -41,19 +41,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Check for persisted user
         const loadUser = async () => {
             try {
-                // FORCE AUTO LOGIN (TEMPORARY)
-                const bypassUser = { username: 'entelog', role: 'user', name: 'Entelog User' };
-                setUser(bypassUser);
-                await SecureStore.setItemAsync('user', JSON.stringify(bypassUser));
-                await SecureStore.setItemAsync('token', 'mock-jwt-token-user-user');
-
-                /* 
-                // Original Logic Disabled for Bypass
                 const storedUser = await SecureStore.getItemAsync('user');
                 if (storedUser) {
                     setUser(JSON.parse(storedUser));
                 }
-                */
             } catch (e) {
                 console.error('Failed to load user', e);
             } finally {
