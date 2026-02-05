@@ -71,12 +71,20 @@ const Orders = () => {
         }
     };
 
-    // Fetch all orders for charts (unfiltered)
+    // Fetch all orders for charts (filtered by date)
     const fetchAllOrders = async () => {
         try {
             const params = new URLSearchParams();
-            params.append('period', 'yearly');
-            params.append('limit', '1000');
+
+            // Apply date filters
+            if (dateFilter === 'custom') {
+                if (customStartDate) params.append('startDate', customStartDate);
+                if (customEndDate) params.append('endDate', customEndDate);
+            } else {
+                params.append('period', dateFilter);
+            }
+
+            params.append('limit', '2000'); // Higher limit for charts
 
             const res = await fetch(`/api/orders?${params.toString()}`);
             if (res.ok) {
@@ -96,8 +104,8 @@ const Orders = () => {
     };
 
     useEffect(() => {
-        fetchAllOrders(); // Fetch all orders once on mount
-    }, []);
+        fetchAllOrders();
+    }, [dateFilter, customStartDate, customEndDate]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -113,29 +121,11 @@ const Orders = () => {
         }
     }, [statusFilter]);
 
-    // Filter out 2025 carryover orders from allOrders
+    // Filter out 2025 carryover orders
     let filteredOrders = allOrders.filter(o => o.date !== '2026-01-01');
 
-    // Apply date filter to stats
-    const now = new Date();
-    if (dateFilter === 'daily') {
-        const today = now.toISOString().split('T')[0];
-        filteredOrders = filteredOrders.filter(o => o.date === today);
-    } else if (dateFilter === 'weekly') {
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        filteredOrders = filteredOrders.filter(o => new Date(o.date) >= weekAgo);
-    } else if (dateFilter === 'monthly') {
-        const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-        filteredOrders = filteredOrders.filter(o => new Date(o.date) >= monthAgo);
-    } else if (dateFilter === 'yearly') {
-        const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-        filteredOrders = filteredOrders.filter(o => new Date(o.date) >= yearAgo);
-    } else if (dateFilter === 'custom' && customStartDate && customEndDate) {
-        filteredOrders = filteredOrders.filter(o => {
-            const orderDate = new Date(o.date);
-            return orderDate >= new Date(customStartDate) && orderDate <= new Date(customEndDate);
-        });
-    }
+    // Stats are calculated from this filteredOrders
+    // Note: manual date filtering removed here as fetchAllOrders now handles it.
 
     // Calculate quick stats from filtered orders
     const stats = {
@@ -170,44 +160,108 @@ const Orders = () => {
         { name: 'Onaylı', value: allStats.approvedAmount, color: '#ec4899' }
     ];
 
-    // Monthly trend data (last 6 months from allOrders)
-    const getMonthlyTrend = () => {
-        const monthsData = {};
+    // Dynamic Trend Data based on dateFilter with GAP FILLING
+    const getTrendData = () => {
+        const dataMap = {};
         const now = new Date();
+        now.setHours(0, 0, 0, 0);
 
-        for (let i = 5; i >= 0; i--) {
-            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            monthsData[monthKey] = { öneri: 0, onaylı: 0 };
+        // Generate keys based on filter to fill gaps
+        if (dateFilter === 'yearly') {
+            // Last 12 Months
+            for (let i = 11; i >= 0; i--) {
+                // Create date for the 1st of the month
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                // Key format YYYY-MM
+                const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                dataMap[key] = {
+                    date: key,
+                    Öneri: 0,
+                    Onaylı: 0,
+                    // Label format MM/YY
+                    ay: `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).substring(2)}`
+                };
+            }
+        } else if (dateFilter === 'monthly') {
+            // Last 30 Days
+            for (let i = 29; i >= 0; i--) {
+                const d = new Date(now);
+                d.setDate(d.getDate() - i);
+                const key = d.toISOString().substring(0, 10);
+                dataMap[key] = {
+                    date: key,
+                    Öneri: 0,
+                    Onaylı: 0,
+                    ay: `${key.substring(8, 10)}/${key.substring(5, 7)}` // DD/MM
+                };
+            }
+        } else if (dateFilter === 'weekly') {
+            // Last 7 Days
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(now);
+                d.setDate(d.getDate() - i);
+                const key = d.toISOString().substring(0, 10);
+                dataMap[key] = {
+                    date: key,
+                    Öneri: 0,
+                    Onaylı: 0,
+                    ay: `${key.substring(8, 10)}/${key.substring(5, 7)}`
+                };
+            }
+        } else if (dateFilter === 'daily') {
+            // Just Today
+            const key = now.toISOString().substring(0, 10);
+            dataMap[key] = {
+                date: key,
+                Öneri: 0,
+                Onaylı: 0,
+                ay: `${key.substring(8, 10)}/${key.substring(5, 7)}`
+            };
+        } else if (customStartDate && customEndDate) {
+            let current = new Date(customStartDate);
+            const end = new Date(customEndDate);
+            if (!isNaN(current.getTime()) && !isNaN(end.getTime())) {
+                while (current <= end) {
+                    const key = current.toISOString().substring(0, 10);
+                    dataMap[key] = {
+                        date: key,
+                        Öneri: 0,
+                        Onaylı: 0,
+                        ay: `${key.substring(8, 10)}/${key.substring(5, 7)}`
+                    };
+                    current.setDate(current.getDate() + 1);
+                }
+            }
         }
 
+        // Fill with data
+        filteredOrders.forEach(order => {
+            if (!order.date) return;
 
-        allOrders.forEach(order => {
-            // Skip 2025 carryover orders (01.01.2026)
-            if (order.date && order.date !== '2026-01-01') {
-                const orderMonth = order.date.substring(0, 7);
-                if (monthsData[orderMonth]) {
-                    if (order.status === 1) monthsData[orderMonth].öneri++;
-                    if (order.status === 4) monthsData[orderMonth].onaylı++;
-                }
+            let key = order.date;
+            if (dateFilter === 'yearly') {
+                key = key.substring(0, 7); // YYYY-MM
+            }
+
+            if (dataMap[key]) {
+                // Use loose equality to match numbers or strings
+                if (order.status == 1) dataMap[key].Öneri++;
+                if (order.status == 4) dataMap[key].Onaylı++;
             }
         });
 
-        return Object.keys(monthsData).map(month => ({
-            ay: month.substring(5, 7) + '/' + month.substring(2, 4),
-            Öneri: monthsData[month].öneri,
-            Onaylı: monthsData[month].onaylı
-        }));
+        // Return array sorted by date
+        return Object.values(dataMap).sort((a, b) => a.date.localeCompare(b.date));
     };
 
-    const monthlyTrendData = getMonthlyTrend();
+    const trendData = getTrendData();
 
-    // Top customers by order count (excluding 2025 carryover)
+    // Top customers by order count (using filtered orders)
     const getTopCustomers = () => {
         const customerMap = {};
         const colors = ['#14b8a6', '#3b82f6', '#8b5cf6', '#f59e0b', '#ec4899'];
 
-        allOrders.forEach(order => {
+        filteredOrders.forEach(order => {
             // Skip 2025 carryover orders
             if (order.date === '2026-01-01') return;
 
@@ -237,10 +291,20 @@ const Orders = () => {
     const [topProductsData, setTopProductsData] = React.useState([]);
 
     React.useEffect(() => {
-        // Fetch top products from backend
+        // Fetch top products from backend with filters
         const fetchTopProducts = async () => {
             try {
-                const res = await fetch('/api/orders/top-products?limit=5');
+                const params = new URLSearchParams();
+                params.append('limit', '5');
+
+                if (dateFilter === 'custom') {
+                    if (customStartDate) params.append('startDate', customStartDate);
+                    if (customEndDate) params.append('endDate', customEndDate);
+                } else {
+                    params.append('period', dateFilter);
+                }
+
+                const res = await fetch(`/api/orders/top-products?${params.toString()}`);
                 if (res.ok) {
                     const data = await res.json();
                     const colors = ['#f97316', '#06b6d4', '#8b5cf6', '#10b981', '#f59e0b'];
@@ -251,7 +315,6 @@ const Orders = () => {
                     }));
                     setTopProductsData(formattedData);
                 } else {
-                    // Fallback to empty array if endpoint doesn't exist yet
                     setTopProductsData([]);
                 }
             } catch (error) {
@@ -260,10 +323,8 @@ const Orders = () => {
             }
         };
 
-        if (allOrders.length > 0) {
-            fetchTopProducts();
-        }
-    }, [allOrders]);
+        fetchTopProducts();
+    }, [dateFilter, customStartDate, customEndDate]); // Dependencies: Refetch when filters change
 
     return (
         <div className="p-8 max-w-full mx-auto space-y-8 animate-fade-in pb-20">
@@ -431,9 +492,9 @@ const Orders = () => {
 
                 {/* Monthly Trend - Line Chart */}
                 <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 backdrop-blur-xl">
-                    <h3 className="text-xs font-semibold text-slate-400 mb-3">Aylık Trend (Son 6 Ay)</h3>
+                    <h3 className="text-xs font-semibold text-slate-400 mb-3">Sipariş Trendi</h3>
                     <ResponsiveContainer width="100%" height={180}>
-                        <LineChart data={monthlyTrendData}>
+                        <LineChart data={trendData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                             <XAxis dataKey="ay" stroke="#94a3b8" tick={{ fontSize: 9 }} />
                             <YAxis stroke="#94a3b8" tick={{ fontSize: 9 }} />

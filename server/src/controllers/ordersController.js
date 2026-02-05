@@ -104,6 +104,33 @@ exports.getOrders = async (req, res) => {
                 whereClause += ` AND (O.FICHENO LIKE '%${search}%' OR O.DOCODE LIKE '%${search}%' OR C.DEFINITION_ LIKE '%${search}%')`;
             }
 
+            // 4. Date Filter
+            const period = req.query.period;
+            const startDate = req.query.startDate;
+            const endDate = req.query.endDate;
+
+            if (startDate && endDate) {
+                whereClause += ` AND O.DATE_ BETWEEN '${startDate}' AND '${endDate}'`;
+            } else if (period) {
+                const today = new Date();
+                let dateLimit;
+
+                if (period === 'daily') {
+                    dateLimit = today.toISOString().split('T')[0];
+                    whereClause += ` AND O.DATE_ = '${dateLimit}'`;
+                } else {
+                    if (period === 'weekly') {
+                        today.setDate(today.getDate() - 7);
+                    } else if (period === 'monthly') {
+                        today.setMonth(today.getMonth() - 1);
+                    } else if (period === 'yearly') {
+                        today.setFullYear(today.getFullYear() - 1);
+                    }
+                    dateLimit = today.toISOString().split('T')[0];
+                    whereClause += ` AND O.DATE_ >= '${dateLimit}'`;
+                }
+            }
+
             const trcode = req.query.type === 'purchase' ? 2 : 1;
             whereClause += ` AND O.TRCODE = ${trcode}`;
 
@@ -376,21 +403,50 @@ exports.getTopProducts = async (req, res) => {
     try {
         const config = getConfig();
         const firm = config.firmNo || '113';
-        const period = config.periodNo || '01';
-        const orflineTable = `LG_${firm}_${period}_ORFLINE`;
+        const periodConfig = config.periodNo || '01';
+        const orflineTable = `LG_${firm}_${periodConfig}_ORFLINE`;
         const itemsTable = `LG_${firm}_ITEMS`;
 
         const limit = parseInt(req.query.limit) || 5;
+
+        // Date Filter for Top Products
+        let dateWhere = '';
+        const period = req.query.period;
+        const startDate = req.query.startDate;
+        const endDate = req.query.endDate;
+
+        if (startDate && endDate) {
+            dateWhere = ` AND O.DATE_ BETWEEN '${startDate}' AND '${endDate}'`;
+        } else if (period) {
+            const today = new Date();
+            let dateLimit;
+
+            if (period === 'daily') {
+                dateLimit = today.toISOString().split('T')[0];
+                dateWhere = ` AND O.DATE_ = '${dateLimit}'`;
+            } else {
+                if (period === 'weekly') {
+                    today.setDate(today.getDate() - 7);
+                } else if (period === 'monthly') {
+                    today.setMonth(today.getMonth() - 1);
+                } else if (period === 'yearly') {
+                    today.setFullYear(today.getFullYear() - 1);
+                }
+                dateLimit = today.toISOString().split('T')[0];
+                dateWhere = ` AND O.DATE_ >= '${dateLimit}'`;
+            }
+        }
 
         const query = `
             SELECT TOP ${limit}
                 I.CODE as productCode,
                 I.NAME as name,
-                COUNT(DISTINCT O.LOGICALREF) as count
+                COUNT(DISTINCT O.ORDFICHEREF) as count
             FROM ${orflineTable} O
             INNER JOIN ${itemsTable} I ON O.STOCKREF = I.LOGICALREF
             WHERE O.LINETYPE = 0  -- Only product lines
             AND O.CANCELLED = 0   -- Not cancelled
+            ${dateWhere}
             GROUP BY I.CODE, I.NAME
             ORDER BY count DESC
         `;

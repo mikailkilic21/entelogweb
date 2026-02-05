@@ -896,7 +896,7 @@ const Checks = () => {
                 <div className="flex gap-4 w-full md:w-auto">
                     <div className="relative flex-1 md:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-                        <input type="text" placeholder="Çek No / Portföy No" value={searchVal} onChange={(e) => setSearchVal(e.target.value)} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-500" />
+                        <input type="text" placeholder="Çek No / Portföy No / Cari Ünvanı" value={searchVal} onChange={(e) => setSearchVal(e.target.value)} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-500" />
                     </div>
                 </div>
             </div>
@@ -926,13 +926,35 @@ const Checks = () => {
                         <div className="p-4 bg-slate-950/50 flex items-center gap-2 border-b border-slate-800">
                             <div className="w-2 h-2 rounded-full bg-red-500"></div>
                             <h3 className="font-semibold text-slate-200">Kendi Çeklerimiz {activeTab === 'overdue' ? '(Ödenmemiş)' : ''}</h3>
-                            <span className="text-xs text-slate-500 bg-slate-900 px-2 py-0.5 rounded-full ml-auto">{checks.filter(c => activeTab === 'own' || c.category === 'own_overdue').length} Kayıt</span>
+                            <span className="text-xs text-slate-500 bg-slate-900 px-2 py-0.5 rounded-full ml-auto">{checks.filter(c => c.type === 'own').length} Kayıt</span>
                         </div>
                         <table className="w-full">
                             <thead className="bg-slate-950/30 text-xs uppercase text-slate-400 font-medium"><tr><th className="px-6 py-3 text-left">Vade</th><th className="px-6 py-3 text-left">Banka</th><th className="px-6 py-3 text-left">Seri No</th><th className="px-6 py-3 text-right">Tutar</th></tr></thead>
-                            <tbody className="divide-y divide-slate-800">{checks.filter(c => activeTab === 'own' || c.category === 'own_overdue').map((check) => (
-                                <tr key={check.id} onClick={() => setActiveCheck(check)} className="hover:bg-slate-800/30 transition-colors cursor-pointer"><td className="px-6 py-3 text-red-400 font-medium">{formatDate(check.dueDate)}</td><td className="px-6 py-3 text-slate-300">{check.bankName}</td><td className="px-6 py-3 text-slate-400 text-sm">{check.serialNo}</td><td className="px-6 py-3 text-right font-mono text-slate-200">{formatCurrency(check.amount)}</td></tr>
-                            ))}</tbody>
+                            <tbody className="divide-y divide-slate-800">{checks.filter(c => c.type === 'own').map((check) => {
+                                // Vade kontrolü
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                const dueDate = check.dueDate ? new Date(check.dueDate) : null;
+                                if (dueDate) dueDate.setHours(0, 0, 0, 0);
+                                const isOverdue = dueDate && dueDate < today;
+
+                                return (
+                                    <tr
+                                        key={check.id}
+                                        onClick={() => setActiveCheck(check)}
+                                        className={`hover:bg-slate-800/30 transition-colors cursor-pointer ${isOverdue ? 'bg-red-900/20 hover:bg-red-900/30 border-l-4 border-l-red-500' : ''}`}
+                                    >
+                                        <td className={`px-6 py-3 font-medium flex items-center gap-2 ${isOverdue ? 'text-red-400' : 'text-slate-300'}`}>
+                                            {isOverdue && <AlertCircle size={16} className="text-red-400 animate-pulse" />}
+                                            {formatDate(check.dueDate)}
+                                            {isOverdue && <span className="text-[10px] bg-red-500/20 text-red-300 px-2 py-0.5 rounded-full font-bold">VADESİ GEÇTİ</span>}
+                                        </td>
+                                        <td className="px-6 py-3 text-slate-300">{check.bankName}</td>
+                                        <td className="px-6 py-3 text-slate-400 text-sm">{check.serialNo}</td>
+                                        <td className={`px-6 py-3 text-right font-mono ${isOverdue ? 'text-red-400 font-bold' : 'text-slate-200'}`}>{formatCurrency(check.amount)}</td>
+                                    </tr>
+                                );
+                            })}</tbody>
                         </table>
                     </div>
                 )}
