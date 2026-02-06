@@ -2,7 +2,11 @@ const sql = require('mssql');
 const fs = require('fs');
 const path = require('path');
 
-const configPath = path.join(__dirname, 'db-config.json');
+// Detect if running in a packaged environment (pkg)
+const isPkg = typeof process.pkg !== 'undefined';
+const configPath = isPkg
+    ? path.join(path.dirname(process.execPath), 'db-config.json')
+    : path.join(__dirname, 'db-config.json');
 
 const getConfig = () => {
     try {

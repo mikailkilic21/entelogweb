@@ -3,7 +3,13 @@ const path = require('path');
 const multer = require('multer');
 const { sql, getPool } = require('../config/db');
 
-const DB_PATH = path.join(__dirname, '../../data/company-db.json');
+// Detect if running in a packaged environment (pkg)
+const isPkg = typeof process.pkg !== 'undefined';
+
+// Paths relative to executable in production, or source in dev
+const DB_PATH = isPkg
+    ? path.join(path.dirname(process.execPath), 'data/company-db.json')
+    : path.join(__dirname, '../../data/company-db.json');
 
 // Ensure data directory calls
 if (!fs.existsSync(path.dirname(DB_PATH))) {
@@ -13,7 +19,11 @@ if (!fs.existsSync(path.dirname(DB_PATH))) {
 // Multer Storage Configuration
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        const uploadDir = path.join(__dirname, '../../public/uploads');
+        // Uploads also need to be external in prod
+        const uploadDir = isPkg
+            ? path.join(path.dirname(process.execPath), 'public/uploads')
+            : path.join(__dirname, '../../public/uploads');
+
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
         }
@@ -93,7 +103,9 @@ const uploadLogo = (req, res) => {
 };
 
 // DB Config Handling
-const DB_CONFIG_PATH = path.join(__dirname, '../config/db-config.json');
+const DB_CONFIG_PATH = isPkg
+    ? path.join(path.dirname(process.execPath), 'db-config.json')
+    : path.join(__dirname, '../config/db-config.json');
 
 const getDbSettings = async (req, res) => {
     try {
