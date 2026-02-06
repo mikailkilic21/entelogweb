@@ -1,3 +1,30 @@
+// Polyfill for AbortSignal.any which is missing in older Node versions < 20.3
+if (typeof AbortSignal !== 'undefined' && !AbortSignal.any) {
+    AbortSignal.any = (signals) => {
+        const controller = new AbortController();
+        // If any signal is already aborted, abort immediately
+        for (const signal of signals) {
+            if (signal.aborted) {
+                controller.abort(signal.reason);
+                return controller.signal;
+            }
+        }
+        // Listener to abort the controller when any signal triggers
+        const onAbort = (event) => {
+            controller.abort(event.target.reason);
+            // Cleanup listeners
+            for (const signal of signals) {
+                signal.removeEventListener('abort', onAbort);
+            }
+        };
+        // Add listeners
+        for (const signal of signals) {
+            signal.addEventListener('abort', onAbort);
+        }
+        return controller.signal;
+    };
+}
+
 const express = require('express');
 const cors = require('cors');
 const { connectDB } = require('./config/db');
