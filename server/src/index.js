@@ -27,17 +27,43 @@ if (typeof AbortSignal !== 'undefined' && !AbortSignal.any) {
 
 const express = require('express');
 const cors = require('cors');
+const http = require('http'); // HTTP Server for Socket.IO
+const { Server } = require("socket.io"); // Socket.IO
 const { connectDB } = require('./config/db');
 const apiRoutes = require('./routes/api');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
+const server = http.createServer(app); // Wrap Express with HTTP Server
+
+// Socket.IO Setup
+const io = new Server(server, {
+    cors: {
+        origin: "*", // Allow all origins (mobile app)
+        methods: ["GET", "POST"]
+    }
+});
+
 const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public')); // Serve static files like uploaded logos
+
+// Socket.IO Connection Event
+io.on('connection', (socket) => {
+    console.log('🔌 Yeni bir kullanıcı bağlandı:', socket.id);
+    socket.on('disconnect', () => {
+        console.log('🔌 Kullanıcı ayrıldı:', socket.id);
+    });
+});
+
+// Middleware to inject io instance into req
+app.use((req, res, next) => {
+    req.io = io;
+    next();
+});
 
 // Routes
 app.use('/api', apiRoutes);
@@ -52,13 +78,16 @@ connectDB().then(() => {
     console.error('❌ Veritabanı bağlantı hatası (Sunucu yine de başlatılıyor):', err.message);
 });
 
-const server = app.listen(PORT, () => {
+// Use server.listen instead of app.listen for Socket.IO
+server.listen(PORT, () => {
     console.log(`
     ╔════════════════════════════════════════╗
     ║   ✅ Logo Go Wings API Çalışıyor!    ║
+    ║   ⚡ Socket.IO Aktif (Canlı Veri)    ║
     ╚════════════════════════════════════════╝
     
-    🌐 Test: http://localhost:${PORT}/api/test
+    🌐 API: http://localhost:${PORT}/api
+    🔌 Socket: http://localhost:${PORT}
     📦 Fişler: http://localhost:${PORT}/api/invoices
     📊 İstatistikler: http://localhost:${PORT}/api/stats
     `);

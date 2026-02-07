@@ -1,17 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Building2, MapPin, Phone, Mail, ArrowUpRight, ArrowDownLeft, Users, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { Search, Building2 } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '@/context/AuthContext';
+import AccountItem from '@/components/AccountItem';
+
+import { Account } from '@/types';
 
 export default function AccountsScreen() {
     const { isDemo } = useAuth();
     const router = useRouter();
-    const [accounts, setAccounts] = useState<any[]>([]);
+    const [accounts, setAccounts] = useState<Account[]>([]);
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -41,11 +44,14 @@ export default function AccountsScreen() {
             }
         } catch (error) {
             console.error('Fetch error:', error);
+            if (activeTab) {
+                Alert.alert('Hata', 'Sunucuya bağlanılamadı via VPN (192.168.1.200). Lütfen bağlantınızı kontrol edin. Detay: ' + (error as Error).message);
+            }
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [activeTab, searchText]);
+    }, [activeTab, searchText, isDemo]);
 
     useEffect(() => {
         setLoading(true);
@@ -53,7 +59,7 @@ export default function AccountsScreen() {
             fetchData();
         }, 500);
         return () => clearTimeout(timer);
-    }, [activeTab, searchText]);
+    }, [fetchData]);
 
     const onRefresh = () => {
         setRefreshing(true);
@@ -131,35 +137,9 @@ export default function AccountsScreen() {
         </View>
     );
 
-    const renderItem = ({ item, index }: { item: any, index: number }) => (
-        <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
-            <TouchableOpacity
-                onPress={() => router.push(`/account/${item.id}`)}
-                className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl mb-3 flex-row items-center"
-            >
-                <View className={`p-3 rounded-xl mr-4 ${item.cardType === 1 ? 'bg-blue-500/10' : 'bg-purple-500/10'}`}>
-                    <Building2 size={24} color={item.cardType === 1 ? '#60a5fa' : '#c084fc'} />
-                </View>
-
-                <View className="flex-1">
-                    <Text className="text-white font-bold text-base" numberOfLines={1}>{item.name}</Text>
-                    <Text className="text-slate-500 text-xs font-mono mt-1">{item.code}</Text>
-                    <Text className="text-slate-400 text-xs mt-1">
-                        {[item.town, item.city].filter(Boolean).join(' / ')}
-                    </Text>
-                </View>
-
-                <View className="items-end">
-                    <Text className={`font-bold ${item.balance > 0 ? 'text-green-400' : item.balance < 0 ? 'text-red-400' : 'text-slate-400'}`}>
-                        {Math.abs(item.balance).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
-                    </Text>
-                    <Text className="text-xs text-slate-500 mt-1">
-                        {item.balance > 0 ? 'Alacak' : item.balance < 0 ? 'Borç' : '-'}
-                    </Text>
-                </View>
-            </TouchableOpacity>
-        </Animated.View>
-    );
+    const renderItem = useCallback(({ item, index }: { item: Account, index: number }) => (
+        <AccountItem item={item} index={index} />
+    ), []);
 
     return (
         <View className="flex-1 bg-slate-950">

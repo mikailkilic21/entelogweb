@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { View, Text, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import { X, Calendar, CreditCard, User, FileText, Hash } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
+
 
 interface Transaction {
     id: number;
@@ -40,7 +41,7 @@ export default function FinanceDetailModal({ visible, onClose, transaction }: Fi
     };
 
     // Determine color based on transaction type (similar to web)
-    const isIncome = (transaction.trcode === 70 || transaction.trcode === 3) || (transaction.sign === 0 && transaction.trcode !== 72 && transaction.trcode !== 4);
+
     // Logic might need adjustment based on exact ERP definitions, syncing with web logic:
     // Web: 
     // const isOutflow = (trcode === 72 && sign === 0) || (trcode === 4 && sign === 1);

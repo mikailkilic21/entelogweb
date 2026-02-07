@@ -7,7 +7,7 @@
 export type Environment = 'development' | 'production' | 'vpn';
 
 // Current environment - CHANGE THIS BASED ON YOUR NEEDS
-const CURRENT_ENV: Environment = 'development'; // 'development' | 'production' | 'vpn'
+const CURRENT_ENV: Environment = 'vpn'; // 'development' | 'production' | 'vpn'
 
 // Environment configurations
 const ENV_CONFIG = {

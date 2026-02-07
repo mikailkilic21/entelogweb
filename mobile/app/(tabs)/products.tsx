@@ -1,25 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image, Modal, StyleSheet, Alert, Button, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Package, TrendingUp, AlertTriangle, CheckCircle, Box, ScanLine, X, Camera as CameraIcon } from 'lucide-react-native';
-import { API_URL } from '@/constants/Config';
+import { Search, Package, TrendingUp, AlertTriangle, CheckCircle, Box, ScanLine, X } from 'lucide-react-native';
+import { API_URL, BASE_URL } from '@/constants/Config';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '@/context/AuthContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-
-// TypeScript Interfaces
-interface Product {
-    id: number;
-    name: string;
-    code: string;
-    brand?: string;
-    stockLevel: number;
-    salesAmount: number;
-    unit?: string;
-    stockValue?: number;
-}
+import { Product } from '@/types';
+import ProductItem from '@/components/ProductItem';
+import { io } from "socket.io-client"; // Socket.IO Import
 
 interface Stats {
     totalProducts: number;
@@ -28,119 +18,111 @@ interface Stats {
     totalStockValue?: number;
 }
 
-// Memoized Product Item Component
-const ProductItem = React.memo(({ item, index, onPress }: { item: Product; index: number; onPress: (id: number) => void }) => (
-    <Animated.View entering={FadeInDown.delay(index * 100).springify()} className="mb-3">
-        <TouchableOpacity onPress={() => onPress(item.id)}>
-            <View className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl mb-3 flex-row items-center">
-                <View className="p-3 rounded-xl mr-4 bg-slate-800/50">
-                    <Box size={24} color="#94a3b8" />
-                </View>
-
-                <View className="flex-1">
-                    <Text className="text-white font-bold text-base" numberOfLines={1}>{item.name}</Text>
-                    <Text className="text-slate-500 text-xs font-mono mt-1">{item.code}</Text>
-                    <Text className="text-slate-400 text-xs mt-1">{item.brand || '-'}</Text>
-                </View>
-
-                <View className="items-end">
-                    <View className={`px-2 py-1 rounded text-xs font-bold mb-1 ${item.stockLevel > 0 ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>
-                        <Text className={item.stockLevel > 0 ? 'text-blue-400' : 'text-red-400'}>
-                            {item.stockLevel.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {item.unit || ''}
-                        </Text>
-                    </View>
-                    <Text className="text-emerald-400 font-bold text-sm">
-                        {(item.stockValue || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺
-                    </Text>
-                </View>
-            </View>
-        </TouchableOpacity>
-    </Animated.View>
-));
-
-ProductItem.displayName = 'ProductItem';
-
 export default function ProductsScreen() {
     const { isDemo } = useAuth();
     const router = useRouter();
+
+    // UI State
     const [products, setProducts] = useState<Product[]>([]);
+    const [searchText, setSearchText] = useState('');
     const [stats, setStats] = useState<Stats | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [searchText, setSearchText] = useState('');
     const [sortBy, setSortBy] = useState('realStock'); // 'amount' | 'quantity' | 'realStock'
-
-    // Camera State
-    const [permission, requestPermission] = useCameraPermissions();
-    const [isScanning, setIsScanning] = useState(false);
-    const [scanned, setScanned] = useState(false);
-
-    const [warehouses, setWarehouses] = useState<any[]>([]);
     const [selectedWarehouse, setSelectedWarehouse] = useState<number | null>(null);
+    const [warehouses, setWarehouses] = useState<any[]>([]);
 
-    // Fetch Warehouses
+    // Socket Ref
+    const socketRef = React.useRef<any>(null);
+
+    // Fetch Warehouses (REST)
     useEffect(() => {
         fetch(`${API_URL}/products/warehouses`, {
             headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
         }).then(res => res.json()).then(data => {
             if (Array.isArray(data)) setWarehouses([{ id: null, name: 'Tümü' }, ...data]);
         }).catch(err => console.error(err));
-    }, []);
+    }, [isDemo]);
 
+    // Initial Data Fetch (REST)
     const fetchData = useCallback(async () => {
         try {
+            // Stats URL
             let statsUrl = `${API_URL}/products/stats?search=${encodeURIComponent(searchText)}`;
             if (selectedWarehouse !== null) statsUrl += `&warehouse=${selectedWarehouse}`;
 
-            const statsRes = await fetch(statsUrl, {
-                headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
-            });
-            if (statsRes.ok) {
-                setStats(await statsRes.json());
-            }
+            // Products URL (REST Endpoint)
+            let prodUrl = `${API_URL}/products?limit=50&sortBy=${sortBy}`;
+            if (selectedWarehouse !== null) prodUrl += `&warehouse=${selectedWarehouse}`;
+            if (searchText) prodUrl += `&search=${encodeURIComponent(searchText)}`;
 
-            let url = `${API_URL}/products?limit=50&sortBy=${sortBy}`;
-            if (selectedWarehouse !== null) url += `&warehouse=${selectedWarehouse}`;
-            if (searchText) url += `&search=${encodeURIComponent(searchText)}`;
+            // Parallel Request
+            const [statsRes, prodRes] = await Promise.all([
+                fetch(statsUrl, { headers: { 'x-demo-mode': isDemo ? 'true' : 'false' } }),
+                fetch(prodUrl, { headers: { 'x-demo-mode': isDemo ? 'true' : 'false' } })
+            ]);
 
-            const prodRes = await fetch(url, {
-                headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
-            });
+            if (statsRes.ok) setStats(await statsRes.json());
+
             if (prodRes.ok) {
                 const data = await prodRes.json();
                 setProducts(Array.isArray(data) ? data : []);
             }
         } catch (error) {
-            // Production: Use error logging service instead
-            if (__DEV__) console.error(error);
+            console.error(error);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     }, [searchText, sortBy, selectedWarehouse, isDemo]);
 
+    // Socket.IO Connection & Initial Fetch
+    useEffect(() => {
+        // Connect Socket
+        socketRef.current = io(BASE_URL);
+
+        socketRef.current.on("connect", () => {
+            console.log("⚡ Socket.IO Bağlandı:", socketRef.current.id);
+        });
+
+        // Listen for updates (Example event)
+        socketRef.current.on("stock_update", (updatedProduct: any) => {
+            console.log("📦 Stok Güncellemesi Geldi:", updatedProduct.code);
+            // Update local state without full refresh
+            setProducts(prevProducts => prevProducts.map(p =>
+                p.id === updatedProduct.id ? { ...p, ...updatedProduct } : p
+            ));
+        });
+
+        fetchData();
+
+        return () => {
+            if (socketRef.current) socketRef.current.disconnect();
+        };
+    }, [fetchData]); // Re-connect only if BASE_URL changes (unlikely) or component remounts
+
+    // Trigger Fetch on Filter Change
     useEffect(() => {
         setLoading(true);
-        const timer = setTimeout(fetchData, 500);
+        const timer = setTimeout(fetchData, 500); // Debounce
         return () => clearTimeout(timer);
-    }, [searchText, sortBy, selectedWarehouse]);
+    }, [searchText, sortBy, selectedWarehouse]); // fetchData is stable via useCallback
 
     const onRefresh = () => {
         setRefreshing(true);
-        fetchData();
+        fetchData(); // Socket will stay connected
     };
 
-    const handleScan = () => {
-        if (!permission) {
-            // Camera permissions are still loading
-            return;
-        }
+    // Camera State
+    const [permission, requestPermission] = useCameraPermissions();
+    const [isScanning, setIsScanning] = useState(false);
+    const [scanned, setScanned] = useState(false);
 
-        if (!permission.granted) {
+    const handleScan = () => {
+        if (!permission?.granted) {
             requestPermission();
             return;
         }
-
         setScanned(false);
         setIsScanning(true);
     };
@@ -151,6 +133,24 @@ export default function ProductsScreen() {
         setSearchText(data);
         Alert.alert("Barkod Okundu", `Ürün Kodu: ${data}`);
     };
+
+    // Memoized Navigation
+    const handleProductPress = useCallback((id: number) => {
+        let url = `/products/${id}`;
+        if (selectedWarehouse) {
+            url += `?warehouse=${selectedWarehouse}`;
+            const whName = warehouses.find(w => w.id === selectedWarehouse)?.name;
+            if (whName) url += `&warehouseName=${encodeURIComponent(whName)}`;
+        }
+        router.push(url as any);
+    }, [router, selectedWarehouse, warehouses]);
+
+    // Render Helpers
+    const renderItem = useCallback(({ item, index }: { item: Product; index: number }) => (
+        <ProductItem item={item} index={index} onPress={handleProductPress} />
+    ), [handleProductPress]);
+
+    const keyExtractor = useCallback((item: Product) => item.id.toString(), []);
 
     const renderHeader = () => (
         <View className="mb-4">
@@ -174,7 +174,7 @@ export default function ProductsScreen() {
 
             {stats && (
                 <View className="mb-4 space-y-2">
-                    {/* Top Row: Total Products, In Stock, Critical */}
+                    {/* Top Row: Returns Stats Component logic from before... */}
                     <View className="flex-row gap-2">
                         <LinearGradient colors={['#3730a3', '#312e81']} className="flex-1 p-3 rounded-xl border border-indigo-500/30">
                             <Package size={20} color="#818cf8" />
@@ -192,7 +192,6 @@ export default function ProductsScreen() {
                             <Text className="text-amber-200 text-xs">Kritik</Text>
                         </LinearGradient>
                     </View>
-
                     {/* Bottom Row: Total Stock Value */}
                     <LinearGradient colors={['#1e1b4b', '#0f172a']} className="p-3 rounded-xl border border-indigo-500/30 flex-row items-center justify-between">
                         <View className="flex-row items-center gap-3">
@@ -213,72 +212,26 @@ export default function ProductsScreen() {
 
             {/* Sorting Tabs */}
             <View className="flex-row bg-slate-900 p-1 rounded-xl border border-slate-800 mb-2">
-                <TouchableOpacity
-                    onPress={() => setSortBy('realStock')}
-                    className={`flex-1 py-2 rounded-lg items-center ${sortBy === 'realStock' ? 'bg-indigo-600' : ''}`}
-                >
-                    <Text className={`text-xs font-bold ${sortBy === 'realStock' ? 'text-white' : 'text-slate-400'}`}>
-                        Gerçek Stok
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={() => setSortBy('amount')}
-                    className={`flex-1 py-2 rounded-lg items-center ${sortBy === 'amount' ? 'bg-indigo-600' : ''}`}
-                >
-                    <Text className={`text-xs font-bold ${sortBy === 'amount' ? 'text-white' : 'text-slate-400'}`}>
-                        Toplam Tutar
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={() => setSortBy('quantity')}
-                    className={`flex-1 py-2 rounded-lg items-center ${sortBy === 'quantity' ? 'bg-indigo-600' : ''}`}
-                >
-                    <Text className={`text-xs font-bold ${sortBy === 'quantity' ? 'text-white' : 'text-slate-400'}`}>
-                        Toplam Miktar
-                    </Text>
-                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setSortBy('realStock')} className={`flex-1 py-2 rounded-lg items-center ${sortBy === 'realStock' ? 'bg-indigo-600' : ''}`}><Text className={`text-xs font-bold ${sortBy === 'realStock' ? 'text-white' : 'text-slate-400'}`}>Gerçek Stok</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => setSortBy('amount')} className={`flex-1 py-2 rounded-lg items-center ${sortBy === 'amount' ? 'bg-indigo-600' : ''}`}><Text className={`text-xs font-bold ${sortBy === 'amount' ? 'text-white' : 'text-slate-400'}`}>Tutar</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => setSortBy('quantity')} className={`flex-1 py-2 rounded-lg items-center ${sortBy === 'quantity' ? 'bg-indigo-600' : ''}`}><Text className={`text-xs font-bold ${sortBy === 'quantity' ? 'text-white' : 'text-slate-400'}`}>Miktar</Text></TouchableOpacity>
             </View>
         </View>
     );
-
-    // Memoized navigation handler
-    const handleProductPress = useCallback((id: number) => {
-        let url = `/products/${id}`;
-        if (selectedWarehouse) {
-            url += `?warehouse=${selectedWarehouse}`;
-            const whName = warehouses.find(w => w.id === selectedWarehouse)?.name;
-            if (whName) {
-                url += `&warehouseName=${encodeURIComponent(whName)}`;
-            }
-        }
-        router.push(url as any);
-    }, [router, selectedWarehouse, warehouses]);
-
-    // Memoized renderItem
-    const renderItem = useCallback(({ item, index }: { item: Product; index: number }) => (
-        <ProductItem item={item} index={index} onPress={handleProductPress} />
-    ), [handleProductPress]);
-
-    // Memoized keyExtractor
-    const keyExtractor = useCallback((item: Product) => item.id.toString(), []);
 
     return (
         <View className="flex-1 bg-slate-950">
             <LinearGradient colors={['#0f172a', '#020617']} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />
             <SafeAreaView className="flex-1 px-4 pt-2">
                 <View className="flex-row items-center gap-3 mb-6">
-                    <Image
-                        source={require('../../assets/images/siyahlogo.png')}
-                        style={{ width: 40, height: 40, borderRadius: 10 }}
-                        resizeMode="contain"
-                    />
+                    <Image source={require('../../assets/images/siyahlogo.png')} style={{ width: 40, height: 40, borderRadius: 10 }} resizeMode="contain" />
                     <View>
                         <Text className="text-3xl font-black text-white">Stok & Ürün</Text>
-                        <Text className="text-slate-400 text-xs font-medium tracking-wide uppercase">Entelog Mobile</Text>
+                        <Text className="text-slate-400 text-xs font-medium tracking-wide uppercase">Entelog Mobile (Canlı)</Text>
                     </View>
                 </View>
 
-                {/* Search Bar & Scan Button */}
+                {/* Search Bar */}
                 <View className="flex-row gap-3 mb-4">
                     <View className="bg-slate-900 border border-slate-800 rounded-xl flex-1 flex-row items-center px-4 py-3">
                         <Search size={20} color="#94a3b8" />
@@ -290,10 +243,7 @@ export default function ProductsScreen() {
                             className="flex-1 ml-3 text-white font-medium"
                         />
                     </View>
-                    <TouchableOpacity
-                        onPress={handleScan}
-                        className="bg-blue-600 rounded-xl justify-center items-center w-14 border border-blue-500"
-                    >
+                    <TouchableOpacity onPress={handleScan} className="bg-blue-600 rounded-xl justify-center items-center w-14 border border-blue-500">
                         <ScanLine size={24} color="white" />
                     </TouchableOpacity>
                 </View>
@@ -308,50 +258,22 @@ export default function ProductsScreen() {
                         contentContainerStyle={{ paddingBottom: 100 }}
                         ListHeaderComponent={renderHeader}
                         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />}
-                        ListEmptyComponent={
-                            <View className="items-center justify-center py-20">
-                                <Package size={64} color="#334155" />
-                                <Text className="text-slate-500 mt-4 font-medium">Kayıt bulunamadı</Text>
-                            </View>
-                        }
+                        ListEmptyComponent={<View className="items-center justify-center py-20"><Package size={64} color="#334155" /><Text className="text-slate-500 mt-4 font-medium">Kayıt bulunamadı</Text></View>}
+                        initialNumToRender={10} maxToRenderPerBatch={10} windowSize={5} removeClippedSubviews={true} getItemLayout={(data, index) => ({ length: 100, offset: 100 * index, index })}
                     />
                 )}
             </SafeAreaView>
 
             {/* Camera Modal */}
             <Modal visible={isScanning} animationType="slide" presentationStyle="fullScreen">
-                <View style={StyleSheet.absoluteFill}>
-                    {!permission ? (
-                        <View className="flex-1 bg-black justify-center items-center">
-                            <ActivityIndicator size="large" color="#fff" />
-                        </View>
-                    ) : !permission.granted ? (
-                        <View className="flex-1 bg-black justify-center items-center p-6">
-                            <Text className="text-white text-center mb-4 text-lg">Kamera izni gerekiyor</Text>
-                            <Button onPress={requestPermission} title="İzin Ver" />
-                            <Button onPress={() => setIsScanning(false)} title="İptal" color="red" />
-                        </View>
+                <View style={StyleSheet.absoluteFill} className="bg-black">
+                    {!permission?.granted ? (
+                        <View className="flex-1 justify-center items-center"><Text className="text-white mb-4">İzin Gerekli</Text><Button onPress={requestPermission} title="İzin Ver" /><Button onPress={() => setIsScanning(false)} title="İptal" color="red" /></View>
                     ) : (
-                        <CameraView
-                            style={StyleSheet.absoluteFill}
-                            facing="back"
-                            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-                            barcodeScannerSettings={{
-                                barcodeTypes: ["qr", "ean13", "ean8", "upc_e", "code128", "code39"],
-                            }}
-                        >
+                        <CameraView style={StyleSheet.absoluteFill} facing="back" onBarcodeScanned={scanned ? undefined : handleBarCodeScanned} barcodeScannerSettings={{ barcodeTypes: ["qr", "ean13", "ean8", "upc_e", "code128", "code39"] }}>
                             <View className="flex-1 bg-black/50 justify-center items-center">
-                                <View className="w-80 h-80 border-2 border-white/50 rounded-3xl justify-center items-center overflow-hidden">
-                                    <View className="w-full h-1 bg-red-500 opacity-50 absolute top-1/2" />
-                                    <Text className="text-white/80 font-bold bg-black/50 px-4 py-2 mt-48 rounded-full overflow-hidden">Barkodu Çerçeveye Hizalayın</Text>
-                                </View>
-
-                                <TouchableOpacity
-                                    onPress={() => setIsScanning(false)}
-                                    className="absolute bottom-12 bg-red-600 rounded-full p-4"
-                                >
-                                    <X size={32} color="white" />
-                                </TouchableOpacity>
+                                <View className="w-80 h-80 border-2 border-white/50 rounded-3xl overflow-hidden"><View className="w-full h-1 bg-red-500 opacity-50 absolute top-1/2" /></View>
+                                <TouchableOpacity onPress={() => setIsScanning(false)} className="absolute bottom-12 bg-red-600 rounded-full p-4"><X size={32} color="white" /></TouchableOpacity>
                             </View>
                         </CameraView>
                     )}

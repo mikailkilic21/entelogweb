@@ -1,10 +1,16 @@
 const fs = require('fs');
 const path = require('path');
 
-const applicationsFile = path.join(__dirname, '../../data/applications.json');
+// Detect if running in a packaged environment (pkg)
+const isPkg = typeof process.pkg !== 'undefined';
+// In pkg, we want to store data relative to the executable, not inside the snapshot
+const dataDir = isPkg
+    ? path.join(path.dirname(process.execPath), 'data')
+    : path.join(__dirname, '../../data');
+
+const applicationsFile = path.join(dataDir, 'applications.json');
 
 // Ensure data directory exists
-const dataDir = path.join(__dirname, '../../data');
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
 }

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ProductDetailModal from '../components/ProductDetailModal';
 import TopProductsChart from '../components/TopProductsChart';
 import StockDistributionChart from '../components/StockDistributionChart';
+import ProductRow from '../components/ProductRow';
 import { Package, Search, Loader2, RefreshCw, AlertTriangle, CheckCircle, Box, Warehouse } from 'lucide-react';
 
 const Products = () => {
@@ -13,14 +14,15 @@ const Products = () => {
     const [warehouses, setWarehouses] = useState([]);
     const [selectedWarehouse, setSelectedWarehouse] = useState(null);
 
-    const [sortBy, setSortBy] = useState('quantity'); // 'quantity' or 'amount'
+    const [sortBy, setSortBy] = useState('quantity'); // 'quantity' | 'amount' | 'realStock'
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const searchParam = searchTerm ? `&search=${searchTerm}` : '';
+            const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
             const warehouseParam = selectedWarehouse !== null ? `&warehouse=${selectedWarehouse}` : '';
             const sortParam = `?limit=50&sortBy=${sortBy}`; // Default limit 50 as requested
+
             const [productsRes, statsRes] = await Promise.all([
                 fetch(`/api/products${sortParam}${searchParam}${warehouseParam}`),
                 fetch('/api/products/stats')
@@ -39,7 +41,7 @@ const Products = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [searchTerm, selectedWarehouse, sortBy]);
 
     useEffect(() => {
         // Fetch Warehouses once
@@ -56,7 +58,7 @@ const Products = () => {
             fetchData();
         }, 500);
         return () => clearTimeout(timer);
-    }, [searchTerm, sortBy, selectedWarehouse]);
+    }, [fetchData]);
 
     if (loading && !products.length) {
         return (
@@ -169,8 +171,6 @@ const Products = () => {
                 <div className="lg:col-span-1 space-y-6">
                     {/* Pie Chart: Stock Distribution by Account */}
                     {stats && <StockDistributionChart data={stats.topAccounts || []} className="h-[540px]" />}
-
-
                 </div>
             </div>
 
@@ -209,8 +209,8 @@ const Products = () => {
 
                 <div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700 w-full md:w-auto overflow-x-auto">
                     <button
-                        onClick={() => setSortBy('stock')}
-                        className={`flex-1 md:flex-none px-6 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap ${sortBy === 'stock'
+                        onClick={() => setSortBy('realStock')}
+                        className={`flex-1 md:flex-none px-6 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap ${sortBy === 'realStock'
                             ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
                             : 'text-slate-400 hover:text-white hover:bg-slate-700'
                             }`}
@@ -250,7 +250,7 @@ const Products = () => {
                                 <th className="text-left p-4 text-sm font-medium text-slate-400 uppercase tracking-wider">Kod</th>
                                 <th className="text-left p-4 text-sm font-medium text-slate-400 uppercase tracking-wider">Ürün Adı</th>
                                 <th className="text-right p-4 text-sm font-medium text-slate-400 uppercase tracking-wider">Gerçek Stok</th>
-                                <th className="text-left p-4 text-sm font-medium text-slate-400 uppercase tracking-wider">Marka</th>
+                                <th className="text-left p-4 text-sm font-medium text-slate-400 uppercase tracking-wider hidden md:table-cell">Marka</th>
                                 <th className="text-right p-4 text-sm font-medium text-slate-400 uppercase tracking-wider">Satış Tutarı</th>
                                 <th className="text-right p-4 text-sm font-medium text-slate-400 uppercase tracking-wider">Satış Miktarı</th>
                             </tr>
@@ -258,54 +258,11 @@ const Products = () => {
                         <tbody className="divide-y divide-slate-800">
                             {products.length > 0 ? (
                                 products.map((product) => (
-                                    <tr
+                                    <ProductRow
                                         key={product.id}
-                                        onClick={() => setSelectedProductId(product.id)}
-                                        className="hover:bg-slate-800/40 transition-colors cursor-pointer group"
-                                    >
-                                        <td className="p-4 text-sm font-mono text-slate-400 group-hover:text-emerald-400 transition-colors">
-                                            {product.code}
-                                        </td>
-                                        <td className="p-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 rounded-lg bg-slate-800/50 text-slate-400">
-                                                    <Box size={16} />
-                                                </div>
-                                                <span className="text-sm font-medium text-white">{product.name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="p-4 text-right">
-                                            <div className="flex flex-col items-end gap-1">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${product.realStock > 0
-                                                    ? 'bg-purple-500/20 text-purple-400'
-                                                    : product.realStock < 0
-                                                        ? 'bg-red-500/20 text-red-400'
-                                                        : 'bg-slate-700 text-slate-400'
-                                                    }`}>
-                                                    {product.realStock.toLocaleString('tr-TR')}
-                                                </span>
-                                                {product.transitStock > 0 && (
-                                                    <span className="text-[10px] text-amber-500 font-medium">
-                                                        Yolda: {product.transitStock.toLocaleString('tr-TR')}
-                                                    </span>
-                                                )}
-                                                {product.reservedStock > 0 && (
-                                                    <span className="text-[10px] text-slate-500">
-                                                        Rez: {product.reservedStock.toLocaleString('tr-TR')}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="p-4 text-sm text-slate-400">
-                                            {product.brand || '-'}
-                                        </td>
-                                        <td className="p-4 text-right text-sm font-medium text-emerald-400 font-mono">
-                                            {product.salesAmount > 0 ? `${product.salesAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺` : '-'}
-                                        </td>
-                                        <td className="p-4 text-right text-sm text-slate-300 font-mono">
-                                            {product.salesQuantity > 0 ? product.salesQuantity.toLocaleString('tr-TR') : '-'} {product.unit}
-                                        </td>
-                                    </tr>
+                                        product={product}
+                                        onClick={setSelectedProductId}
+                                    />
                                 ))
                             ) : (
                                 <tr>

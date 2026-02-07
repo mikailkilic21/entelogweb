@@ -43,8 +43,7 @@ export default function LoginScreen() {
             });
 
             const text = await response.text();
-            console.log('Login Response Status:', response.status);
-            console.log('Login Response Body:', text);
+
 
             try {
                 if (!text || text.trim() === '') {
@@ -65,7 +64,7 @@ export default function LoginScreen() {
                 if (isHtml) {
                     Alert.alert('Sunucu Hatası (HTML)', 'Sunucu bir web sayfası döndürdü. Muhtemelen Tünel/Proxy hatası.');
                 } else {
-                    Alert.alert('Veri Hatası', e.message || 'Yanıt işlenemedi.');
+                    Alert.alert('Veri Hatası', (e as Error).message || 'Yanıt işlenemedi.');
                 }
             }
 
