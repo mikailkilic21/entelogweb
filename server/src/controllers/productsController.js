@@ -242,6 +242,7 @@ exports.getProductStats = async (req, res) => {
         const gntotstTable = `LG_${firm}_${period}_GNTOTST`;
         const stlineTable = `LG_${firm}_${period}_STLINE`;
         const clcardTable = `LG_${firm}_CLCARD`;
+        const prclistTable = `LG_${firm}_PRCLIST`;
 
         const search = req.query.search || '';
         const warehouse = req.query.warehouse || null;
@@ -259,6 +260,7 @@ exports.getProductStats = async (req, res) => {
 
         // 1. Basic Counts & Aggregations
         // We use ITEMS table as base to ensure consistency with getProducts listing
+        // Using OUTER APPLY for price lookup is more performant than correlated subqueries inside SUM
         const countsQuery = `
             SELECT 
                 COUNT(*) as totalProducts,
@@ -266,23 +268,20 @@ exports.getProductStats = async (req, res) => {
                 SUM(CASE WHEN ISNULL(G.ONHAND, 0) < 0 THEN 1 ELSE 0 END) as criticalStock,
                 SUM(
                     CASE WHEN ISNULL(G.ONHAND, 0) > 0 
-                    THEN G.ONHAND * ISNULL(
-                        (SELECT TOP 1 S.PRICE 
-                         FROM ${stlineTable} S 
-                         WHERE S.STOCKREF = I.LOGICALREF 
-                           AND S.TRCODE IN (1, 13, 14, 50) 
-                           AND S.CANCELLED = 0 
-                           AND S.LINETYPE = 0 
-                           AND S.PRICE > 0 
-                         ORDER BY S.DATE_ DESC
-                        ), 
-                        ISNULL((SELECT TOP 1 PRICE FROM ${prclistTable} P WHERE P.CARDREF = I.LOGICALREF AND P.PTYPE = 1 AND (P.CLIENTCODE = '' OR P.CLIENTCODE IS NULL) ORDER BY P.PRIORITY DESC), 0)
-                    )
+                    THEN G.ONHAND * ISNULL(PriceData.PRICE, 0)
                     ELSE 0 
                     END
                 ) as totalStockValue
             FROM ${itemsTable} I
             LEFT JOIN ${gntotstTable} G ON G.STOCKREF = I.LOGICALREF AND ${invenFilter}
+            OUTER APPLY (
+                SELECT TOP 1 PRICE 
+                FROM ${prclistTable} P 
+                WHERE P.CARDREF = I.LOGICALREF 
+                  AND (P.PTYPE = 1 OR P.PTYPE = 2) 
+                  AND (P.CLIENTCODE = '' OR P.CLIENTCODE IS NULL)
+                ORDER BY CASE WHEN P.PTYPE = 1 THEN 0 ELSE 1 END, P.PRIORITY DESC
+            ) PriceData
             WHERE ${itemFilter}
         `;
 
