@@ -101,6 +101,7 @@ export default function BanksScreen() {
     // Data states
     const [banks, setBanks] = useState<any[]>([]);
     const [stats, setStats] = useState<any>(null);
+    const [dbsInvoices, setDbsInvoices] = useState<any[]>([]);
     const [financeTransactions, setFinanceTransactions] = useState<any[]>([]);
 
     // Modal
@@ -124,7 +125,6 @@ export default function BanksScreen() {
                 const banksData = await banksRes.json();
                 setBanks(Array.isArray(banksData) ? banksData : []);
             } else {
-                // Fallback Mock Data if API fails or is not ready
                 console.warn("Banks API failed, using fallback data");
                 setBanks(getMockBanks());
             }
@@ -132,13 +132,21 @@ export default function BanksScreen() {
             // Handle Stats Data
             if (statsRes.ok) {
                 const statsData = await statsRes.json();
-                setStats(statsData.stats || statsData); // consistency check
+                setStats(statsData.stats || statsData);
             } else {
                 setStats(getMockStats());
             }
 
             // Fetch transactions based on active tab
-            if (activeTab !== 'accounts' && activeTab !== 'dbs') {
+            if (activeTab === 'dbs') {
+                const dbsRes = await fetch(`${API_URL}/dbs/invoices`, {
+                    headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
+                });
+                if (dbsRes.ok) {
+                    const dbsData = await dbsRes.json();
+                    setDbsInvoices(Array.isArray(dbsData) ? dbsData : []);
+                }
+            } else if (activeTab !== 'accounts') {
                 const txRes = await fetch(`${API_URL}/banks/finance-transactions?type=${activeTab}`, {
                     headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
                 });
@@ -147,17 +155,15 @@ export default function BanksScreen() {
                     const txData = await txRes.json();
                     setFinanceTransactions(Array.isArray(txData) ? txData : []);
                 } else {
-                    // Fallback Mock data for transactions
                     setFinanceTransactions(getMockTransactions(activeTab));
                 }
             }
 
         } catch (error) {
             console.error('Banks fetch error:', error);
-            // Fallbacks on error
             setBanks(getMockBanks());
             setStats(getMockStats());
-            if (activeTab !== 'accounts') setFinanceTransactions(getMockTransactions(activeTab));
+            if (activeTab !== 'accounts' && activeTab !== 'dbs') setFinanceTransactions(getMockTransactions(activeTab));
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -305,8 +311,8 @@ export default function BanksScreen() {
                     key={tab.id}
                     onPress={() => setActiveTab(tab.id)}
                     className={`mr-4 px-4 py-2 rounded-xl flex-row items-center gap-2 border ${activeTab === tab.id
-                            ? 'bg-blue-600 border-blue-500'
-                            : 'bg-slate-900 border-slate-800'
+                        ? 'bg-blue-600 border-blue-500'
+                        : 'bg-slate-900 border-slate-800'
                         }`}
                 >
                     <tab.icon size={16} color={activeTab === tab.id ? '#fff' : '#64748b'} />
@@ -491,15 +497,33 @@ export default function BanksScreen() {
     );
 
     const renderDBS = () => (
-        <View className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 items-center">
-            <Receipt size={48} color="#334155" />
-            <Text className="text-white font-bold text-lg mt-4">DBS Sistemi</Text>
-            <Text className="text-slate-400 text-center mt-2 px-4">
-                Doğrudan Borçlandırma Sistemi entegrasyonu mobil sürümü yakında aktif olacaktır.
-            </Text>
-            <TouchableOpacity className="mt-6 bg-blue-600 px-6 py-3 rounded-xl">
-                <Text className="text-white font-bold">Web Panelinden Yönet</Text>
-            </TouchableOpacity>
+        <View className="gap-4">
+            {dbsInvoices.length === 0 ? (
+                <View className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 items-center">
+                    <Receipt size={48} color="#334155" />
+                    <Text className="text-white font-bold text-lg mt-4">Kayıt Yok</Text>
+                    <Text className="text-slate-400 text-center mt-2">DBS sisteminde bekleyen fatura bulunamadı.</Text>
+                </View>
+            ) : (
+                dbsInvoices.map((inv, index) => (
+                    <Animated.View key={index} entering={FadeInDown.delay(index * 50).springify()}>
+                        <View className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 flex-row items-center justify-between">
+                            <View>
+                                <Text className="text-white font-bold text-base mb-1">{inv.clientName}</Text>
+                                <Text className="text-slate-500 text-xs">{inv.ficheno}</Text>
+                            </View>
+                            <View className="items-end">
+                                <Text className="text-emerald-400 font-bold text-lg">
+                                    {formatCurrency(inv.amount)}
+                                </Text>
+                                <Text className="text-slate-400 text-xs mt-1">
+                                    Vade: {new Date(inv.dbsDate).toLocaleDateString('tr-TR')}
+                                </Text>
+                            </View>
+                        </View>
+                    </Animated.View>
+                ))
+            )}
         </View>
     );
 

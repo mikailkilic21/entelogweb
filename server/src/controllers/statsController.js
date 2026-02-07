@@ -145,16 +145,13 @@ exports.getFinancialTrend = async (req, res) => {
         break;
 
       case 'monthly':
-        // Current Month, group by 4 Weeks
-        // Week number within month: (Day - 1) / 7 + 1
-        whereClause = `MONTH(DATE_) = MONTH(GETDATE()) AND YEAR(DATE_) = YEAR(GETDATE())`;
+        // Last 30 Days Daily Trend
+        whereClause = `DATE_ >= DATEADD(DAY, -30, GETDATE())`;
 
-        const dayOfMonth = "DAY(DATE_)";
-        const weekNum = `(((${dayOfMonth} - 1) / 7) + 1)`;
-
-        groupByClause = weekNum;
-        selectDate = `'Hafta ' + CAST(${weekNum} AS VARCHAR)`;
-        orderByClause = groupByClause;
+        // Return Day-Month format (e.g. 15-02)
+        selectDate = "FORMAT(DATE_, 'dd-MM')";
+        groupByClause = "DATE_";
+        orderByClause = "DATE_";
         break;
 
       case 'yearly':

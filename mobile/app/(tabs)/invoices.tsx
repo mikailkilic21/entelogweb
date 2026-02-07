@@ -87,13 +87,13 @@ export default function InvoicesScreen() {
                 {[
                     { key: 'all', label: 'Tümü' },
                     { key: 'sales', label: 'Satışlar' },
-                    { key: 'purchases', label: 'Alışlar' }
+                    { key: 'purchase', label: 'Alışlar' }
                 ].map((t) => (
                     <TouchableOpacity
                         key={t.key}
                         onPress={() => setType(t.key as any)}
                         className={`flex-1 py-2 rounded-lg items-center ${type === t.key ?
-                            (t.key === 'sales' ? 'bg-blue-600' : t.key === 'purchases' ? 'bg-rose-600' : 'bg-slate-700')
+                            (t.key === 'sales' ? 'bg-blue-600' : t.key === 'purchase' ? 'bg-rose-600' : 'bg-slate-700')
                             : 'bg-transparent'}`}
                     >
                         <Text className={`text-xs font-bold ${type === t.key ? 'text-white' : 'text-slate-400'}`}>

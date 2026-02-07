@@ -198,9 +198,9 @@ exports.getChecks = async (req, res) => {
             } else if (timePeriod === 'weekly') {
                 whereClause += ` AND C.DUEDATE >= CAST(GETDATE() AS DATE) AND C.DUEDATE <= DATEADD(day, 7, CAST(GETDATE() AS DATE))`;
             } else if (timePeriod === 'monthly') {
-                whereClause += ` AND MONTH(C.DUEDATE) = MONTH(GETDATE()) AND YEAR(C.DUEDATE) = YEAR(GETDATE())`;
+                whereClause += ` AND C.DUEDATE >= CAST(GETDATE() AS DATE) AND C.DUEDATE <= DATEADD(day, 30, CAST(GETDATE() AS DATE))`;
             } else if (timePeriod === 'yearly') {
-                whereClause += ` AND YEAR(C.DUEDATE) = YEAR(GETDATE())`;
+                whereClause += ` AND C.DUEDATE >= CAST(GETDATE() AS DATE) AND C.DUEDATE <= DATEADD(day, 365, CAST(GETDATE() AS DATE))`;
             }
         }
 

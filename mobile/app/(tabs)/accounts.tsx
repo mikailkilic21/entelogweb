@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Building2, MapPin, Phone, Mail, ArrowUpRight, ArrowDownLeft, Users, TrendingUp, TrendingDown } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
@@ -62,50 +62,49 @@ export default function AccountsScreen() {
 
     const renderHeader = () => (
         <View className="mb-4">
-            {/* Stats Cards - Horizontal Scroll */}
+            {/* Employer Insights - Top Lists */}
             {stats && (
-                <FlatList
-                    horizontal
-                    data={[
-                        { label: 'Toplam Müşteri', value: stats.totalCustomers, icon: Users, color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' },
-                        { label: 'Toplam Tedarikçi', value: stats.totalSuppliers, icon: Building2, color: '#a855f7', bg: 'rgba(168, 85, 247, 0.1)' },
-                        {
-                            label: 'Toplam Alacak',
-                            value: (stats.totalReceivables || 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }),
-                            icon: TrendingUp,
-                            color: '#22c55e',
-                            bg: 'rgba(34, 197, 94, 0.1)'
-                        },
-                        {
-                            label: 'Toplam Borç',
-                            value: (stats.totalPayables || 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }),
-                            icon: TrendingDown,
-                            color: '#ef4444',
-                            bg: 'rgba(239, 68, 68, 0.1)'
-                        },
-                    ]}
-                    showsHorizontalScrollIndicator={false}
-                    keyExtractor={(item) => item.label}
-                    renderItem={({ item, index }) => (
-                        <Animated.View entering={FadeInDown.delay(index * 100).springify()} className="mr-3">
-                            <LinearGradient
-                                colors={['#1e293b', '#0f172a']}
-                                className="p-4 rounded-xl border border-slate-800 w-40"
-                            >
-                                <View className="flex-row items-center gap-2 mb-2">
-                                    <View style={{ backgroundColor: item.bg, padding: 6, borderRadius: 8 }}>
-                                        <item.icon size={16} color={item.color} />
+                <View className="mb-6 space-y-4">
+                    {/* Top Debtors (Receivables) */}
+                    <View>
+                        <View className="flex-row items-center justify-between mb-2 px-1">
+                            <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider">En Çok Bize Borçlu Olanlar</Text>
+                            <Text className="text-emerald-400 text-xs font-bold">Toplam Alacak: {(stats.totalReceivables || 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })}</Text>
+                        </View>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            {stats.topDebtors?.map((item: any, index: number) => (
+                                <Animated.View key={index} entering={FadeInDown.delay(index * 100).springify()} className="mr-3">
+                                    <View className="bg-slate-900 border border-slate-800 p-3 rounded-xl w-48">
+                                        <Text className="text-white font-bold text-sm mb-1" numberOfLines={1}>{item.name}</Text>
+                                        <Text className="text-emerald-400 font-bold text-lg">
+                                            {item.value.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })}
+                                        </Text>
                                     </View>
-                                </View>
-                                <Text className="text-slate-400 text-xs font-medium">{item.label}</Text>
-                                <Text className="text-white font-bold text-lg mt-1" numberOfLines={1} adjustsFontSizeToFit>
-                                    {item.value}
-                                </Text>
-                            </LinearGradient>
-                        </Animated.View>
-                    )}
-                    contentContainerStyle={{ paddingHorizontal: 4 }}
-                />
+                                </Animated.View>
+                            ))}
+                        </ScrollView>
+                    </View>
+
+                    {/* Top Creditors (Payables) */}
+                    <View>
+                        <View className="flex-row items-center justify-between mb-2 px-1">
+                            <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider">En Çok Borcumuz Olanlar</Text>
+                            <Text className="text-rose-400 text-xs font-bold">Toplam Borç: {(stats.totalPayables || 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })}</Text>
+                        </View>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            {stats.topCreditors?.map((item: any, index: number) => (
+                                <Animated.View key={index} entering={FadeInDown.delay(index * 100).springify()} className="mr-3">
+                                    <View className="bg-slate-900 border border-slate-800 p-3 rounded-xl w-48">
+                                        <Text className="text-white font-bold text-sm mb-1" numberOfLines={1}>{item.name}</Text>
+                                        <Text className="text-rose-400 font-bold text-lg">
+                                            {Math.abs(item.value).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })}
+                                        </Text>
+                                    </View>
+                                </Animated.View>
+                            ))}
+                        </ScrollView>
+                    </View>
+                </View>
             )}
 
             {/* Filters */}

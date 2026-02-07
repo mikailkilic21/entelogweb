@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
-const { sql, getPool } = require('../config/db');
+const { sql, getPool, connectDB } = require('../config/db');
 
 // Detect if running in a packaged environment (pkg)
 const isPkg = typeof process.pkg !== 'undefined';
@@ -178,6 +178,8 @@ const getFirms = async (req, res) => {
     }
 };
 
+
+
 const switchDbConfig = async (req, res) => {
     try {
         const { firmNo, periodNo } = req.body;
@@ -196,8 +198,12 @@ const switchDbConfig = async (req, res) => {
         // Save updated config
         fs.writeFileSync(DB_CONFIG_PATH, JSON.stringify(currentConfig, null, 4));
 
-        // Reconnect with new config (optional - the app will use new values on next request)
-        // For now, just return success. The frontend will reload and use new config.
+        // FORCE RECONNECT: Close existing pool and reconnect with new config
+        const pool = getPool();
+        if (pool) {
+            await pool.close();
+        }
+        await connectDB();
 
         res.json({ success: true, message: 'Firma ve dönem güncellendi', config: currentConfig });
     } catch (error) {

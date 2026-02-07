@@ -192,6 +192,15 @@ export default function MenuScreen() {
                                 </View>
                             </View>
                         )}
+
+                        {/* Database Connection Info (Always visible or toggleable) */}
+                        {!isDemo && dbConfig && (
+                            <View className="mt-4 pt-3 border-t border-white/10">
+                                <Text className="text-slate-400 text-[10px] font-mono">
+                                    SRV: {dbConfig.server} | DB: {dbConfig.database}
+                                </Text>
+                            </View>
+                        )}
                         {isDemo && (
                             <Text className="text-orange-100 text-sm mt-2 opacity-80">
                                 Kısıtlı özellikler ile inceliyorsunuz.

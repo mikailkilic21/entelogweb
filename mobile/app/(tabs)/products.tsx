@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image, Modal, StyleSheet, Alert, Button } from 'react-native';
+import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image, Modal, StyleSheet, Alert, Button, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Package, TrendingUp, AlertTriangle, CheckCircle, Box, ScanLine, X, Camera as CameraIcon } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
@@ -18,12 +18,14 @@ interface Product {
     stockLevel: number;
     salesAmount: number;
     unit?: string;
+    stockValue?: number;
 }
 
 interface Stats {
     totalProducts: number;
     productsInStock: number;
     criticalStock: number;
+    totalStockValue?: number;
 }
 
 // Memoized Product Item Component
@@ -44,11 +46,11 @@ const ProductItem = React.memo(({ item, index, onPress }: { item: Product; index
                 <View className="items-end">
                     <View className={`px-2 py-1 rounded text-xs font-bold mb-1 ${item.stockLevel > 0 ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>
                         <Text className={item.stockLevel > 0 ? 'text-blue-400' : 'text-red-400'}>
-                            {item.stockLevel}
+                            {item.stockLevel.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {item.unit || ''}
                         </Text>
                     </View>
                     <Text className="text-emerald-400 font-bold text-sm">
-                        {item.salesAmount?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                        {(item.stockValue || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺
                     </Text>
                 </View>
             </View>
@@ -66,16 +68,31 @@ export default function ProductsScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [searchText, setSearchText] = useState('');
-    const [sortBy, setSortBy] = useState('amount'); // 'amount' | 'quantity'
+    const [sortBy, setSortBy] = useState('realStock'); // 'amount' | 'quantity' | 'realStock'
 
     // Camera State
     const [permission, requestPermission] = useCameraPermissions();
     const [isScanning, setIsScanning] = useState(false);
     const [scanned, setScanned] = useState(false);
 
+    const [warehouses, setWarehouses] = useState<any[]>([]);
+    const [selectedWarehouse, setSelectedWarehouse] = useState<number | null>(null);
+
+    // Fetch Warehouses
+    useEffect(() => {
+        fetch(`${API_URL}/products/warehouses`, {
+            headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
+        }).then(res => res.json()).then(data => {
+            if (Array.isArray(data)) setWarehouses([{ id: null, name: 'Tümü' }, ...data]);
+        }).catch(err => console.error(err));
+    }, []);
+
     const fetchData = useCallback(async () => {
         try {
-            const statsRes = await fetch(`${API_URL}/products/stats`, {
+            let statsUrl = `${API_URL}/products/stats?search=${encodeURIComponent(searchText)}`;
+            if (selectedWarehouse !== null) statsUrl += `&warehouse=${selectedWarehouse}`;
+
+            const statsRes = await fetch(statsUrl, {
                 headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
             });
             if (statsRes.ok) {
@@ -83,6 +100,7 @@ export default function ProductsScreen() {
             }
 
             let url = `${API_URL}/products?limit=50&sortBy=${sortBy}`;
+            if (selectedWarehouse !== null) url += `&warehouse=${selectedWarehouse}`;
             if (searchText) url += `&search=${encodeURIComponent(searchText)}`;
 
             const prodRes = await fetch(url, {
@@ -99,13 +117,13 @@ export default function ProductsScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [searchText, sortBy, isDemo]);
+    }, [searchText, sortBy, selectedWarehouse, isDemo]);
 
     useEffect(() => {
         setLoading(true);
         const timer = setTimeout(fetchData, 500);
         return () => clearTimeout(timer);
-    }, [searchText, sortBy]);
+    }, [searchText, sortBy, selectedWarehouse]);
 
     const onRefresh = () => {
         setRefreshing(true);
@@ -136,22 +154,59 @@ export default function ProductsScreen() {
 
     const renderHeader = () => (
         <View className="mb-4">
+            {/* Warehouse Selector */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4 max-h-12">
+                {warehouses.map((w) => (
+                    <TouchableOpacity
+                        key={w.id ?? 'all'}
+                        onPress={() => setSelectedWarehouse(w.id)}
+                        className={`px-4 py-2 rounded-full mr-2 border ${selectedWarehouse === w.id
+                            ? 'bg-blue-600 border-blue-500'
+                            : 'bg-slate-800/60 border-slate-700/50'
+                            }`}
+                    >
+                        <Text className={`${selectedWarehouse === w.id ? 'text-white font-bold' : 'text-slate-400 font-medium'} text-xs`}>
+                            {w.name}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
+            </ScrollView>
+
             {stats && (
-                <View className="flex-row gap-2 mb-4">
-                    <LinearGradient colors={['#3730a3', '#312e81']} className="flex-1 p-3 rounded-xl border border-indigo-500/30">
-                        <Package size={20} color="#818cf8" />
-                        <Text className="text-white font-bold text-lg mt-1">{stats.totalProducts || 0}</Text>
-                        <Text className="text-indigo-200 text-xs">Toplam</Text>
-                    </LinearGradient>
-                    <LinearGradient colors={['#065f46', '#064e3b']} className="flex-1 p-3 rounded-xl border border-emerald-500/30">
-                        <CheckCircle size={20} color="#34d399" />
-                        <Text className="text-white font-bold text-lg mt-1">{stats.productsInStock || 0}</Text>
-                        <Text className="text-emerald-200 text-xs">Stokta</Text>
-                    </LinearGradient>
-                    <LinearGradient colors={['#92400e', '#78350f']} className="flex-1 p-3 rounded-xl border border-amber-500/30">
-                        <AlertTriangle size={20} color="#fbbf24" />
-                        <Text className="text-white font-bold text-lg mt-1">{stats.criticalStock || 0}</Text>
-                        <Text className="text-amber-200 text-xs">Kritik</Text>
+                <View className="mb-4 space-y-2">
+                    {/* Top Row: Total Products, In Stock, Critical */}
+                    <View className="flex-row gap-2">
+                        <LinearGradient colors={['#3730a3', '#312e81']} className="flex-1 p-3 rounded-xl border border-indigo-500/30">
+                            <Package size={20} color="#818cf8" />
+                            <Text className="text-white font-bold text-lg mt-1">{stats.totalProducts || 0}</Text>
+                            <Text className="text-indigo-200 text-xs">Toplam</Text>
+                        </LinearGradient>
+                        <LinearGradient colors={['#065f46', '#064e3b']} className="flex-1 p-3 rounded-xl border border-emerald-500/30">
+                            <CheckCircle size={20} color="#34d399" />
+                            <Text className="text-white font-bold text-lg mt-1">{stats.productsInStock || 0}</Text>
+                            <Text className="text-emerald-200 text-xs">Stokta</Text>
+                        </LinearGradient>
+                        <LinearGradient colors={['#92400e', '#78350f']} className="flex-1 p-3 rounded-xl border border-amber-500/30">
+                            <AlertTriangle size={20} color="#fbbf24" />
+                            <Text className="text-white font-bold text-lg mt-1">{stats.criticalStock || 0}</Text>
+                            <Text className="text-amber-200 text-xs">Kritik</Text>
+                        </LinearGradient>
+                    </View>
+
+                    {/* Bottom Row: Total Stock Value */}
+                    <LinearGradient colors={['#1e1b4b', '#0f172a']} className="p-3 rounded-xl border border-indigo-500/30 flex-row items-center justify-between">
+                        <View className="flex-row items-center gap-3">
+                            <View className="bg-indigo-500/20 p-2 rounded-lg">
+                                <TrendingUp size={24} color="#818cf8" />
+                            </View>
+                            <View>
+                                <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider">Toplam Stok Değeri</Text>
+                                <Text className="text-slate-500 text-[10px]">(Alış Fiyatıyla)</Text>
+                            </View>
+                        </View>
+                        <Text className="text-white font-bold text-xl">
+                            {(stats.totalStockValue || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺
+                        </Text>
                     </LinearGradient>
                 </View>
             )}
@@ -159,10 +214,18 @@ export default function ProductsScreen() {
             {/* Sorting Tabs */}
             <View className="flex-row bg-slate-900 p-1 rounded-xl border border-slate-800 mb-2">
                 <TouchableOpacity
+                    onPress={() => setSortBy('realStock')}
+                    className={`flex-1 py-2 rounded-lg items-center ${sortBy === 'realStock' ? 'bg-indigo-600' : ''}`}
+                >
+                    <Text className={`text-xs font-bold ${sortBy === 'realStock' ? 'text-white' : 'text-slate-400'}`}>
+                        Gerçek Stok
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                     onPress={() => setSortBy('amount')}
                     className={`flex-1 py-2 rounded-lg items-center ${sortBy === 'amount' ? 'bg-indigo-600' : ''}`}
                 >
-                    <Text className={`text-sm font-bold ${sortBy === 'amount' ? 'text-white' : 'text-slate-400'}`}>
+                    <Text className={`text-xs font-bold ${sortBy === 'amount' ? 'text-white' : 'text-slate-400'}`}>
                         Toplam Tutar
                     </Text>
                 </TouchableOpacity>
@@ -170,7 +233,7 @@ export default function ProductsScreen() {
                     onPress={() => setSortBy('quantity')}
                     className={`flex-1 py-2 rounded-lg items-center ${sortBy === 'quantity' ? 'bg-indigo-600' : ''}`}
                 >
-                    <Text className={`text-sm font-bold ${sortBy === 'quantity' ? 'text-white' : 'text-slate-400'}`}>
+                    <Text className={`text-xs font-bold ${sortBy === 'quantity' ? 'text-white' : 'text-slate-400'}`}>
                         Toplam Miktar
                     </Text>
                 </TouchableOpacity>
@@ -180,8 +243,16 @@ export default function ProductsScreen() {
 
     // Memoized navigation handler
     const handleProductPress = useCallback((id: number) => {
-        router.push(`/products/${id}`);
-    }, [router]);
+        let url = `/products/${id}`;
+        if (selectedWarehouse) {
+            url += `?warehouse=${selectedWarehouse}`;
+            const whName = warehouses.find(w => w.id === selectedWarehouse)?.name;
+            if (whName) {
+                url += `&warehouseName=${encodeURIComponent(whName)}`;
+            }
+        }
+        router.push(url as any);
+    }, [router, selectedWarehouse, warehouses]);
 
     // Memoized renderItem
     const renderItem = useCallback(({ item, index }: { item: Product; index: number }) => (

@@ -24,7 +24,9 @@ export default function OrdersScreen() {
     const fetchData = useCallback(async () => {
         try {
             let url = `${API_URL}/orders?limit=50`;
-            // ... params ...
+            if (statusFilter !== 'all') url += `&status=${statusFilter}`;
+            if (shipmentFilter !== 'all') url += `&shipmentStatus=${shipmentFilter}`;
+            if (searchText) url += `&search=${encodeURIComponent(searchText)}`;
 
             console.log('Fetching:', url);
             const res = await fetch(url, {

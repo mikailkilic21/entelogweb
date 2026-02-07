@@ -92,9 +92,11 @@ exports.getProducts = async (req, res) => {
         let orderByClause = 'salesQuantity DESC';
         if (sortBy === 'amount') {
             orderByClause = 'salesAmount DESC';
-        } else if (sortBy === 'stock') {
-            // Real Stock = Physical + Transit - Reserved
-            orderByClause = '(physicalStock + transitStock - reservedStock) DESC';
+        } else if (sortBy === 'realStock') {
+            // realStock is calculated in CTE
+            orderByClause = 'realStock DESC';
+        } else if (sortBy === 'quantity') {
+            orderByClause = 'salesQuantity DESC';
         }
 
         const salesSourceFilter = warehouse ? `AND SOURCEINDEX = ${warehouse}` : '';
@@ -124,7 +126,20 @@ exports.getProducts = async (req, res) => {
                     -- Sales Amount (Toplam Satış Tutarı)
                     ISNULL((SELECT SUM(TOTAL) FROM ${stlineTable} WHERE STOCKREF = I.LOGICALREF AND TRCODE IN (7, 8) AND LINETYPE = 0 AND CANCELLED = 0 ${salesSourceFilter}), 0) as salesAmount,
                     -- Fixed Sales Price (Sabit Satış Fiyatı) - PTYPE 2 (Satış)
-                    ISNULL((SELECT TOP 1 PRICE FROM ${prclistTable} WHERE CARDREF = I.LOGICALREF AND PTYPE = 2 AND (CLIENTCODE = '' OR CLIENTCODE IS NULL) ORDER BY PRIORITY DESC, LOGICALREF DESC), 0) as fixedPrice
+                    ISNULL((SELECT TOP 1 PRICE FROM ${prclistTable} WHERE CARDREF = I.LOGICALREF AND PTYPE = 2 AND (CLIENTCODE = '' OR CLIENTCODE IS NULL) ORDER BY PRIORITY DESC, LOGICALREF DESC), 0) as fixedPrice,
+                    -- Last Purchase/Input Price (En Son Giriş Fiyatı)
+                    ISNULL((
+                        SELECT TOP 1 PRICE 
+                        FROM ${stlineTable} 
+                        WHERE STOCKREF = I.LOGICALREF 
+                          AND TRCODE IN (1, 13, 14, 50) 
+                          AND CANCELLED = 0 
+                          AND LINETYPE = 0 
+                          AND PRICE > 0 
+                        ORDER BY DATE_ DESC, LOGICALREF DESC
+                    ), 
+                    ISNULL((SELECT TOP 1 PRICE FROM ${prclistTable} WHERE CARDREF = I.LOGICALREF AND PTYPE = 1 AND (CLIENTCODE = '' OR CLIENTCODE IS NULL) ORDER BY PRIORITY DESC, LOGICALREF DESC), 0)
+                    ) as purchasePrice
                 FROM ${itemsTable} I
                 LEFT JOIN LG_${firm}_UNITSETL U ON I.UNITSETREF = U.UNITSETREF AND U.MAINUNIT = 1
                 WHERE ${whereCondition}
@@ -139,6 +154,8 @@ exports.getProducts = async (req, res) => {
                 CASE WHEN fixedPrice > 0 THEN fixedPrice 
                      WHEN salesQuantity > 0 THEN salesAmount / salesQuantity 
                      ELSE 0 END as avgPrice,
+                -- Stock Value based on Purchase Price
+                ((physicalStock + transitStock - reservedStock) * purchasePrice) as stockValue,
                 fixedPrice -- return separately too just in case
             FROM ProductStats
             ${realStockFilter}
@@ -226,12 +243,47 @@ exports.getProductStats = async (req, res) => {
         const stlineTable = `LG_${firm}_${period}_STLINE`;
         const clcardTable = `LG_${firm}_CLCARD`;
 
-        // 1. Basic Counts
+        const search = req.query.search || '';
+        const warehouse = req.query.warehouse || null;
+
+        let itemFilter = `ACTIVE = 0 AND CARDTYPE <> 22`;
+        if (search) {
+            const s = search.replace(/'/g, "''");
+            itemFilter += ` AND (CODE LIKE '%${s}%' OR NAME LIKE '%${s}%')`;
+        }
+
+        const invenNo = warehouse ? warehouse : -1;
+        const invenFilter = `INVENNO = ${invenNo}`;
+
+        const itemSubQuery = `AND STOCKREF IN (SELECT LOGICALREF FROM ${itemsTable} WHERE ${itemFilter})`;
+
+        // 1. Basic Counts & Aggregations
+        // We use ITEMS table as base to ensure consistency with getProducts listing
         const countsQuery = `
             SELECT 
-                (SELECT COUNT(*) FROM ${itemsTable} WHERE ACTIVE = 0 AND CARDTYPE <> 22) as totalProducts, 
-                (SELECT COUNT(DISTINCT STOCKREF) FROM ${gntotstTable} WHERE ONHAND > 0 AND INVENNO = -1) as productsInStock,
-                (SELECT COUNT(DISTINCT STOCKREF) FROM ${gntotstTable} WHERE ONHAND < 0 AND INVENNO = -1) as criticalStock
+                COUNT(*) as totalProducts,
+                SUM(CASE WHEN ISNULL(G.ONHAND, 0) > 0 THEN 1 ELSE 0 END) as productsInStock,
+                SUM(CASE WHEN ISNULL(G.ONHAND, 0) < 0 THEN 1 ELSE 0 END) as criticalStock,
+                SUM(
+                    CASE WHEN ISNULL(G.ONHAND, 0) > 0 
+                    THEN G.ONHAND * ISNULL(
+                        (SELECT TOP 1 S.PRICE 
+                         FROM ${stlineTable} S 
+                         WHERE S.STOCKREF = I.LOGICALREF 
+                           AND S.TRCODE IN (1, 13, 14, 50) 
+                           AND S.CANCELLED = 0 
+                           AND S.LINETYPE = 0 
+                           AND S.PRICE > 0 
+                         ORDER BY S.DATE_ DESC
+                        ), 
+                        ISNULL((SELECT TOP 1 PRICE FROM ${prclistTable} P WHERE P.CARDREF = I.LOGICALREF AND P.PTYPE = 1 AND (P.CLIENTCODE = '' OR P.CLIENTCODE IS NULL) ORDER BY P.PRIORITY DESC), 0)
+                    )
+                    ELSE 0 
+                    END
+                ) as totalStockValue
+            FROM ${itemsTable} I
+            LEFT JOIN ${gntotstTable} G ON G.STOCKREF = I.LOGICALREF AND ${invenFilter}
+            WHERE ${itemFilter}
         `;
 
         // 2. Top Selling By Amount (Ciro)

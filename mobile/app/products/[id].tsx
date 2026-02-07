@@ -8,7 +8,7 @@ import { API_URL } from '@/constants/Config';
 import { useAuth } from '@/context/AuthContext';
 
 export default function ProductDetailScreen() {
-    const { id } = useLocalSearchParams();
+    const { id, warehouse, warehouseName } = useLocalSearchParams();
     const router = useRouter();
     const { isDemo } = useAuth();
 
@@ -21,8 +21,8 @@ export default function ProductDetailScreen() {
         const fetchDetails = async () => {
             try {
                 const [prodRes, ordersRes] = await Promise.all([
-                    fetch(`${API_URL}/products/${id}`, { headers: { 'x-demo-mode': isDemo ? 'true' : 'false' } }),
-                    fetch(`${API_URL}/products/${id}/orders`, { headers: { 'x-demo-mode': isDemo ? 'true' : 'false' } })
+                    fetch(`${API_URL}/products/${id}?warehouse=${warehouse || ''}`, { headers: { 'x-demo-mode': isDemo ? 'true' : 'false' } }),
+                    fetch(`${API_URL}/products/${id}/orders?warehouse=${warehouse || ''}`, { headers: { 'x-demo-mode': isDemo ? 'true' : 'false' } })
                 ]);
 
                 if (prodRes.ok) setProduct(await prodRes.json());
@@ -56,31 +56,70 @@ export default function ProductDetailScreen() {
     const renderTabContent = () => {
         switch (activeTab) {
             case 'transactions':
+                // Filter transactions by warehouse if selected (client-side filter if not already filtered by API)
+                // Note: API already filters if we passed the warehouse parameter.
+                // But let's be safe.
+                const filteredTransactions = warehouseName
+                    ? (product.transactions || []).filter((tr: any) => tr.warehouseName === warehouseName || !tr.warehouseName) // Assuming API returns warehouseName or we filter by something else?
+                    // actually, the API `getProductDetails` accepts `warehouse` param.
+                    // If we passed `warehouseName` (which is just a name) we need the ID.
+                    // But wait, `useLocalSearchParams` only has `id` and `warehouseName`. We don't have warehouse ID here easily unless we look it up.
+                    // Better approach: The previous screen passed `warehouseName` purely for display. 
+                    // To fetch filtered data, we need the ID. 
+                    // Let's modify the previous screen to pass ID as well.
+                    : product.transactions;
+
                 return (
                     <View className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden mb-6">
-                        {product.transactions?.map((tr: any, index: number) => (
-                            <View key={index} className="p-4 border-b border-slate-800 last:border-0 hover:bg-slate-800/30">
-                                <View className="flex-row justify-between mb-2">
-                                    <Text className="text-slate-400 text-xs">{tr.date}</Text>
-                                    <View className={`px-2 py-0.5 rounded ${tr.type === 'Satış' ? 'bg-emerald-500/20' : 'bg-rose-500/20'}`}>
-                                        <Text className={`text-xs font-bold ${tr.type === 'Satış' ? 'text-emerald-400' : 'text-rose-400'}`}>{tr.type}</Text>
+                        {product.transactions?.map((tr: any, index: number) => {
+                            // Check if clickable (Invoice types)
+                            const isClickable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(tr.trcode);
+                            // Check if account name should be shown (Not for internal slips like 14, 25, 50, 51)
+                            const showAccount = ![14, 25, 50, 51].includes(tr.trcode);
+
+                            return (
+                                <TouchableOpacity
+                                    key={index}
+                                    onPress={() => {
+                                        if (isClickable && tr.invoiceId) {
+                                            router.push({ pathname: `/invoices/${tr.invoiceId}` as any });
+                                        }
+                                    }}
+                                    disabled={!isClickable || !tr.invoiceId}
+                                    className={`p-4 border-b border-slate-800 last:border-0 ${isClickable ? 'active:bg-slate-800/50' : ''}`}
+                                >
+                                    <View className="flex-row justify-between mb-2">
+                                        <Text className="text-slate-400 text-xs">{tr.date}</Text>
+                                        <View className={`px-2 py-0.5 rounded ${[7, 8, 9].includes(tr.trcode) ? 'bg-emerald-500/20' : [1, 2, 3].includes(tr.trcode) ? 'bg-rose-500/20' : 'bg-slate-700/50'}`}>
+                                            <Text className={`text-xs font-bold ${[7, 8, 9].includes(tr.trcode) ? 'text-emerald-400' : [1, 2, 3].includes(tr.trcode) ? 'text-rose-400' : 'text-slate-300'}`}>
+                                                {tr.type}
+                                            </Text>
+                                        </View>
                                     </View>
-                                </View>
-                                <View className="flex-row items-center gap-2 mb-2">
-                                    <User size={14} color="#818cf8" />
-                                    <Text className="text-indigo-200 text-sm font-medium">{tr.accountName || 'Cari Yok'}</Text>
-                                </View>
-                                <View className="flex-row justify-between items-end">
-                                    <View>
-                                        <Text className="text-slate-500 text-xs">Fiş: {tr.ficheNo}</Text>
+
+                                    {showAccount ? (
+                                        <View className="flex-row items-center gap-2 mb-2">
+                                            <User size={14} color="#818cf8" />
+                                            <Text className="text-indigo-200 text-sm font-medium" numberOfLines={1}>{tr.accountName}</Text>
+                                        </View>
+                                    ) : (
+                                        <View className="mb-2 h-5" /> // Spacer instead of account name
+                                    )}
+
+                                    <View className="flex-row justify-between items-end">
+                                        <View>
+                                            <Text className="text-slate-500 text-xs">Fiş: {tr.ficheNo}</Text>
+                                            {isClickable && <Text className="text-blue-400 text-[10px] mt-0.5">Detay için dokunun</Text>}
+                                        </View>
+                                        <View className="items-end">
+                                            <Text className="text-white font-bold">{tr.quantity} {tr.unit || product.unit}</Text>
+                                            <Text className="text-slate-400 text-xs">{tr.price?.toLocaleString('tr-TR')} ₺/br</Text>
+                                        </View>
                                     </View>
-                                    <View className="items-end">
-                                        <Text className="text-white font-bold">{tr.quantity} {tr.unit || product.unit}</Text>
-                                        <Text className="text-slate-400 text-xs">{tr.price?.toLocaleString('tr-TR')} ₺/br</Text>
-                                    </View>
-                                </View>
-                            </View>
-                        ))}
+                                </TouchableOpacity>
+                            );
+                        })
+                        }
                         {(!product.transactions || product.transactions.length === 0) && (
                             <View className="p-8 items-center">
                                 <Text className="text-slate-500">Hareket bulunamadı</Text>
@@ -196,6 +235,16 @@ export default function ProductDetailScreen() {
                         <Text className="text-slate-400 text-xs font-mono">{product.code}</Text>
                     </View>
                 </View>
+
+                {/* Warehouse Badge (If Selected) */}
+                {warehouseName && (
+                    <View className="mx-4 mt-3 bg-orange-500/20 border border-orange-500/50 p-2 rounded-lg flex-row items-center justify-center">
+                        <Box size={16} color="#fb923c" />
+                        <Text className="text-orange-400 font-bold ml-2 text-sm uppercase tracking-wide">
+                            {warehouseName}
+                        </Text>
+                    </View>
+                )}
 
                 {/* Tabs */}
                 <View className="flex-row px-4 py-4 gap-2">
