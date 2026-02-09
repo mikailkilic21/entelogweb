@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="tr" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EnteLog - Modern Web ERP Çözümü</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9', // Sky blue default, can be adjusted
+                            600: '#0284c7',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-morphism {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .gradient-text {
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-slate-50 font-sans antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 glass-morphism border-b border-slate-800" x-data="{ mobileMenuOpen: false }">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-24">
+                <div class="flex items-center gap-4">
+                    <img src="logo.png" alt="EnteLog Logo" class="h-16 w-auto object-contain"
+                        onerror="this.src='https://placehold.co/200x50/1e293b/white?text=EnteLog'">
+                    <span class="text-2xl font-bold tracking-tight text-white uppercase">ENTELOG</span>
+                </div>
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8">
+                        <a href="#ozellikler"
+                            class="hover:text-brand-500 transition-colors px-3 py-2 rounded-md text-sm font-medium">Özellikler</a>
+                        <a href="#analiz"
+                            class="hover:text-brand-500 transition-colors px-3 py-2 rounded-md text-sm font-medium">Raporlama</a>
+                        <a href="#entegrasyon"
+                            class="hover:text-brand-500 transition-colors px-3 py-2 rounded-md text-sm font-medium">Entegrasyon</a>
+                        <a href="#iletisim"
+                            class="hover:text-brand-500 transition-colors px-3 py-2 rounded-md text-sm font-medium">İletişim</a>
+                    </div>
+                </div>
+
+                <div class="hidden md:block">
+                    <a href="#iletisim"
+                        class="bg-brand-600 hover:bg-brand-500 text-white px-6 py-2.5 rounded-full text-sm font-medium transition-all shadow-lg shadow-brand-500/20 hover:shadow-brand-500/40">
+                        Demo Talep Et
+                    </a>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden">
+                    <button @click="mobileMenuOpen = !mobileMenuOpen" type="button"
+                        class="text-slate-400 hover:text-white focus:outline-none">
+                        <i data-lucide="menu" class="w-8 h-8" x-show="!mobileMenuOpen"></i>
+                        <i data-lucide="x" class="w-8 h-8" x-show="mobileMenuOpen" style="display:none;"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu Dropdown -->
+        <div class="md:hidden bg-slate-900 border-b border-slate-800" x-show="mobileMenuOpen"
+            x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2"
+            x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"
+            style="display: none;">
+            <div class="px-4 pt-2 pb-6 space-y-2">
+                <a href="#ozellikler" @click="mobileMenuOpen = false"
+                    class="block px-3 py-3 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Özellikler</a>
+                <a href="#analiz" @click="mobileMenuOpen = false"
+                    class="block px-3 py-3 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Raporlama</a>
+                <a href="#entegrasyon" @click="mobileMenuOpen = false"
+                    class="block px-3 py-3 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Entegrasyon</a>
+                <a href="#iletisim" @click="mobileMenuOpen = false"
+                    class="block px-3 py-3 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">İletişim</a>
+                <div class="pt-4">
+                    <a href="#iletisim" @click="mobileMenuOpen = false"
+                        class="block w-full text-center bg-brand-600 text-white px-6 py-3 rounded-lg font-medium">
+                        Demo Talep Et
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <!-- Alpine.js for Mobile Menu (Lightweight) -->
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+    <!-- Hero Section -->
+    <section class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full z-0 pointer-events-none">
+            <div
+                class="absolute top-20 left-10 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob">
+            </div>
+            <div
+                class="absolute top-20 right-10 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000">
+            </div>
+            <div
+                class="absolute -bottom-8 left-1/2 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000">
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+            <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-8" data-aos="fade-up">
+                İşletmenizi <span class="gradient-text">Geleceğe Taşıyın</span>
+            </h1>
+            <p class="text-lg md:text-xl text-slate-400 max-w-3xl mx-auto mb-10" data-aos="fade-up"
+                data-aos-delay="100">
+                LOGO Go Wings ile tam entegre, modern ve hızlı web tabanlı yönetim paneli.
+                Stoktan cariye, siparişten faturaya tüm süreçleriniz tek ekranda.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center mb-20" data-aos="fade-up" data-aos-delay="200">
+                <a href="#iletisim"
+                    class="flex items-center justify-center gap-2 bg-white text-slate-900 px-8 py-3 rounded-full text-lg font-semibold hover:bg-slate-100 transition-colors">
+                    Hemen Başlayın <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </a>
+                <a href="#ozellikler"
+                    class="flex items-center justify-center gap-2 glass-morphism text-white px-8 py-3 rounded-full text-lg font-semibold hover:bg-white/10 transition-colors">
+                    Özellikleri Keşfet
+                </a>
+            </div>
+
+            <!-- Dashboard Preview Mockup -->
+            <div class="relative max-w-5xl mx-auto" data-aos="fade-up" data-aos-delay="300">
+                <div
+                    class="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent z-10 h-full w-full bottom-0">
+                </div>
+                <div class="bg-slate-800 rounded-xl border border-slate-700 shadow-2xl overflow-hidden p-2">
+                    <div
+                        class="bg-slate-900 rounded-lg overflow-hidden relative aspect-video flex items-center justify-center border border-slate-800 group">
+                        <img src="dashboard.png" alt="EnteLog Yönetim Paneli"
+                            class="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity duration-300"
+                            onerror="this.src='https://placehold.co/1920x1080/1e293b/white?text=Yonetim+Paneli+Gorseli+Yukleyin'; this.style.opacity='1';">
+
+                        <div
+                            class="absolute inset-0 bg-slate-900/0 flex items-center justify-center group-hover:bg-slate-900/20 transition-all pointer-events-none">
+                            <div
+                                class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all transform scale-50 group-hover:scale-100">
+                                <i data-lucide="zoom-in" class="w-8 h-8 text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Grid -->
+    <section id="ozellikler" class="py-24 bg-slate-800/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Tüm İhtiyaçlarınız Tek Platformda</h2>
+                <p class="text-slate-400">Karmaşık süreçleri basitleştiren güçlü modüller.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="p-8 rounded-2xl bg-slate-900 border border-slate-700 hover:border-brand-500/50 transition-colors group"
+                    data-aos="fade-up" data-aos-delay="0">
+                    <div
+                        class="w-12 h-12 bg-brand-500/10 rounded-lg flex items-center justify-center text-brand-500 mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="layout-dashboard" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Gelişmiş Dashboard</h3>
+                    <p class="text-slate-400">Günlük, haftalık ve aylık satış verilerinizi, finansal özetlerinizi tek
+                        bir ekrandan anlık olarak takip edin.</p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="p-8 rounded-2xl bg-slate-900 border border-slate-700 hover:border-brand-500/50 transition-colors group"
+                    data-aos="fade-up" data-aos-delay="100">
+                    <div
+                        class="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center text-green-500 mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="package" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Akıllı Stok Yönetimi</h3>
+                    <p class="text-slate-400">Ürün stok durumları, depo bazlı takipler ve kritik stok uyarıları ile
+                        kontrol her zaman sizde olsun.</p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="p-8 rounded-2xl bg-slate-900 border border-slate-700 hover:border-brand-500/50 transition-colors group"
+                    data-aos="fade-up" data-aos-delay="200">
+                    <div
+                        class="w-12 h-12 bg-purple-500/10 rounded-lg flex items-center justify-center text-purple-500 mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="users" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Cari Hesap Takibi</h3>
+                    <p class="text-slate-400">Müşteri ve tedarikçi bakiyeleri, hesap hareketleri ve iletişim bilgileri
+                        parmaklarınızın ucunda.</p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="p-8 rounded-2xl bg-slate-900 border border-slate-700 hover:border-brand-500/50 transition-colors group"
+                    data-aos="fade-up" data-aos-delay="300">
+                    <div
+                        class="w-12 h-12 bg-orange-500/10 rounded-lg flex items-center justify-center text-orange-500 mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="file-text" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Fatura & Sipariş</h3>
+                    <p class="text-slate-400">Bekleyen siparişler, kesilen faturalar ve finansal belgelerinize anında
+                        erişim sağlayın.</p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="p-8 rounded-2xl bg-slate-900 border border-slate-700 hover:border-brand-500/50 transition-colors group"
+                    data-aos="fade-up" data-aos-delay="400">
+                    <div
+                        class="w-12 h-12 bg-red-500/10 rounded-lg flex items-center justify-center text-red-500 mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="bar-chart-3" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Detaylı Raporlama</h3>
+                    <p class="text-slate-400">Görsel grafiklerle desteklenmiş satış, karlılık ve performans raporları
+                        ile veriye dayalı kararlar alın.</p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="p-8 rounded-2xl bg-slate-900 border border-slate-700 hover:border-brand-500/50 transition-colors group"
+                    data-aos="fade-up" data-aos-delay="500">
+                    <div
+                        class="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500 mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="shield-check" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Güvenli ve Hızlı</h3>
+                    <p class="text-slate-400">Modern SSL altyapısı, güvenli veri iletimi ve hızlı sunucu yanıt süreleri
+                        ile kesintisiz çalışma.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Reports Section -->
+    <section id="analiz" class="py-24 bg-slate-900 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col lg:flex-row items-center gap-16">
+                <div class="w-full lg:w-1/2" data-aos="fade-right">
+                    <div class="relative">
+                        <div
+                            class="absolute -inset-4 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-3xl blur-2xl opacity-20">
+                        </div>
+                        <div class="relative bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-xl">
+                            <!-- Mock Chart -->
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-white font-semibold">Satış Analizi</h3>
+                                <div class="bg-slate-700 text-xs px-2 py-1 rounded text-slate-300">Bu Hafta</div>
+                            </div>
+                            <div class="h-64 flex items-end justify-between gap-2">
+                                <div
+                                    class="w-full bg-purple-500/30 rounded-t h-[40%] hover:scale-y-110 transition-transform origin-bottom">
+                                </div>
+                                <div
+                                    class="w-full bg-purple-500/40 rounded-t h-[60%] hover:scale-y-110 transition-transform origin-bottom">
+                                </div>
+                                <div
+                                    class="w-full bg-purple-500/60 rounded-t h-[30%] hover:scale-y-110 transition-transform origin-bottom">
+                                </div>
+                                <div
+                                    class="w-full bg-brand-500 rounded-t h-[80%] shadow-[0_0_15px_rgba(14,165,233,0.5)]">
+                                </div>
+                                <div
+                                    class="w-full bg-purple-500/50 rounded-t h-[50%] hover:scale-y-110 transition-transform origin-bottom">
+                                </div>
+                                <div
+                                    class="w-full bg-purple-500/60 rounded-t h-[70%] hover:scale-y-110 transition-transform origin-bottom">
+                                </div>
+                            </div>
+                            <div class="mt-4 grid grid-cols-2 gap-4">
+                                <div class="bg-slate-900/50 p-3 rounded-lg">
+                                    <div class="text-xs text-slate-500">Toplam Ciro</div>
+                                    <div class="text-lg font-bold text-white">₺842.300</div>
+                                </div>
+                                <div class="bg-slate-900/50 p-3 rounded-lg">
+                                    <div class="text-xs text-slate-500">Büyüme</div>
+                                    <div class="text-lg font-bold text-green-400">+%12.5</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-full lg:w-1/2" data-aos="fade-left">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-6">
+                        Verilerinizi <span
+                            class="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-indigo-400">Anlamlı
+                            Bilgiye</span> Dönüştürün
+                    </h2>
+                    <p class="text-lg text-slate-400 mb-8">
+                        Karmaşık Excel tablolarıyla uğraşmaya son. EnteLog'un gelişmiş raporlama motoru ile işletmenizin
+                        nabzını tutun.
+                    </p>
+                    <ul class="space-y-4">
+                        <li class="flex items-start gap-3">
+                            <div class="mt-1 bg-green-500/10 p-1 rounded">
+                                <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
+                            </div>
+                            <span class="text-slate-300">Anlık karlılık analizleri ve marj takibi</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <div class="mt-1 bg-green-500/10 p-1 rounded">
+                                <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
+                            </div>
+                            <span class="text-slate-300">Tedarikçi performans değerlendirme raporları</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <div class="mt-1 bg-green-500/10 p-1 rounded">
+                                <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
+                            </div>
+                            <span class="text-slate-300">Bölgesel ve ürün bazlı satış trendleri</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <div class="mt-1 bg-green-500/10 p-1 rounded">
+                                <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
+                            </div>
+                            <span class="text-slate-300">PDF ve Excel formatında dışa aktarım</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Integration Section -->
+    <section id="entegrasyon" class="py-24 bg-slate-800/30 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Güçlü ve Esnek Entegrasyon</h2>
+                <p class="text-slate-400 max-w-2xl mx-auto">
+                    Mevcut ERP sisteminizle tam uyumlu çalışır, iş akışınızı kesintiye uğratmaz.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- ERP Integration -->
+                <div class="bg-slate-900 p-8 rounded-2xl border border-slate-700/50 hover:border-brand-500/30 transition-all hover:shadow-lg hover:shadow-brand-500/5"
+                    data-aos="fade-up" data-aos-delay="0">
+                    <div
+                        class="h-14 w-14 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-orange-500/20">
+                        <i data-lucide="database" class="w-7 h-7 text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">LOGO Go Wings</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        LOGO Go Wings ile çift yönlü ve anlık veri senkronizasyonu. Stok, cari, fatura ve sipariş
+                        kayıtlarınız her an güncel.
+                    </p>
+                </div>
+
+                <!-- E-Invoice -->
+                <div class="bg-slate-900 p-8 rounded-2xl border border-slate-700/50 hover:border-brand-500/30 transition-all hover:shadow-lg hover:shadow-brand-500/5"
+                    data-aos="fade-up" data-aos-delay="100">
+                    <div
+                        class="h-14 w-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/20">
+                        <i data-lucide="files" class="w-7 h-7 text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">e-Fatura / e-Arşiv</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Dijital dönüşümünüzü tamamlayın. e-Fatura ve e-Arşiv süreçlerinizi doğrudan panel üzerinden
+                        yönetin ve görüntüleyin.
+                    </p>
+                </div>
+
+                <!-- API Connectivity -->
+                <div class="bg-slate-900 p-8 rounded-2xl border border-slate-700/50 hover:border-brand-500/30 transition-all hover:shadow-lg hover:shadow-brand-500/5"
+                    data-aos="fade-up" data-aos-delay="200">
+                    <div
+                        class="h-14 w-14 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-green-500/20">
+                        <i data-lucide="workflow" class="w-7 h-7 text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Custom API</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Özel API desteği sayesinde B2B, B2C veya mobil uygulamalarınızla sorunsuz veri alışverişi yapın.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Integration Diagram (Visual Flair) -->
+            <div class="mt-20 relative hidden md:block" data-aos="fade-up" data-aos-delay="300">
+                <div class="absolute top-1/2 left-0 w-full h-px bg-slate-700/50 -translate-y-1/2 -z-10"></div>
+                <div class="flex justify-between items-center max-w-4xl mx-auto">
+                    <div class="bg-slate-800 border border-slate-600 px-6 py-3 rounded-full text-slate-300 font-medium">
+                        Satış</div>
+                    <div class="bg-slate-800 border border-slate-600 p-2 rounded-full"><i data-lucide="arrow-right"
+                            class="w-4 h-4 text-slate-500"></i></div>
+                    <div
+                        class="bg-brand-900/50 border border-brand-500/50 px-8 py-4 rounded-full text-white font-bold shadow-[0_0_20px_rgba(14,165,233,0.3)]">
+                        EnteLog Core</div>
+                    <div class="bg-slate-800 border border-slate-600 p-2 rounded-full"><i data-lucide="arrow-right"
+                            class="w-4 h-4 text-slate-500"></i></div>
+                    <div class="bg-slate-800 border border-slate-600 px-6 py-3 rounded-full text-slate-300 font-medium">
+                        Muhasebe</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tech Specs / Stats -->
+    <section class="py-20 border-y border-slate-800 bg-slate-900 relative overflow-hidden">
+        <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                <div data-aos="fade-in">
+                    <div class="text-4xl font-bold text-white mb-2">React</div>
+                    <div class="text-sm text-slate-500 font-medium tracking-wider uppercase">Modern Arayüz</div>
+                </div>
+                <div data-aos="fade-in" data-aos-delay="100">
+                    <div class="text-4xl font-bold text-white mb-2">Node.js</div>
+                    <div class="text-sm text-slate-500 font-medium tracking-wider uppercase">Güçlü Backend</div>
+                </div>
+                <div data-aos="fade-in" data-aos-delay="200">
+                    <div class="text-4xl font-bold text-white mb-2">%100</div>
+                    <div class="text-sm text-slate-500 font-medium tracking-wider uppercase">LOGO Uyumlu</div>
+                </div>
+                <div data-aos="fade-in" data-aos-delay="300">
+                    <div class="text-4xl font-bold text-white mb-2">7/24</div>
+                    <div class="text-sm text-slate-500 font-medium tracking-wider uppercase">Erişim</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="py-24 bg-slate-800/30 border-t border-slate-800">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-bold mb-4">Sıkça Sorulan Sorular</h2>
+                <p class="text-slate-400">Aklınıza takılan soruların cevapları burada.</p>
+            </div>
+
+            <div class="space-y-4" x-data="{ selected: null }">
+                <!-- FAQ Item 1 -->
+                <div class="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
+                    <button class="w-full px-6 py-4 text-left flex justify-between items-center focus:outline-none"
+                        onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('svg').classList.toggle('rotate-180')">
+                        <span class="font-medium text-white">Kurulum ne kadar sürer?</span>
+                        <i data-lucide="chevron-down"
+                            class="w-5 h-5 text-slate-500 transition-transform duration-300"></i>
+                    </button>
+                    <div class="hidden px-6 pb-4 text-slate-400 text-sm border-t border-slate-800/50 pt-4">
+                        EnteLog bulut tabanlı bir sistemdir. Kurulum gerektirmez. Size verilen kullanıcı adı ve şifre
+                        ile anında kullanmaya başlayabilirsiniz.
+                    </div>
+                </div>
+
+                <!-- FAQ Item 2 -->
+                <div class="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
+                    <button class="w-full px-6 py-4 text-left flex justify-between items-center focus:outline-none"
+                        onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('svg').classList.toggle('rotate-180')">
+                        <span class="font-medium text-white">Mevcut verilerim silinir mi?</span>
+                        <i data-lucide="chevron-down"
+                            class="w-5 h-5 text-slate-500 transition-transform duration-300"></i>
+                    </button>
+                    <div class="hidden px-6 pb-4 text-slate-400 text-sm border-t border-slate-800/50 pt-4">
+                        Hayır. EnteLog, mevcut ERP sisteminizle (Logo vb.) entegre çalışır. Verilerinizi sadece okur ve
+                        işler, mevcut kayıtlarınızı bozmaz veya silmez.
+                    </div>
+                </div>
+
+                <!-- FAQ Item 3 -->
+                <div class="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
+                    <button class="w-full px-6 py-4 text-left flex justify-between items-center focus:outline-none"
+                        onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('svg').classList.toggle('rotate-180')">
+                        <span class="font-medium text-white">Mobilden kullanabilir miyim?</span>
+                        <i data-lucide="chevron-down"
+                            class="w-5 h-5 text-slate-500 transition-transform duration-300"></i>
+                    </button>
+                    <div class="hidden px-6 pb-4 text-slate-400 text-sm border-t border-slate-800/50 pt-4">
+                        Kesinlikle. EnteLog tüm akıllı telefon ve tabletlerle %100 uyumludur. İster ofiste, ister sahada
+                        işlerinizi cebinizden yönetebilirsiniz.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section id="iletisim" class="py-24 relative overflow-hidden">
+        <div class="max-w-4xl mx-auto px-4 relative z-10 text-center">
+            <h2 class="text-3xl md:text-5xl font-bold mb-6">İşletmenizi Dijitale Taşıyın</h2>
+            <p class="text-lg text-slate-400 mb-10">
+                EnteLog ile verimliliğinizi artırın, işletmenizi her yerden yönetin.
+                Demo ve detaylı bilgi için hemen iletişime geçin.
+            </p>
+
+            <div class="bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-sm max-w-lg mx-auto">
+                <form id="contactForm" class="space-y-4">
+                    <div>
+                        <input type="text" name="name" placeholder="Adınız Soyadınız" required
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors">
+                    </div>
+                    <div>
+                        <input type="email" name="email" placeholder="E-posta Adresiniz" required
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors">
+                    </div>
+                    <div>
+                        <input type="tel" name="phone" id="phoneInput" placeholder="(5__) ___ __ __" maxlength="15"
+                            required
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors">
+                    </div>
+                    <script>
+                        document.getElementById('phoneInput').addEventListener('input', function (e) {
+                            var x = e.target.value.replace(/\D/g, '').match(/(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
+                            e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? ' ' + x[3] : '') + (x[4] ? ' ' + x[4] : '');
+                        });
+                    </script>
+                    <button type="submit" id="submitBtn"
+                        class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-4 rounded-lg transition-all shadow-lg hover:shadow-brand-500/25 flex items-center justify-center gap-2">
+                        <span>Bize Ulaşın</span>
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                    </button>
+                    <div id="formMessage" class="hidden text-center text-sm p-3 rounded-lg mt-4"></div>
+                    <p class="text-xs text-slate-500 mt-4 text-center">
+                        * Bilgileriniz güvenli sunucularımızda saklanmaktadır.
+                    </p>
+                </form>
+            </div>
+
+            <script>
+                document.getElementById('contactForm').addEventListener('submit', function (e) {
+                    e.preventDefault();
+
+                    const form = this;
+                    const submitBtn = document.getElementById('submitBtn');
+                    const messageDiv = document.getElementById('formMessage');
+                    const originalBtnText = submitBtn.innerHTML;
+
+                    // Disable button and show loading state
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="animate-spin mr-2">⟳</span> Gönderiliyor...';
+
+                    const formData = new FormData(form);
+
+                    fetch('send_mail.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(response => response.text().then(text => {
+                            // Önce metin olarak alıp kontrol edelim
+                            try {
+                                return JSON.parse(text);
+                            } catch (e) {
+                                console.error('Sunucu Yanıtı:', text); // Konsola hatayı bas
+                                // Hatanın ne olduğunu anlamak için gelen yanıtın başını gösterelim
+                                let errorSummary = text.length > 100 ? text.substring(0, 100) + '...' : text;
+                                if (text.trim() === '') errorSummary = '(Boş Yanıt)';
+
+                                throw new Error('Sunucu hatası veya PHP çalışmıyor. Sunucudan gelen yanıt: ' + errorSummary);
+                            }
+                        }))
+                        .then(data => {
+                            messageDiv.classList.remove('hidden', 'bg-red-500/20', 'text-red-400', 'bg-green-500/20', 'text-green-400');
+
+                            if (data.status === 'success') {
+                                messageDiv.classList.add('bg-green-500/20', 'text-green-400');
+                                messageDiv.innerHTML = data.message;
+                                form.reset();
+                            } else {
+                                throw new Error(data.message || 'Bir hata oluştu');
+                            }
+                        })
+                        .catch(error => {
+                            messageDiv.classList.remove('hidden', 'bg-green-500/20', 'text-green-400');
+                            messageDiv.classList.add('bg-red-500/20', 'text-red-400');
+                            messageDiv.innerHTML = error.message || 'Gönderim sırasında bir hata oluştu.';
+                        })
+                        .finally(() => {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalBtnText;
+                            lucide.createIcons(); // Re-render icons if needed
+
+                            // Hide message after 5 seconds
+                            setTimeout(() => {
+                                messageDiv.classList.add('hidden');
+                            }, 5000);
+                        });
+                });
+            </script>
+
+            <div class="mt-12 flex flex-col md:flex-row items-center justify-center gap-8 text-slate-400">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="mail" class="w-5 h-5 text-brand-500"></i>
+                    <span>info@enteleg.com.tr</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i data-lucide="map-pin" class="w-5 h-5 text-brand-500"></i>
+                    <span>Türkiye</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-8 border-t border-slate-800 bg-slate-900 text-center text-slate-500 text-sm">
+        <p>&copy; 2026 Entelog. Tüm hakları saklıdır.</p>
+    </footer>
+
+    <!-- WhatsApp Button -->
+    <a href="javascript:void(0)" onclick="openWhatsApp()"
+        class="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-lg transition-all hover:scale-110 flex items-center justify-center group">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8">
+            <path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"></path>
+        </svg>
+        <span
+            class="absolute right-full mr-4 bg-white text-slate-900 px-3 py-1 rounded-lg text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-md pointer-events-none">
+            WhatsApp'tan Yazın
+        </span>
+    </a>
+
+    <!-- Cookie Consent -->
+    <div id="cookieBanner"
+        class="fixed bottom-0 left-0 w-full bg-slate-900/95 backdrop-blur border-t border-slate-800 p-4 z-50 transform translate-y-full transition-transform duration-500">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p class="text-sm text-slate-400 text-center sm:text-left">
+                Size daha iyi hizmet sunmak için çerezleri kullanıyoruz. Sitemizi kullanarak çerez politikamızı kabul
+                etmiş olursunuz.
+            </p>
+            <div class="flex gap-3">
+                <button onclick="acceptCookies()"
+                    class="bg-brand-600 hover:bg-brand-500 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
+                    Kabul Et
+                </button>
+                <button onclick="closeCookieBanner()"
+                    class="text-slate-400 hover:text-white px-4 py-2 text-sm font-medium transition-colors">
+                    Reddet
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // WhatsApp Logic
+        function openWhatsApp() {
+            var phone = '905533912286';
+            var text = encodeURIComponent('Merhaba EnteLog hakkında bilgi almak istiyorum.');
+
+            // Mobil cihaz kontrolü
+            var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+            if (isMobile) {
+                // Mobilde uygulama açılsın
+                window.open('https://api.whatsapp.com/send?phone=' + phone + '&text=' + text, '_blank');
+            } else {
+                // Masaüstünde direkt Web Whatsapp (Aynı sekmede kontrolü için isim verdik)
+                // Not: Tarayıcı güvenliği gereği, kullanıcının daha önce kendi açtığı sekmeyi göremeyiz.
+                // Ancak bizim butonumuzla açılan sekmeyi tekrar kullanabiliriz.
+                window.open('https://web.whatsapp.com/send?phone=' + phone + '&text=' + text, 'whatsapp_entelog');
+            }
+        }
+
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Initialize AOS Animation Library
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+        });
+
+        // Cookie Logic
+        function acceptCookies() {
+            localStorage.setItem('cookieConsent', 'true');
+            document.getElementById('cookieBanner').classList.add('translate-y-full');
+        }
+        function closeCookieBanner() {
+            document.getElementById('cookieBanner').classList.add('translate-y-full');
+        }
+
+        // Show cookie banner if not accepted
+        setTimeout(() => {
+            if (!localStorage.getItem('cookieConsent')) {
+                document.getElementById('cookieBanner').classList.remove('translate-y-full');
+            }
+        }, 2000);
+    </script>
+</body>
+
+</html>
