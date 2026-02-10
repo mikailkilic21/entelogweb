@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Bell, MessageSquare, AlertCircle, CheckCircle2, Clock } from 'lucide-react-native';
+import { ChevronLeft, MessageSquare, AlertCircle, CheckCircle2, Clock } from 'lucide-react-native';
 
 export default function NotificationsScreen() {
     const router = useRouter();

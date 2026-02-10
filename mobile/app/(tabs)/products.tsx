@@ -106,7 +106,7 @@ export default function ProductsScreen() {
         setLoading(true);
         const timer = setTimeout(fetchData, 500); // Debounce
         return () => clearTimeout(timer);
-    }, [searchText, sortBy, selectedWarehouse]); // fetchData is stable via useCallback
+    }, [fetchData]); // fetchData is stable via useCallback
 
     const onRefresh = () => {
         setRefreshing(true);

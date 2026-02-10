@@ -68,7 +68,7 @@ export const EnvironmentBadge = () => {
                         </TouchableOpacity>
 
                         <Text className="text-slate-600 text-center text-xs mt-4">
-                            Environment değiştirmek için Config.ts'i düzenleyin
+                            Environment değiştirmek için Config.ts&apos;i düzenleyin
                         </Text>
                     </View>
                 </View>

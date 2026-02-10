@@ -3,7 +3,7 @@ import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, Tou
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Building2 } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
-import { useRouter } from 'expo-router';
+
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '@/context/AuthContext';
@@ -13,7 +13,7 @@ import { Account } from '@/types';
 
 export default function AccountsScreen() {
     const { isDemo } = useAuth();
-    const router = useRouter();
+
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);

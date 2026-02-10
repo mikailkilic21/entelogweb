@@ -16,18 +16,14 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = (segments[0] as string) === '(auth)';
-
     const isLoginScreen = segments[0] === 'login';
 
     if (!user && !isLoginScreen) {
-      // Redirect to login if not authenticated
       router.replace('/login');
     } else if (user && isLoginScreen) {
-      // Redirect to tabs if authenticated and on login screen
       router.replace('/(tabs)');
     }
-  }, [user, isLoading, segments]);
+  }, [user, isLoading, segments, router]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

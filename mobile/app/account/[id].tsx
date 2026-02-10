@@ -3,7 +3,7 @@ import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Linking, P
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Building2, Phone, Mail, MapPin, TrendingUp, TrendingDown, FileText, ChevronLeft, Calendar, FileBox } from 'lucide-react-native';
+import { Phone, Mail, MapPin, TrendingUp, TrendingDown, ChevronLeft, Calendar, FileBox } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
@@ -16,27 +16,27 @@ export default function AccountDetailScreen() {
     const [activeTab, setActiveTab] = useState<'summary' | 'transactions'>('summary');
 
     useEffect(() => {
+        const fetchAccountDetails = async () => {
+            try {
+                const res = await fetch(`${API_URL}/accounts/${id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setAccount(data);
+                    if (data.transactions) {
+                        setTransactions(data.transactions);
+                    }
+                }
+            } catch (error) {
+                console.error('Account detail error:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         if (id) {
             fetchAccountDetails();
         }
     }, [id]);
-
-    const fetchAccountDetails = async () => {
-        try {
-            const res = await fetch(`${API_URL}/accounts/${id}`);
-            if (res.ok) {
-                const data = await res.json();
-                setAccount(data);
-                if (data.transactions) {
-                    setTransactions(data.transactions);
-                }
-            }
-        } catch (error) {
-            console.error('Account detail error:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleCall = (phone: string) => {
         if (phone) Linking.openURL(`tel:${phone}`);

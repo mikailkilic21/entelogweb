@@ -11,7 +11,7 @@ import { API_URL } from '@/constants/Config';
 
 export default function LicenseApplicationScreen() {
     const router = useRouter();
-    const { user } = useAuth();
+    const { } = useAuth();
 
     const [companyName, setCompanyName] = useState('');
     const [officialName, setOfficialName] = useState('');

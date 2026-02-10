@@ -38,14 +38,14 @@ import { BankCard, BankLogo } from '@/components/BankCard';
 import TransactionItem from '@/components/TransactionItem';
 
 export default function BanksScreen() {
-    const { isDemo, user } = useAuth();
+    const { isDemo } = useAuth();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
     const [expandedBanks, setExpandedBanks] = useState<{ [key: string]: boolean }>({});
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('accounts'); // 'accounts', 'pos', 'cc', 'havale-in', 'havale-out', 'dbs'
-    const [activeDBSTab, setActiveDBSTab] = useState('list'); // 'list' | 'settings' (Not fully implemented on mobile yet)
+
 
     // Data states
     const [banks, setBanks] = useState<Bank[]>([]);

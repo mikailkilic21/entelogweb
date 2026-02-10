@@ -18,7 +18,7 @@ const MenuCard = ({ children, onPress, colors = ['#1e293b', '#0f172a'] }: any) =
         scale.value = withSpring(1, { damping: 12 });
         opacity.value = withTiming(1, { duration: 500 });
         rotateX.value = withSpring(0, { damping: 15, mass: 1.2 }); // Settle to 0
-    }, []);
+    }, [scale, opacity, rotateX]);
 
     const pressed = useSharedValue(false);
 
@@ -139,7 +139,7 @@ export default function MenuScreen() {
             } else {
                 Alert.alert('Hata', 'Değişiklik yapılamadı.');
             }
-        } catch (err) {
+        } catch {
             Alert.alert('Hata', 'Sunucu hatası.');
         } finally {
             setLoading(false);
@@ -325,7 +325,7 @@ export default function MenuScreen() {
                                 <Animated.View key={firm.nr} style={{ marginBottom: 12 }}>
                                     <TouchableOpacity
                                         onPress={() => handleFirmSelect(firm)}
-                                        className={`p-5 rounded-2xl border flex-row items-center justify-between ${dbConfig?.firmNo == firm.nr
+                                        className={`p-5 rounded-2xl border flex-row items-center justify-between ${dbConfig?.firmNo === firm.nr.toString()
                                             ? 'bg-blue-600 border-blue-500'
                                             : 'bg-slate-900 border-slate-800'
                                             }`}
@@ -334,7 +334,7 @@ export default function MenuScreen() {
                                             <Text className="text-white font-bold text-lg">{firm.nr}</Text>
                                             <Text className="text-slate-300 text-sm">{firm.name}</Text>
                                         </View>
-                                        {dbConfig?.firmNo == firm.nr && <View className="bg-white/20 p-1 rounded-full"><Check size={16} color="white" /></View>}
+                                        {dbConfig?.firmNo === firm.nr.toString() && <View className="bg-white/20 p-1 rounded-full"><Check size={16} color="white" /></View>}
                                     </TouchableOpacity>
                                 </Animated.View>
                             ))}
@@ -357,7 +357,7 @@ export default function MenuScreen() {
                                 <Animated.View key={period.nr} style={{ marginBottom: 12 }}>
                                     <TouchableOpacity
                                         onPress={() => handlePeriodSelect(period)}
-                                        className={`p-5 rounded-2xl border flex-row items-center justify-between ${dbConfig?.periodNo == period.nr.toString().padStart(2, '0')
+                                        className={`p-5 rounded-2xl border flex-row items-center justify-between ${dbConfig?.periodNo === period.nr.toString().padStart(2, '0')
                                             ? 'bg-emerald-600 border-emerald-600'
                                             : 'bg-slate-900 border-slate-800'
                                             }`}
@@ -370,7 +370,7 @@ export default function MenuScreen() {
                                                 {period.beginDate.split('T')[0]}  ➔  {period.endDate.split('T')[0]}
                                             </Text>
                                         </View>
-                                        {dbConfig?.periodNo == period.nr.toString().padStart(2, '0') && <View className="bg-white/20 p-1 rounded-full"><Check size={16} color="white" /></View>}
+                                        {dbConfig?.periodNo === period.nr.toString().padStart(2, '0') && <View className="bg-white/20 p-1 rounded-full"><Check size={16} color="white" /></View>}
                                     </TouchableOpacity>
                                 </Animated.View>
                             ))}

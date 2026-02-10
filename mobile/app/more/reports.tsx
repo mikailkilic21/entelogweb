@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, BarChart3, TrendingUp, PieChart, ArrowUpRight, ArrowDownRight, Download } from 'lucide-react-native';
+import { ChevronLeft, BarChart3, TrendingUp, PieChart, ArrowUpRight, Download } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ReportsScreen() {

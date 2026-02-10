@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
-import { Building2, Database, User, ChevronLeft, Save, Plus, Trash2, Edit2, X, Check, Server, Key, FileText, MapPin, Phone, Mail, Globe } from 'lucide-react-native';
+import { Building2, Database, User, ChevronLeft, Save, Plus, Trash2, Edit2, X, Server, Key, FileText, MapPin, Phone, Mail, Globe } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { API_URL } from '@/constants/Config';
 
@@ -28,11 +28,7 @@ export default function SystemSettingsScreen() {
     const [editingUser, setEditingUser] = useState<any>(null);
     const [userForm, setUserForm] = useState({ username: '', password: '', name: '', role: 'user' });
 
-    useEffect(() => {
-        fetchData();
-    }, [activeTab]);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             if (activeTab === 'company') {
@@ -45,13 +41,17 @@ export default function SystemSettingsScreen() {
                 const res = await fetch(`${API_URL}/users`);
                 if (res.ok) setUsers(await res.json());
             }
-        } catch (error) {
-            console.error('Fetch error:', error);
+        } catch {
+            console.error('Fetch error');
             Alert.alert('Hata', 'Veri yüklenirken bir sorun oluştu.');
         } finally {
             setLoading(false);
         }
-    };
+    }, [activeTab]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     const handleSave = async () => {
         setSaving(true);
@@ -79,7 +79,7 @@ export default function SystemSettingsScreen() {
             } else {
                 Alert.alert('Hata', 'Kaydetme başarısız.');
             }
-        } catch (error) {
+        } catch {
             Alert.alert('Hata', 'Sunucu hatası.');
         } finally {
             setSaving(false);
@@ -112,7 +112,7 @@ export default function SystemSettingsScreen() {
             } else {
                 Alert.alert('Hata', 'İşlem başarısız.');
             }
-        } catch (error) {
+        } catch {
             Alert.alert('Hata', 'Sunucu hatası.');
         } finally {
             setSaving(false);

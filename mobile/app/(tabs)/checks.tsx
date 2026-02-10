@@ -3,7 +3,7 @@ import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, Tou
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Banknote, Calendar, ChevronLeft } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
-import { useRouter } from 'expo-router';
+
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '@/context/AuthContext';
@@ -12,7 +12,7 @@ export default function ChecksScreen() {
     const { isDemo } = useAuth();
     const [selectedCheck, setSelectedCheck] = useState<any>(null);
 
-    const router = useRouter();
+
     const [checks, setChecks] = useState<any[]>([]);
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -52,14 +52,14 @@ export default function ChecksScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [searchText, period, checkType, customerStatus]);
+    }, [searchText, period, checkType, customerStatus, isDemo]);
 
     useEffect(() => {
         setChecks([]); // Clear old data to prevent flash of wrong content
         setLoading(true);
         const timer = setTimeout(fetchData, 500);
         return () => clearTimeout(timer);
-    }, [searchText, period, checkType, customerStatus]);
+    }, [fetchData]);
 
     const onRefresh = () => {
         setRefreshing(true);
@@ -174,7 +174,7 @@ export default function ChecksScreen() {
         </View>
     );
 
-    const renderItem = ({ item, index }) => {
+    const renderItem = ({ item, index }: { item: any; index: number }) => {
         const isCheck = item.cardType === 1;
         return (
             <Animated.View entering={FadeInDown.delay(index * 100).springify()} className="mb-3">

@@ -5,12 +5,12 @@ import { API_URL } from '@/constants/Config';
 import { SalesTrendChart, TopProductsChart, TopCustomersChart } from '@/components/DashboardCharts';
 import { EnvironmentBadge } from '@/components/EnvironmentBadge';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Bell, Search, TrendingUp, TrendingDown, Package, Users, AlertCircle, LayoutDashboard, Receipt, RefreshCcw, X } from 'lucide-react-native';
+import { Bell, TrendingUp, TrendingDown, Package, Users, AlertCircle, LayoutDashboard, Receipt, RefreshCcw, X } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { generateMockTrendData } from '@/utils/chartHelpers';
 
 export default function DashboardScreen() {
-  const { isDemo, user } = useAuth();
+  const { isDemo } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +24,7 @@ export default function DashboardScreen() {
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [topCustomers, setTopCustomers] = useState<any[]>([]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setError(null);
     try {
       const headers = {
@@ -84,11 +84,11 @@ export default function DashboardScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [period, customerType, isDemo]);
 
   useEffect(() => {
     fetchData();
-  }, [period, customerType]);
+  }, [fetchData]);
 
   const onRefresh = () => {
     setRefreshing(true);

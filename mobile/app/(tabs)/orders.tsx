@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Filter, Truck, CheckCircle, Clock, ChevronRight, X, AlertCircle, PackageCheck, Package, PackageX, ShoppingCart } from 'lucide-react-native';
+import { Search, Clock, AlertCircle, PackageCheck, Package, PackageX, ShoppingCart } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -45,13 +45,13 @@ export default function OrdersScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [statusFilter, shipmentFilter, searchText]);
+    }, [statusFilter, shipmentFilter, searchText, isDemo]);
 
     useEffect(() => {
         setLoading(true);
         const timer = setTimeout(fetchData, 500);
         return () => clearTimeout(timer);
-    }, [statusFilter, shipmentFilter, searchText]);
+    }, [fetchData]);
 
     const onRefresh = () => {
         setRefreshing(true);

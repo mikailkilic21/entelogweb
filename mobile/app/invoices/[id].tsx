@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Calendar, FileText, CreditCard, Layers, Tag } from 'lucide-react-native';
+import { ArrowLeft, CreditCard, Layers } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -13,22 +13,22 @@ export default function InvoiceDetailScreen() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const fetchDetails = async () => {
+            try {
+                const res = await fetch(`${API_URL}/invoices/${id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setDetails(data);
+                }
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         if (id) fetchDetails();
     }, [id]);
-
-    const fetchDetails = async () => {
-        try {
-            const res = await fetch(`${API_URL}/invoices/${id}`);
-            if (res.ok) {
-                const data = await res.json();
-                setDetails(data);
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     if (loading) {
         return (

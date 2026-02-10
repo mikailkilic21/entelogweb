@@ -35,7 +35,7 @@ export default function ProductDetailScreen() {
         };
 
         if (id) fetchDetails();
-    }, [id, isDemo]);
+    }, [id, isDemo, warehouse]);
 
     if (loading) {
         return (
@@ -59,7 +59,7 @@ export default function ProductDetailScreen() {
                 // Filter transactions by warehouse if selected (client-side filter if not already filtered by API)
                 // Note: API already filters if we passed the warehouse parameter.
                 // But let's be safe.
-                const filteredTransactions = warehouseName
+                const _filteredTransactions = warehouseName
                     ? (product.transactions || []).filter((tr: any) => tr.warehouseName === warehouseName || !tr.warehouseName) // Assuming API returns warehouseName or we filter by something else?
                     // actually, the API `getProductDetails` accepts `warehouse` param.
                     // If we passed `warehouseName` (which is just a name) we need the ID.

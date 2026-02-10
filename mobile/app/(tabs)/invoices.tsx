@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, TrendingUp, TrendingDown, Calendar, Filter, FileText, CheckCircle, XCircle, ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
+import { Search, FileText, ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -49,13 +49,13 @@ export default function InvoicesScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [searchText, period, type]);
+    }, [searchText, period, type, isDemo]);
 
     useEffect(() => {
         setLoading(true);
         const timer = setTimeout(fetchData, 500);
         return () => clearTimeout(timer);
-    }, [searchText, period, type]);
+    }, [fetchData]);
 
     const onRefresh = () => {
         setRefreshing(true);
@@ -87,13 +87,13 @@ export default function InvoicesScreen() {
                 {[
                     { key: 'all', label: 'Tümü' },
                     { key: 'sales', label: 'Satışlar' },
-                    { key: 'purchase', label: 'Alışlar' }
+                    { key: 'purchases', label: 'Alışlar' }
                 ].map((t) => (
                     <TouchableOpacity
                         key={t.key}
                         onPress={() => setType(t.key as any)}
                         className={`flex-1 py-2 rounded-lg items-center ${type === t.key ?
-                            (t.key === 'sales' ? 'bg-blue-600' : t.key === 'purchase' ? 'bg-rose-600' : 'bg-slate-700')
+                            (t.key === 'sales' ? 'bg-blue-600' : t.key === 'purchases' ? 'bg-rose-600' : 'bg-slate-700')
                             : 'bg-transparent'}`}
                     >
                         <Text className={`text-xs font-bold ${type === t.key ? 'text-white' : 'text-slate-400'}`}>
@@ -118,7 +118,7 @@ export default function InvoicesScreen() {
                         </LinearGradient>
                     )}
 
-                    {(type === 'all' || type === 'purchase') && (
+                    {(type === 'all' || type === 'purchases') && (
                         <LinearGradient colors={['#9f1239', '#881337']} className="flex-1 p-3 rounded-xl border border-rose-500/30">
                             <View className="flex-row items-center gap-2 mb-2">
                                 <ArrowDownLeft size={16} color="#fca5a5" />
