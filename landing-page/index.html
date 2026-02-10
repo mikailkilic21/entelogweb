@@ -4,21 +4,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EnteLog - Modern Web ERP Çözümü</title>
+    <title>EnteLog - Size Özel Web & Mobil ERP Çözümü</title>
+    <meta name="description"
+        content="İşletmenize özel geliştirilen, Web ve Mobil senkronize çalışan yeni nesil ERP. Stok, Cari, Çek/Senet ve DBS yönetimini tek panelde birleştirin.">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
-        // Tema Kontrolü (Sayfa yüklenmeden çalışmalı - Flash önleme)
+        // Tema Kontrolü
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark')
         } else {
             document.documentElement.classList.remove('dark')
         }
 
-        // Toggle Theme Fonksiyonu
         function toggleTheme() {
             if (document.documentElement.classList.contains('dark')) {
                 document.documentElement.classList.remove('dark')
@@ -33,18 +34,12 @@
             darkMode: 'class',
             theme: {
                 extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
                     colors: {
                         brand: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            200: '#bae6fd',
-                            400: '#38bdf8',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            900: '#0c4a6e',
+                            50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd', 300: '#7dd3fc',
+                            400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1',
+                            800: '#075985', 900: '#0c4a6e',
                         }
                     }
                 }
@@ -59,21 +54,21 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        /* Light Mode Glass */
         html:not(.dark) .glass-morphism {
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.85);
             border-bottom: 1px solid #e2e8f0;
         }
 
         .gradient-text {
-            background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+            background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        /* Scrollbar */
+        /* Custom Scrollbar */
         ::-webkit-scrollbar {
-            width: 10px;
+            width: 8px;
         }
 
         ::-webkit-scrollbar-track {
@@ -82,14 +77,13 @@
 
         ::-webkit-scrollbar-thumb {
             background: #334155;
-            border-radius: 5px;
+            border-radius: 4px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
             background: #475569;
         }
 
-        /* Light Mode Scrollbar */
         html:not(.dark) ::-webkit-scrollbar-track {
             background: #f1f5f9;
         }
@@ -97,282 +91,388 @@
         html:not(.dark) ::-webkit-scrollbar-thumb {
             background: #cbd5e1;
         }
-
-        html:not(.dark) ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
     </style>
 </head>
 
 <body
-    class="bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-50 font-sans antialiased selection:bg-brand-500 selection:text-white transition-colors duration-300">
+    class="bg-gray-50 text-slate-900 dark:bg-slate-900 dark:text-slate-50 font-sans antialiased selection:bg-brand-500 selection:text-white transition-colors duration-300">
 
     <!-- Navigation -->
-    <nav class="fixed w-full z-50 glass-morphism border-b border-gray-200 dark:border-slate-800 transition-colors duration-300"
-        x-data="{ mobileMenuOpen: false }">
+    <nav class="fixed w-full z-50 glass-morphism transition-all duration-300" x-data="{ mobileMenuOpen: false }">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-24">
-                <div class="flex items-center gap-4">
-                    <img src="logo.png" alt="EnteLog Logo"
-                        class="h-16 w-auto object-contain dark:brightness-100 brightness-0 transition-all"
-                        onerror="this.src='https://placehold.co/200x50/1e293b/white?text=EnteLog'">
+            <div class="flex items-center justify-between h-20">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <img src="logo.png" alt="EnteLog"
+                        class="h-10 w-auto object-contain dark:brightness-100 brightness-0 transition-all"
+                        onerror="this.src='https://placehold.co/150x50/transparent/white?text=EnteLog'">
                     <span
-                        class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white uppercase transition-colors">ENTELOG</span>
+                        class="text-xl font-bold tracking-tight text-slate-900 dark:text-white uppercase">ENTELOG</span>
                 </div>
 
                 <!-- Desktop Menu -->
-                <div class="hidden md:block">
-                    <div class="ml-10 flex items-baseline space-x-8">
-                        <a href="#ozellikler"
-                            class="text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-500 transition-colors px-3 py-2 rounded-md text-sm font-medium">Özellikler</a>
-                        <a href="#analiz"
-                            class="text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-500 transition-colors px-3 py-2 rounded-md text-sm font-medium">Raporlama</a>
-                        <a href="#entegrasyon"
-                            class="text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-500 transition-colors px-3 py-2 rounded-md text-sm font-medium">Entegrasyon</a>
-                        <a href="#iletisim"
-                            class="text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-500 transition-colors px-3 py-2 rounded-md text-sm font-medium">İletişim</a>
-                    </div>
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#cozumler"
+                        class="text-sm font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Çözümlerimiz</a>
+                    <a href="#ozellestirme"
+                        class="text-sm font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Özel
+                        Geliştirme</a>
+                    <a href="#mobil"
+                        class="text-sm font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Mobil
+                        App</a>
+                    <a href="#iletisim"
+                        class="text-sm font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">İletişim</a>
                 </div>
 
+                <!-- Right Actions -->
                 <div class="hidden md:flex items-center gap-4">
-                    <!-- Theme Toggle Button -->
                     <button onclick="toggleTheme()"
-                        class="p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors focus:outline-none"
-                        title="Tema Değiştir">
-                        <!-- Sun Icon (Show in Dark) -->
-                        <i data-lucide="sun" class="w-6 h-6 hidden dark:block"></i>
-                        <!-- Moon Icon (Show in Light) -->
-                        <i data-lucide="moon" class="w-6 h-6 block dark:hidden"></i>
+                        class="p-2.5 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors focus:outline-none">
+                        <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+                        <i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
                     </button>
-
                     <a href="#iletisim"
-                        class="bg-brand-600 hover:bg-brand-500 text-white px-6 py-2.5 rounded-full text-sm font-medium transition-all shadow-lg shadow-brand-500/20 hover:shadow-brand-500/40">
-                        Demo Talep Et
+                        class="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-full text-sm font-semibold transition-all shadow-lg shadow-brand-500/20 hover:shadow-brand-500/30 hover:-translate-y-0.5">
+                        Teklif Alın
                     </a>
                 </div>
 
                 <!-- Mobile Menu Button -->
                 <div class="md:hidden flex items-center gap-4">
-                    <!-- Mobile Theme Toggle -->
-                    <button onclick="toggleTheme()"
-                        class="p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors focus:outline-none">
-                        <i data-lucide="sun" class="w-6 h-6 hidden dark:block"></i>
-                        <i data-lucide="moon" class="w-6 h-6 block dark:hidden"></i>
-                    </button>
-
-                    <button @click="mobileMenuOpen = !mobileMenuOpen" type="button"
-                        class="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white focus:outline-none">
-                        <i data-lucide="menu" class="w-8 h-8" x-show="!mobileMenuOpen"></i>
-                        <i data-lucide="x" class="w-8 h-8" x-show="mobileMenuOpen" style="display:none;"></i>
+                    <button onclick="toggleTheme()" class="p-2 rounded-full text-slate-500 dark:text-slate-400"><i
+                            data-lucide="sun" class="w-6 h-6 hidden dark:block"></i><i data-lucide="moon"
+                            class="w-6 h-6 block dark:hidden"></i></button>
+                    <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-slate-600 dark:text-slate-300">
+                        <i data-lucide="menu" class="w-7 h-7" x-show="!mobileMenuOpen"></i>
+                        <i data-lucide="x" class="w-7 h-7" x-show="mobileMenuOpen"></i>
                     </button>
                 </div>
             </div>
         </div>
 
         <!-- Mobile Menu Dropdown -->
-        <div class="md:hidden bg-white/95 dark:bg-slate-900/95 border-b border-gray-200 dark:border-slate-800 backdrop-blur transition-colors duration-300"
-            x-show="mobileMenuOpen" style="display: none;">
-            <div class="px-4 pt-2 pb-6 space-y-2">
-                <a href="#ozellikler" @click="mobileMenuOpen = false"
-                    class="block px-3 py-3 rounded-md text-base font-medium text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Özellikler</a>
-                <a href="#analiz" @click="mobileMenuOpen = false"
-                    class="block px-3 py-3 rounded-md text-base font-medium text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Raporlama</a>
-                <a href="#entegrasyon" @click="mobileMenuOpen = false"
-                    class="block px-3 py-3 rounded-md text-base font-medium text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Entegrasyon</a>
+        <div class="md:hidden bg-white/95 dark:bg-slate-900/95 border-b border-gray-200 dark:border-slate-800 backdrop-blur"
+            x-show="mobileMenuOpen" style="display: none;" x-transition>
+            <div class="px-4 pt-2 pb-6 space-y-3">
+                <a href="#cozumler" @click="mobileMenuOpen = false"
+                    class="block px-3 py-3 rounded-lg text-base font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Çözümlerimiz</a>
+                <a href="#ozellestirme" @click="mobileMenuOpen = false"
+                    class="block px-3 py-3 rounded-lg text-base font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Özel
+                    Geliştirme</a>
+                <a href="#mobil" @click="mobileMenuOpen = false"
+                    class="block px-3 py-3 rounded-lg text-base font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Mobil
+                    App</a>
                 <a href="#iletisim" @click="mobileMenuOpen = false"
-                    class="block px-3 py-3 rounded-md text-base font-medium text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">İletişim</a>
-                <div class="pt-4">
-                    <a href="#iletisim" @click="mobileMenuOpen = false"
-                        class="block w-full text-center bg-brand-600 text-white px-6 py-3 rounded-lg font-medium">
-                        Demo Talep Et
-                    </a>
-                </div>
+                    class="block w-full text-center bg-brand-600 text-white px-6 py-3 rounded-lg font-bold">Teklif
+                    Alın</a>
             </div>
         </div>
     </nav>
-    <!-- Alpine.js for Mobile Menu (Lightweight) -->
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
     <!-- Hero Section -->
     <section
         class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
-        <!-- Background Glow -->
-        <div class="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-            <div
-                class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-500/10 dark:bg-brand-500/20 rounded-full blur-[120px]">
+        <div class="absolute inset-0 z-0 opacity-40 pointer-events-none">
+            <div class="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-brand-500/20 rounded-full blur-[120px]">
             </div>
             <div
-                class="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-purple-500/10 dark:bg-purple-500/20 rounded-full blur-[120px]">
+                class="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-indigo-500/20 rounded-full blur-[100px]">
             </div>
         </div>
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
             <div data-aos="fade-up">
                 <span
-                    class="inline-block py-1 px-3 rounded-full bg-white border border-gray-200 text-brand-600 dark:bg-slate-800/50 dark:border-slate-700 dark:text-brand-400 text-sm font-medium mb-6 shadow-sm">
-                    🚀 v2.0 Yayında - Şimdi Daha Hızlı
+                    class="inline-flex items-center gap-2 py-1.5 px-4 rounded-full bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 text-brand-600 dark:text-brand-400 text-xs font-bold uppercase tracking-wider mb-8 shadow-sm">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    Web & Mobil Senkronize
                 </span>
                 <h1
-                    class="text-4xl md:text-6xl font-bold tracking-tight mb-6 leading-tight text-slate-900 dark:text-white transition-colors">
-                    İşletmenizi <span class="gradient-text">Geleceğe</span> Taşıyan <br />
-                    Akıllı ERP Çözümü
+                    class="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-8 text-slate-900 dark:text-white leading-tight">
+                    İşletmenizi <span class="gradient-text">Hazır Kalıplara</span> <br class="hidden md:block" />
+                    Sıkıştırmayın.
                 </h1>
                 <p
-                    class="text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed transition-colors">
-                    Stok takibi, cari yönetim ve finansal raporlama hiç bu kadar kolay olmamıştı.
-                    EnteLog ile işlerinizi tek panelden yönetin, zamandan tasarruf edin.
+                    class="text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto mb-10 leading-relaxed">
+                    EnteLog, standart bir ERP değil; <strong>sizin kurallarınıza göre çalışan</strong> bir iş ortağıdır.
+                    Stoktan finansa, DBS'den özel raporlamaya kadar, firmanıza özel modüllerle büyüyün.
                 </p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <a href="#iletisim"
-                        class="w-full sm:w-auto bg-brand-600 hover:bg-brand-500 text-white px-8 py-4 rounded-xl font-semibold transition-all shadow-xl shadow-brand-500/20 hover:scale-105 hover:shadow-brand-500/30 flex items-center justify-center gap-2">
-                        <span>Hemen Başlayın</span>
-                        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        class="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-xl shadow-brand-500/25 hover:scale-105 flex items-center justify-center gap-2">
+                        <span>Sizi Arayalım</span>
+                        <i data-lucide="phone-call" class="w-5 h-5"></i>
                     </a>
-                    <a href="#ozellikler"
-                        class="w-full sm:w-auto bg-white border border-gray-200 hover:bg-gray-50 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 dark:text-white px-8 py-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-sm">
-                        <i data-lucide="play-circle" class="w-5 h-5"></i>
-                        <span>Nasıl Çalışır?</span>
+                    <a href="#cozumler"
+                        class="w-full sm:w-auto bg-white hover:bg-gray-50 text-slate-700 border border-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white dark:border-slate-700 px-8 py-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2">
+                        <span>Neler Yapıyoruz?</span>
+                        <i data-lucide="chevron-down" class="w-5 h-5"></i>
                     </a>
                 </div>
             </div>
 
             <!-- Dashboard Preview -->
-            <div class="mt-20 relative" data-aos="fade-up" data-aos-delay="200">
+            <div class="mt-20 relative px-4" data-aos="fade-up" data-aos-delay="200">
                 <div
-                    class="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 transition-colors">
-                    <!-- Demos Image Placeholder -->
-                    <img src="dashboard.png" alt="EnteLog Panel" class="w-full rounded-2xl"
-                        onerror="this.src='https://placehold.co/1200x600/1e293b/white?text=EnteLog+Dashboard+Preview'">
+                    class="relative rounded-2xl overflow-hidden shadow-2xl ring-1 ring-slate-900/10 dark:ring-white/10 bg-slate-900">
+                    <img src="dashboard.png" alt="EnteLog Panel Arayüzü"
+                        class="w-full opacity-90 hover:opacity-100 transition-opacity"
+                        onerror="this.src='https://placehold.co/1400x800/1e293b/white?text=EnteLog+V2+Arayüzü'">
+                </div>
+                <!-- Floating Badge -->
+                <div class="hidden md:flex absolute -right-4 top-1/4 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-xl border border-gray-100 dark:border-slate-700 items-center gap-3 animate-bounce"
+                    style="animation-duration: 3s;">
+                    <div class="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg">
+                        <i data-lucide="smartphone" class="w-6 h-6 text-green-600 dark:text-green-400"></i>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Mobil Durumu</p>
+                        <p class="text-sm font-bold text-slate-900 dark:text-white">Yayında 🟢</p>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Features Section -->
-    <section id="ozellikler"
-        class="py-24 bg-white dark:bg-slate-900 transition-colors duration-300 border-t border-gray-100 dark:border-slate-800">
+    <!-- Why Custom? Section -->
+    <section id="ozellestirme"
+        class="py-24 bg-white dark:bg-slate-800 border-y border-gray-100 dark:border-slate-800 transition-colors">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16" data-aos="fade-up">
-                <h2 class="text-brand-600 dark:text-brand-500 font-semibold tracking-wide uppercase text-sm">Özellikler
-                </h2>
-                <h3 class="mt-2 text-3xl md:text-4xl font-bold text-slate-900 dark:text-white transition-colors">
-                    İhtiyacınız Olan Her Şey</h3>
-                <p class="mt-4 max-w-2xl text-lg text-slate-600 dark:text-slate-400 mx-auto transition-colors">
-                    Karmaşık süreçleri basitleştiren güçlü modüller ile kontrol sizde.
-                </p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <!-- Feature 1 -->
-                <div class="bg-gray-50 dark:bg-slate-800 p-8 rounded-2xl border border-gray-200 dark:border-slate-700 hover:border-brand-500/50 transition-all hover:shadow-lg group"
-                    data-aos="fade-up" data-aos-delay="100">
-                    <div
-                        class="w-14 h-14 bg-brand-100 dark:bg-brand-900/30 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <i data-lucide="bar-chart-3" class="w-7 h-7 text-brand-600 dark:text-brand-400"></i>
-                    </div>
-                    <h4 class="text-xl font-bold text-slate-900 dark:text-white mb-3 transition-colors">Gelişmiş
-                        Raporlama</h4>
-                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed transition-colors">
-                        Satışlarınızı, giderlerinizi ve kârlılığınızı anlık grafiklerle takip edin. Veriye dayalı
-                        kararlar alın.
-                    </p>
-                </div>
-
-                <!-- Feature 2 -->
-                <div class="bg-gray-50 dark:bg-slate-800 p-8 rounded-2xl border border-gray-200 dark:border-slate-700 hover:border-brand-500/50 transition-all hover:shadow-lg group"
-                    data-aos="fade-up" data-aos-delay="200">
-                    <div
-                        class="w-14 h-14 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <i data-lucide="box" class="w-7 h-7 text-purple-600 dark:text-purple-400"></i>
-                    </div>
-                    <h4 class="text-xl font-bold text-slate-900 dark:text-white mb-3 transition-colors">Stok Yönetimi
-                    </h4>
-                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed transition-colors">
-                        Ürün giriş-çıkışlarını barkod ile yönetin. Kritik stok uyarılarıyla satış kaçırmayın.
-                    </p>
-                </div>
-
-                <!-- Feature 3 -->
-                <div class="bg-gray-50 dark:bg-slate-800 p-8 rounded-2xl border border-gray-200 dark:border-slate-700 hover:border-brand-500/50 transition-all hover:shadow-lg group"
-                    data-aos="fade-up" data-aos-delay="300">
-                    <div
-                        class="w-14 h-14 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <i data-lucide="users" class="w-7 h-7 text-orange-600 dark:text-orange-400"></i>
-                    </div>
-                    <h4 class="text-xl font-bold text-slate-900 dark:text-white mb-3 transition-colors">Cari Takibi</h4>
-                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed transition-colors">
-                        Müşteri ve tedarikçi bakiyelerini tek ekrandan yönetin. Tahsilat günlerini asla unutmayın.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Integration Section -->
-    <section id="entegrasyon"
-        class="py-24 relative overflow-hidden bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
-        <div class="absolute inset-0 z-0 opacity-30">
-            <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-        </div>
-
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                 <div data-aos="fade-right">
-                    <h2 class="text-brand-600 dark:text-brand-500 font-semibold tracking-wide uppercase text-sm mb-2">
-                        Entegrasyon</h2>
-                    <h3 class="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-6 transition-colors">Tüm
-                        Sistemlerle Uyumlu</h3>
-                    <p class="text-lg text-slate-600 dark:text-slate-400 mb-8 leading-relaxed transition-colors">
-                        Mevcut e-ticaret siteniz, pazar yerleri veya muhasebe programınızla (Logo, Mikro, Netsis) tam
-                        entegre çalışır. Veri tekrarına son verin.
+                    <h2 class="text-brand-600 dark:text-brand-500 font-bold tracking-wide uppercase text-sm mb-3">SİZE
+                        ÖZEL ÇÖZÜMLER</h2>
+                    <h3 class="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-6">Paket Programların
+                        Sınırlarına Takılmayın.</h3>
+                    <p class="text-lg text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
+                        Her işletmenin kendine has bir yoğurt yiyişi vardır. Standart yazılımlar sizi kendi akışlarına
+                        uymaya zorlar.
+                        <strong>EnteLog</strong> ise işletmenizin akışına uyum sağlar.
                     </p>
-
-                    <ul class="space-y-4">
-                        <li class="flex items-center gap-3">
-                            <div class="bg-green-100 dark:bg-green-900/30 p-1.5 rounded-full"><i data-lucide="check"
-                                    class="w-5 h-5 text-green-600 dark:text-green-400"></i></div>
-                            <span class="text-slate-700 dark:text-slate-300 transition-colors">Pazaryeri Entegrasyonları
-                                (Trendyol, Hepsiburada)</span>
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="bg-green-100 dark:bg-green-900/30 p-1.5 rounded-full"><i data-lucide="check"
-                                    class="w-5 h-5 text-green-600 dark:text-green-400"></i></div>
-                            <span class="text-slate-700 dark:text-slate-300 transition-colors">E-Fatura & E-Arşiv
-                                Desteği</span>
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="bg-green-100 dark:bg-green-900/30 p-1.5 rounded-full"><i data-lucide="check"
-                                    class="w-5 h-5 text-green-600 dark:text-green-400"></i></div>
-                            <span class="text-slate-700 dark:text-slate-300 transition-colors">Banka & Sanal POS
-                                Entegrasyonu</span>
-                        </li>
-                    </ul>
+                    <div class="space-y-4">
+                        <div class="flex gap-4">
+                            <div class="mt-1">
+                                <div class="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg"><i data-lucide="layers"
+                                        class="w-5 h-5 text-blue-600 dark:text-blue-400"></i></div>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-900 dark:text-white">Modüler Yapı</h4>
+                                <p class="text-sm text-slate-600 dark:text-slate-400">Sadece ihtiyacınız olanı kullanın.
+                                    Gereksiz menülerle kaybolmayın.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="mt-1">
+                                <div class="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg"><i data-lucide="code-2"
+                                        class="w-5 h-5 text-purple-600 dark:text-purple-400"></i></div>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-900 dark:text-white">Size Özel Geliştirme</h4>
+                                <p class="text-sm text-slate-600 dark:text-slate-400">"Şöyle bir rapor alabilir miyiz?"
+                                    dediğinizde cevabımız "Evet, hemen ekleyelim" olur.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-
-                <div class="relative" data-aos="fade-left">
+                <div class="relative group" data-aos="fade-left">
                     <div
-                        class="absolute inset-0 bg-gradient-to-r from-brand-500 to-purple-600 rounded-3xl transform rotate-3 blur-lg opacity-30">
+                        class="absolute -inset-1 bg-gradient-to-r from-brand-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000">
                     </div>
                     <div
-                        class="relative bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-3xl p-8 shadow-2xl transition-colors">
-                        <!-- Code Snippet Mockup -->
-                        <div class="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-700 pb-4">
-                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                            <span class="ml-auto text-xs text-slate-400 font-mono">api_config.json</span>
+                        class="relative bg-slate-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-2xl p-8 shadow-xl">
+                        <div class="flex items-center gap-2 mb-6 border-b border-gray-200 dark:border-slate-800 pb-4">
+                            <span class="text-xs font-mono text-slate-400">custom_module_request.js</span>
                         </div>
-                        <pre class="font-mono text-sm text-slate-600 dark:text-slate-300 overflow-x-auto">
-{
-  "integration": {
-    "platform": "EnteLog_Pro",
-    "sync_mode": "realtime",
-    "modules": [
-      "stock", "sales", "finance"
-    ],
-    "status": "connected" <span class="text-green-500">✓</span>
-  }
-}</pre>
+                        <ul class="space-y-3 font-mono text-sm text-slate-600 dark:text-slate-300">
+                            <li class="flex items-center gap-2">
+                                <span class="text-green-500">✓</span> PDF Sipariş Analiz Modülü
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <span class="text-green-500">✓</span> Özel Depo Stok Görselleştirme
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <span class="text-green-500">✓</span> DBS Ödeme Planı Entegrasyonu
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <span class="text-green-500">✓</span> Çoklu Şube Ciro Raporu
+                            </li>
+                            <li class="flex items-center gap-2 opacity-50">
+                                <span class="text-brand-500">➜</span> Sizin İsteğiniz...
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Solutions Grid -->
+    <section id="cozumler" class="py-24 bg-gray-50 dark:bg-slate-900 transition-colors">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-brand-600 dark:text-brand-500 font-bold uppercase text-sm mb-2">360° YÖNETİM</h2>
+                <h3 class="text-3xl font-bold text-slate-900 dark:text-white">Bütünleşik Çözümlerimiz</h3>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Card 1 -->
+                <div
+                    class="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-gray-200 dark:border-slate-700 hover:shadow-xl transition-all group">
+                    <div
+                        class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-6 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                        <i data-lucide="bar-chart-4" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-xl font-bold text-slate-900 dark:text-white mb-3">Finansal Netlik</h4>
+                    <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                        Çek, senet, vade takibi, cari açık hesaplar ve anlık nakit akışı raporları tek ekranda.
+                    </p>
+                </div>
+
+                <!-- Card 2 -->
+                <div
+                    class="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-gray-200 dark:border-slate-700 hover:shadow-xl transition-all group">
+                    <div
+                        class="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center mb-6 text-orange-600 dark:text-orange-400 group-hover:scale-110 transition-transform">
+                        <i data-lucide="package-search" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-xl font-bold text-slate-900 dark:text-white mb-3">Akıllı Depo</h4>
+                    <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                        Hangi depoda ne kadar malınız var? Depo bazlı filtreleme ve stok yaşlandırma ile kayıpları
+                        önleyin.
+                    </p>
+                </div>
+
+                <!-- Card 3 -->
+                <div
+                    class="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-gray-200 dark:border-slate-700 hover:shadow-xl transition-all group">
+                    <div
+                        class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center mb-6 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform">
+                        <i data-lucide="credit-card" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-xl font-bold text-slate-900 dark:text-white mb-3">DBS Entegrasyonu</h4>
+                    <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                        Doğrudan Borçlandırma Sistemi (DBS) ödemelerinizi otomatikleştirin, bankalarla tam uyumlu
+                        çalışın.
+                    </p>
+                </div>
+
+                <!-- Card 4 -->
+                <div
+                    class="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-gray-200 dark:border-slate-700 hover:shadow-xl transition-all group">
+                    <div
+                        class="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center mb-6 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform">
+                        <i data-lucide="file-check" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-xl font-bold text-slate-900 dark:text-white mb-3">PDF Sipariş Analizi</h4>
+                    <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                        Tedarikçiden gelen PDF sipariş/iskonto listelerini sisteme yükleyin, otomatik analiz edip
+                        işleyin.
+                    </p>
+                </div>
+
+                <!-- Card 5 -->
+                <div
+                    class="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-gray-200 dark:border-slate-700 hover:shadow-xl transition-all group">
+                    <div
+                        class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center mb-6 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
+                        <i data-lucide="zap" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-xl font-bold text-slate-900 dark:text-white mb-3">Real-Time (Anlık) Akış</h4>
+                    <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                        Web'de yapılan işlem anında mobilde, mobilde kesilen fatura anında web'de. Gecikme yok.
+                    </p>
+                </div>
+
+                <!-- Card 6 -->
+                <div
+                    class="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-gray-200 dark:border-slate-700 hover:shadow-xl transition-all group">
+                    <div
+                        class="w-12 h-12 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg flex items-center justify-center mb-6 text-cyan-600 dark:text-cyan-400 group-hover:scale-110 transition-transform">
+                        <i data-lucide="smartphone" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-xl font-bold text-slate-900 dark:text-white mb-3">Yerli Mobil Uygulama</h4>
+                    <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                        Webview değil, %100 Native (React Native) mobil uygulama ile ofisiniz artık cebinizde.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Mobile App Showcase -->
+    <section id="mobil" class="py-24 bg-slate-900 text-white overflow-hidden relative">
+        <!-- Background Decor -->
+        <div class="absolute top-0 right-0 w-1/2 h-full bg-brand-900/20 blur-3xl pointer-events-none"></div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col lg:flex-row items-center gap-16">
+                <div class="lg:w-1/2" data-aos="fade-right">
+                    <h2 class="text-brand-400 font-bold uppercase text-sm mb-2">MOBİL ÖZGÜRLÜK</h2>
+                    <h3 class="text-4xl md:text-5xl font-bold mb-6">Ofise Bağlı Kalmayın. İşinizi Cebinizden Yönetin.
+                    </h3>
+                    <p class="text-slate-300 text-lg mb-8 leading-relaxed">
+                        Patron veya saha personeli olmanız fark etmez. Stokları kontrol edin, sipariş onaylayın veya
+                        cari bakiyeleri anlık görün.
+                    </p>
+                    <ul class="space-y-4 mb-8">
+                        <li class="flex items-center gap-3">
+                            <i data-lucide="check-circle-2" class="text-green-400 w-6 h-6"></i>
+                            <span class="text-slate-200">iOS ve Android Uyumlu</span>
+                        </li>
+                        <li class="flex items-center gap-3">
+                            <i data-lucide="check-circle-2" class="text-green-400 w-6 h-6"></i>
+                            <span class="text-slate-200">Barkod Okuma Özelliği</span>
+                        </li>
+                        <li class="flex items-center gap-3">
+                            <i data-lucide="check-circle-2" class="text-green-400 w-6 h-6"></i>
+                            <span class="text-slate-200">Anlık Bildirimler</span>
+                        </li>
+                    </ul>
+                    <div class="flex gap-4">
+                        <button
+                            class="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-200 transition">
+                            <i data-lucide="apple" class="w-6 h-6"></i> App Store
+                        </button>
+                        <button
+                            class="bg-transparent border border-slate-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-800 transition">
+                            <i data-lucide="play" class="w-6 h-6"></i> Google Play
+                        </button>
+                    </div>
+                </div>
+                <div class="lg:w-1/2 relative" data-aos="fade-up">
+                    <!-- Phone Mockup -->
+                    <div
+                        class="relative mx-auto border-gray-800 dark:border-gray-800 bg-gray-800 border-[14px] rounded-[2.5rem] h-[600px] w-[300px] shadow-xl">
+                        <div class="h-[32px] w-[3px] bg-gray-800 absolute -left-[17px] top-[72px] rounded-l-lg"></div>
+                        <div class="h-[46px] w-[3px] bg-gray-800 absolute -left-[17px] top-[124px] rounded-l-lg"></div>
+                        <div class="h-[46px] w-[3px] bg-gray-800 absolute -left-[17px] top-[178px] rounded-l-lg"></div>
+                        <div class="h-[64px] w-[3px] bg-gray-800 absolute -right-[17px] top-[142px] rounded-r-lg"></div>
+                        <div class="rounded-[2rem] overflow-hidden w-full h-full bg-slate-800 relative"
+                            x-data="{ activeSlide: 1 }"
+                            x-init="setInterval(() => { activeSlide = activeSlide === 6 ? 1 : activeSlide + 1 }, 4000)">
+
+                            <template x-for="i in 6">
+                                <img :src="`picture/${i}.jpeg`" class="absolute inset-0 w-full h-full object-cover"
+                                    x-show="activeSlide === i" x-transition:enter="transition ease-out duration-1000"
+                                    x-transition:enter-start="opacity-0 transform scale-105"
+                                    x-transition:enter-end="opacity-100 transform scale-100"
+                                    x-transition:leave="transition ease-in duration-1000"
+                                    x-transition:leave-start="opacity-100 transform scale-100"
+                                    x-transition:leave-end="opacity-0 transform scale-95"
+                                    alt="EnteLog Mobil Uygulama Ekranı">
+                            </template>
+
+                            <!-- Indicators -->
+                            <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-10">
+                                <template x-for="i in 6">
+                                    <button @click="activeSlide = i"
+                                        class="w-2 h-2 rounded-full transition-all duration-300"
+                                        :class="activeSlide === i ? 'bg-white w-4' : 'bg-white/40 hover:bg-white/60'">
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -380,265 +480,344 @@
     </section>
 
     <!-- FAQ Section -->
-    <section
-        class="py-24 bg-white dark:bg-slate-800/30 border-t border-gray-100 dark:border-slate-800 transition-colors duration-300">
+    <section class="py-24 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-800">
         <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl font-bold mb-4 text-slate-900 dark:text-white transition-colors">Sıkça Sorulan
-                    Sorular</h2>
-                <p class="text-slate-600 dark:text-slate-400 transition-colors">Aklınıza takılan soruların cevapları
-                    burada.</p>
-            </div>
-
+            <h2 class="text-3xl font-bold text-center text-slate-900 dark:text-white mb-12">Sıkça Sorulan Sorular</h2>
             <div class="space-y-4" x-data="{ selected: null }">
-                <!-- FAQ Item 1 -->
-                <div
-                    class="bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden transition-colors">
-                    <button class="w-full px-6 py-4 text-left flex justify-between items-center focus:outline-none"
+                <!-- FAQ 1 -->
+                <div class="bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl">
+                    <button
+                        class="w-full px-6 py-5 text-left flex justify-between items-center font-semibold text-slate-800 dark:text-white"
                         onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('svg').classList.toggle('rotate-180')">
-                        <span class="font-medium text-slate-900 dark:text-white transition-colors">Kurulum ne kadar
-                            sürer?</span>
-                        <i data-lucide="chevron-down"
-                            class="w-5 h-5 text-slate-500 transition-transform duration-300"></i>
+                        Mevcut yazılımımdan (Logo/Netsis) verilerimi aktarabilir miyim?
+                        <i data-lucide="chevron-down" class="w-5 h-5 transition-transform"></i>
                     </button>
                     <div
-                        class="hidden px-6 pb-4 text-slate-600 dark:text-slate-400 text-sm border-t border-gray-200 dark:border-slate-800/50 pt-4 transition-colors">
-                        EnteLog bulut tabanlı bir sistemdir. Kurulum gerektirmez. Size verilen kullanıcı adı ve şifre
-                        ile anında kullanmaya başlayabilirsiniz.
+                        class="hidden px-6 pb-5 text-slate-600 dark:text-slate-400 text-sm border-t border-gray-200 dark:border-slate-800 pt-4">
+                        Evet. EnteLog, mevcut ERP sisteminizle (Logo, Mikro, Netsis vb.) %100 entegre çalışabilir.
+                        Verilerinizi bozmadan, üzerine ek özellikler katarak çalışmaya devam edersiniz.
                     </div>
                 </div>
-
-                <!-- FAQ Item 2 -->
-                <div
-                    class="bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden transition-colors">
-                    <button class="w-full px-6 py-4 text-left flex justify-between items-center focus:outline-none"
+                <!-- FAQ 2 -->
+                <div class="bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl">
+                    <button
+                        class="w-full px-6 py-5 text-left flex justify-between items-center font-semibold text-slate-800 dark:text-white"
                         onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('svg').classList.toggle('rotate-180')">
-                        <span class="font-medium text-slate-900 dark:text-white transition-colors">Mevcut verilerim
-                            silinir mi?</span>
-                        <i data-lucide="chevron-down"
-                            class="w-5 h-5 text-slate-500 transition-transform duration-300"></i>
+                        Özel bir modül/özellik isteyebilir miyim?
+                        <i data-lucide="chevron-down" class="w-5 h-5 transition-transform"></i>
                     </button>
                     <div
-                        class="hidden px-6 pb-4 text-slate-600 dark:text-slate-400 text-sm border-t border-gray-200 dark:border-slate-800/50 pt-4 transition-colors">
-                        Hayır. EnteLog, mevcut ERP sisteminizle (Logo vb.) entegre çalışır. Verilerinizi sadece okur ve
-                        işler, mevcut kayıtlarınızı bozmaz veya silmez.
-                    </div>
-                </div>
-
-                <!-- FAQ Item 3 -->
-                <div
-                    class="bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden transition-colors">
-                    <button class="w-full px-6 py-4 text-left flex justify-between items-center focus:outline-none"
-                        onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('svg').classList.toggle('rotate-180')">
-                        <span class="font-medium text-slate-900 dark:text-white transition-colors">Mobilden kullanabilir
-                            miyim?</span>
-                        <i data-lucide="chevron-down"
-                            class="w-5 h-5 text-slate-500 transition-transform duration-300"></i>
-                    </button>
-                    <div
-                        class="hidden px-6 pb-4 text-slate-600 dark:text-slate-400 text-sm border-t border-gray-200 dark:border-slate-800/50 pt-4 transition-colors">
-                        Kesinlikle. EnteLog tüm akıllı telefon ve tabletlerle %100 uyumludur. İster ofiste, ister sahada
-                        işlerinizi cebinizden yönetebilirsiniz.
+                        class="hidden px-6 pb-5 text-slate-600 dark:text-slate-400 text-sm border-t border-gray-200 dark:border-slate-800 pt-4">
+                        Kesinlikle. Bizim en büyük gücümüz bu. Sizi standart kalıplara sokmuyoruz. Firmanıza özel rapor,
+                        özel giriş ekranı veya iş akışı geliştiriyoruz.
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Call to Action & Contact -->
+    <!-- Contact Form -->
     <section id="iletisim"
-        class="py-24 relative overflow-hidden bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
-        <div class="max-w-4xl mx-auto px-4 relative z-10 text-center">
-            <h2 class="text-4xl font-bold text-slate-900 dark:text-white mb-6 transition-colors">Sektörünüzün Lideri
-                Olun</h2>
-            <p class="text-xl text-slate-600 dark:text-slate-400 mb-10 transition-colors">
-                EnteLog'un avantajlı dünyasıyla tanışmak ve işletmenize özel teklif almak için hemen formu doldurun.
-                Uzman ekibimiz sizi 15 dakika içinde arasın.
+        class="py-24 relative bg-gray-50 dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800">
+        <div class="max-w-4xl mx-auto px-4 z-10 relative text-center">
+            <h2 class="text-4xl font-bold text-slate-900 dark:text-white mb-6">Tanışalım, İşinizi Büyütelim.</h2>
+            <p class="text-lg text-slate-600 dark:text-slate-400 mb-10 max-w-2xl mx-auto">
+                Bize ihtiyaçlarınızı yazın, size özel çözüm ve fiyat teklifimizi sunalım.
             </p>
 
             <div
-                class="bg-white dark:bg-slate-800 rounded-3xl p-8 md:p-12 shadow-2xl border border-gray-200 dark:border-slate-700 text-left transition-colors">
+                class="bg-white dark:bg-slate-800 rounded-3xl p-8 md:p-12 shadow-2xl border border-gray-100 dark:border-slate-700 text-left">
                 <form action="send_mail.php" method="POST" class="space-y-6" onsubmit="submitForm(event)">
-                    <div>
-                        <label
-                            class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 transition-colors">Adınız
-                            Soyadınız</label>
-                        <input type="text" name="name" placeholder="Örn: Ahmet Yılmaz" required
-                            class="w-full bg-gray-50 border border-gray-200 text-slate-900 dark:bg-slate-900 dark:border-slate-700 rounded-lg px-4 py-3 dark:text-white focus:outline-none focus:border-brand-500 transition-colors">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Adınız
+                                Soyadınız</label>
+                            <input type="text" name="name" placeholder="Ad Soyad" required
+                                class="w-full h-12 rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 px-4 text-slate-900 dark:text-white focus:border-brand-500 focus:ring-0">
+                        </div>
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Telefon</label>
+                            <input type="tel" name="phone" id="phoneInput" placeholder="(5__) ___ __ __" maxlength="15"
+                                required
+                                class="w-full h-12 rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 px-4 text-slate-900 dark:text-white focus:border-brand-500 focus:ring-0">
+                        </div>
                     </div>
                     <div>
-                        <label
-                            class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 transition-colors">E-posta
-                            Adresiniz</label>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">E-posta</label>
                         <input type="email" name="email" placeholder="ornek@sirket.com" required
-                            class="w-full bg-gray-50 border border-gray-200 text-slate-900 dark:bg-slate-900 dark:border-slate-700 rounded-lg px-4 py-3 dark:text-white focus:outline-none focus:border-brand-500 transition-colors">
+                            class="w-full h-12 rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 px-4 text-slate-900 dark:text-white focus:border-brand-500 focus:ring-0">
                     </div>
-                    <div>
-                        <label
-                            class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 transition-colors">Telefon
-                            Numaranız</label>
-                        <input type="tel" name="phone" id="phoneInput" placeholder="(5__) ___ __ __" maxlength="15"
-                            required
-                            class="w-full bg-gray-50 border border-gray-200 text-slate-900 dark:bg-slate-900 dark:border-slate-700 rounded-lg px-4 py-3 dark:text-white focus:outline-none focus:border-brand-500 transition-colors">
-                    </div>
-                    <script>
-                        document.getElementById('phoneInput').addEventListener('input', function (e) {
-                            var x = e.target.value.replace(/\D/g, '').match(/(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
-                            e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? ' ' + x[3] : '') + (x[4] ? ' ' + x[4] : '');
-                        });
-                    </script>
                     <button type="submit" id="submitBtn"
-                        class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-4 rounded-lg transition-all shadow-lg hover:shadow-brand-500/25 flex items-center justify-center gap-2">
-                        <span>Bize Ulaşın</span>
-                        <i data-lucide="send" class="w-5 h-5"></i>
+                        class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold h-14 rounded-xl shadow-lg hover:shadow-brand-500/30 transition-all flex items-center justify-center gap-2 text-lg">
+                        <span>Gönder</span> <i data-lucide="send" class="w-5 h-5"></i>
                     </button>
-                    <!-- Bildirim Alanı -->
-                    <div id="responseMessage" class="hidden rounded-lg p-4 text-center text-sm font-medium"></div>
+                    <!-- Bildirim -->
+                    <div id="responseMessage" class="hidden p-4 rounded-lg text-center text-sm font-medium mt-4"></div>
                 </form>
             </div>
-
-            <p class="mt-8 text-sm text-slate-500 dark:text-slate-500 transition-colors">
-                <i data-lucide="lock" class="w-4 h-4 inline mr-1"></i>
-                Bilgileriniz 256-bit SSL ile korunmaktadır ve 3. şahıslarla asla paylaşılmaz.
-            </p>
         </div>
     </section>
 
     <!-- Footer -->
-    <footer
-        class="bg-gray-50 dark:bg-slate-900 py-12 text-center text-slate-500 dark:text-slate-500 text-sm border-t border-gray-200 dark:border-slate-800 transition-colors duration-300">
-        <div class="mb-4">
-            <span
-                class="font-bold text-slate-900 dark:text-slate-200 text-lg uppercase transition-colors">Entelog</span>
-        </div>
-        <p>&copy; 2026 Entelog. Tüm hakları saklıdır.</p>
+    <footer class="bg-white dark:bg-slate-950 py-12 border-t border-gray-200 dark:border-slate-800 text-center">
+        <span class="text-xl font-bold uppercase text-slate-900 dark:text-white tracking-widest">EnteLog</span>
+        <p class="text-slate-500 text-sm mt-4">&copy; 2026. Tüm hakları saklıdır.</p>
     </footer>
 
-    <!-- WhatsApp Button -->
-    <a href="javascript:void(0)" onclick="openWhatsApp()"
-        class="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-lg transition-all hover:scale-110 flex items-center justify-center group">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8">
-            <path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"></path>
-        </svg>
-        <span
-            class="absolute right-full mr-4 bg-white text-slate-900 px-3 py-1 rounded-lg text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-md pointer-events-none">
-            WhatsApp'tan Yazın
-        </span>
-    </a>
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+    </style>
 
-    <!-- Cookie Consent -->
+    <!-- AI Chat Assistant -->
+    <div x-data="chatBot()" class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4" x-cloak>
+        <!-- Chat Window -->
+        <div x-show="isOpen" x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 translate-y-10 scale-95"
+            x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+            x-transition:leave-end="opacity-0 translate-y-10 scale-95"
+            class="bg-white dark:bg-slate-900 w-[350px] h-[500px] rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 flex flex-col overflow-hidden">
+
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-brand-600 to-indigo-600 p-4 flex justify-between items-center text-white">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                        <i data-lucide="bot" class="w-6 h-6 text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm">EnteLog AI</h3>
+                        <div class="flex items-center gap-1.5 opacity-80">
+                            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                            <span class="text-xs">Çevrimiçi</span>
+                        </div>
+                    </div>
+                </div>
+                <button @click="isOpen = false" class="hover:bg-white/20 p-1.5 rounded-lg transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Messages Area -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950" id="chatContainer">
+                <!-- Welcome Message -->
+                <div class="flex gap-3">
+                    <div
+                        class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/50 flex-shrink-0 flex items-center justify-center">
+                        <i data-lucide="bot" class="w-5 h-5 text-brand-600 dark:text-brand-400"></i>
+                    </div>
+                    <div
+                        class="bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 max-w-[85%]">
+                        Merhaba! Ben EnteLog yapay zeka asistanı. Projemiz, modüllerimiz veya size özel çözümlerimiz
+                        hakkında her şeyi sorabilirsiniz. 👋
+                    </div>
+                </div>
+
+                <!-- Messages Loop -->
+                <template x-for="(msg, index) in messages" :key="index">
+                    <div class="flex gap-3" :class="msg.role === 'user' ? 'flex-row-reverse' : ''">
+                        <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center"
+                            :class="msg.role === 'user' ? 'bg-indigo-100 dark:bg-indigo-900/50' : 'bg-brand-100 dark:bg-brand-900/50'">
+                            <i :data-lucide="msg.role === 'user' ? 'user' : 'bot'" class="w-5 h-5"
+                                :class="msg.role === 'user' ? 'text-indigo-600 dark:text-indigo-400' : 'text-brand-600 dark:text-brand-400'"></i>
+                        </div>
+                        <div class="p-3 rounded-2xl shadow-sm border text-sm max-w-[85%]"
+                            :class="msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none border-transparent' : 'bg-white dark:bg-slate-800 rounded-tl-none border-gray-100 dark:border-slate-700 text-slate-700 dark:text-slate-300'">
+                            <p x-text="msg.content"></p>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Loading State -->
+                <div x-show="isLoading" class="flex gap-3">
+                    <div
+                        class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/50 flex-shrink-0 flex items-center justify-center">
+                        <i data-lucide="bot" class="w-5 h-5 text-brand-600 dark:text-brand-400"></i>
+                    </div>
+                    <div
+                        class="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-slate-700 w-16">
+                        <div class="flex gap-1">
+                            <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce"
+                                style="animation-delay: 0ms"></span>
+                            <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce"
+                                style="animation-delay: 150ms"></span>
+                            <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce"
+                                style="animation-delay: 300ms"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-4 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800">
+                <form @submit.prevent="sendMessage" class="flex gap-2">
+                    <input type="text" x-model="inputText" placeholder="Bir soru sorun..."
+                        class="flex-1 bg-gray-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-500 dark:text-white dark:placeholder-slate-500"
+                        :disabled="isLoading">
+                    <button type="submit"
+                        class="bg-brand-600 hover:bg-brand-700 text-white p-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        :disabled="isLoading || !inputText.trim()">
+                        <i data-lucide="send-horizontal" class="w-5 h-5"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Toggle Button -->
+        <button @click="toggleChat"
+            class="bg-brand-600 hover:bg-brand-700 text-white p-4 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center relative group">
+            <span x-show="!isOpen"
+                class="absolute -top-10 right-0 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs py-1 px-3 rounded-lg shadow-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                Yapay Zeka Asistanı
+            </span>
+            <i data-lucide="message-square-more" class="w-8 h-8" x-show="!isOpen"></i>
+            <i data-lucide="chevron-down" class="w-8 h-8" x-show="isOpen"></i>
+        </button>
+    </div>
+
+    <!-- Scripts (Cookie, WhatsApp, Form, Phone Mask) -->
+
     <div id="cookieBanner"
-        class="fixed bottom-0 left-0 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-gray-200 dark:border-slate-800 p-4 z-50 transform translate-y-full transition-transform duration-500">
+        class="fixed bottom-0 w-full bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 p-4 z-50 translate-y-full transition-transform duration-500 shadow-[0_-5px_20px_rgba(0,0,0,0.1)]">
         <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p class="text-sm text-slate-600 dark:text-slate-400 text-center sm:text-left transition-colors">
-                Size daha iyi hizmet sunmak için çerezleri kullanıyoruz. Sitemizi kullanarak çerez politikamızı kabul
-                etmiş olursunuz.
-            </p>
+            <p class="text-sm text-slate-600 dark:text-slate-300">Size daha iyi hizmet sunmak için çerezleri
+                kullanıyoruz.</p>
             <div class="flex gap-3">
                 <button onclick="acceptCookies()"
-                    class="bg-brand-600 hover:bg-brand-500 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
-                    Kabul Et
-                </button>
+                    class="bg-brand-600 text-white px-6 py-2 rounded-lg text-sm font-bold shadow hover:bg-brand-700">Kabul
+                    Et</button>
                 <button onclick="closeCookieBanner()"
-                    class="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white px-4 py-2 text-sm font-medium transition-colors">
-                    Reddet
-                </button>
+                    class="text-slate-500 hover:text-slate-800 dark:hover:text-white px-4 py-2 text-sm font-medium">Reddet</button>
             </div>
         </div>
     </div>
 
     <script>
-        // WhatsApp Logic
-        function openWhatsApp() {
-            var phone = '905533912286';
-            var text = encodeURIComponent('Merhaba EnteLog hakkında bilgi almak istiyorum.');
-
-            var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-            if (isMobile) {
-                window.open('https://api.whatsapp.com/send?phone=' + phone + '&text=' + text, '_blank');
-            } else {
-                window.open('https://web.whatsapp.com/send?phone=' + phone + '&text=' + text, 'whatsapp_entelog');
-            }
-        }
-
-        // Initialize Lucide Icons
         lucide.createIcons();
+        AOS.init({ duration: 800, once: true, offset: 60 });
 
-        // Initialize AOS Animation Library
-        AOS.init({
-            duration: 800,
-            once: true,
-            offset: 50,
+        // Phone Mask
+        document.getElementById('phoneInput').addEventListener('input', function (e) {
+            var x = e.target.value.replace(/\D/g, '').match(/(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
+            e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? ' ' + x[3] : '') + (x[4] ? ' ' + x[4] : '');
         });
 
-        // Cookie Logic
-        function acceptCookies() {
-            localStorage.setItem('cookieConsent', 'true');
-            document.getElementById('cookieBanner').classList.add('translate-y-full');
-        }
-        function closeCookieBanner() {
-            document.getElementById('cookieBanner').classList.add('translate-y-full');
+        // WhatsApp
+        function openWhatsApp() {
+            var phone = '905533912286';
+            var text = encodeURIComponent('Merhaba, EnteLog çözümleri hakkında bilgi almak istiyorum.');
+            var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            window.open(isMobile ? 'https://api.whatsapp.com/send?phone=' + phone + '&text=' + text : 'https://web.whatsapp.com/send?phone=' + phone + '&text=' + text, isMobile ? '_blank' : 'whatsapp_entelog');
         }
 
-        setTimeout(() => {
-            if (!localStorage.getItem('cookieConsent')) {
-                document.getElementById('cookieBanner').classList.remove('translate-y-full');
-            }
-        }, 2000);
+        // Cookie
+        function acceptCookies() { localStorage.setItem('cookieConsent', 'true'); document.getElementById('cookieBanner').classList.add('translate-y-full'); }
+        function closeCookieBanner() { document.getElementById('cookieBanner').classList.add('translate-y-full'); }
+        setTimeout(() => { if (!localStorage.getItem('cookieConsent')) document.getElementById('cookieBanner').classList.remove('translate-y-full'); }, 1500);
 
-        // Form Gönderme (AJAX)
+        // Form Submit
         function submitForm(e) {
             e.preventDefault();
             const form = e.target;
             const btn = document.getElementById('submitBtn');
             const msg = document.getElementById('responseMessage');
 
-            // Loading State
-            const originalBtnText = btn.innerHTML;
+            const originalText = btn.innerHTML;
             btn.disabled = true;
-            btn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Gönderiliyor...';
+            btn.innerHTML = 'Gönderiliyor...';
 
-            const formData = new FormData(form);
-
-            fetch(form.action, {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => response.text())
+            fetch(form.action, { method: 'POST', body: new FormData(form) })
+                .then(r => r.text())
                 .then(text => {
-                    let data;
-                    try {
-                        data = JSON.parse(text);
-                    } catch (e) {
-                        console.error('Server JSON hatası:', text);
-                        data = { success: false, message: 'Sunucudan geçersiz yanıt alındı: ' + text.substring(0, 50) + '...' };
-                    }
-
-                    msg.classList.remove('hidden', 'bg-green-500/20', 'text-green-400', 'bg-red-500/20', 'text-red-400');
-
+                    let data; try { data = JSON.parse(text); } catch (e) { data = { success: false, message: text }; }
+                    msg.classList.remove('hidden', 'bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700');
                     if (data.success) {
-                        msg.classList.add('bg-green-500/20', 'text-green-400'); // TODO: Light mode colors for success
-                        msg.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5 inline mr-2"></i>' + data.message;
+                        msg.classList.add('bg-green-100', 'text-green-700', 'dark:bg-green-900/30', 'dark:text-green-400');
+                        msg.innerHTML = 'Teşekkürler! Talebiniz alındı, en kısa sürede dönüş yapacağız.';
                         form.reset();
                     } else {
-                        msg.classList.add('bg-red-500/20', 'text-red-400');
-                        msg.innerHTML = '<i data-lucide="alert-circle" class="w-5 h-5 inline mr-2"></i>' + data.message;
+                        msg.classList.add('bg-red-100', 'text-red-700', 'dark:bg-red-900/30', 'dark:text-red-400');
+                        msg.innerHTML = 'Hata: ' + data.message;
                     }
+                })
+                .finally(() => { btn.disabled = false; btn.innerHTML = originalText; lucide.createIcons(); });
+        }
+        // Chat Bot Logic
+        function chatBot() {
+            return {
+                isOpen: false,
+                inputText: '',
+                isLoading: false,
+                messages: [], // { role: 'user' | 'assistant', content: '...' }
 
-                    lucide.createIcons();
-                })
-                .catch(error => {
-                    console.error('Fetch Error:', error);
-                    msg.classList.remove('hidden');
-                    msg.classList.add('bg-red-500/20', 'text-red-400');
-                    msg.innerHTML = 'Bir bağlantı hatası oluştu. Lütfen tekrar deneyin.';
-                })
-                .finally(() => {
-                    btn.disabled = false;
-                    btn.innerHTML = originalBtnText;
-                });
+                toggleChat() {
+                    this.isOpen = !this.isOpen;
+                    if (this.isOpen) {
+                        setTimeout(() => {
+                            const container = document.getElementById('chatContainer');
+                            container.scrollTop = container.scrollHeight;
+                        }, 100);
+                    }
+                },
+
+                async sendMessage() {
+                    if (!this.inputText.trim()) return;
+
+                    const userMsg = this.inputText;
+                    this.messages.push({ role: 'user', content: userMsg });
+                    this.inputText = '';
+                    this.isLoading = true;
+
+                    // Scroll to bottom
+                    this.$nextTick(() => {
+                        const container = document.getElementById('chatContainer');
+                        container.scrollTop = container.scrollHeight;
+                    });
+
+                    try {
+                        const response = await fetch('chat.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                message: userMsg,
+                                history: this.messages.slice(-5)
+                            })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP Hatası: ${response.status}`);
+                        }
+
+                        const text = await response.text();
+                        let data;
+                        try {
+                            data = JSON.parse(text);
+                        } catch (e) {
+                            console.error('Sunucu Yanıtı:', text);
+                            throw new Error('Sunucu geçerli bir JSON yanıtı döndürmedi.');
+                        }
+
+                        if (data.reply) {
+                            this.messages.push({ role: 'assistant', content: data.reply });
+                        } else if (data.error) {
+                            this.messages.push({ role: 'assistant', content: 'Hata: ' + data.error });
+                        }
+
+                    } catch (error) {
+                        console.error('Chat Error:', error);
+                        this.messages.push({ role: 'assistant', content: 'Bir sorun oluştu: ' + error.message });
+                    } finally {
+                        this.isLoading = false;
+                        this.$nextTick(() => {
+                            const container = document.getElementById('chatContainer');
+                            container.scrollTop = container.scrollHeight;
+                        });
+                    }
+                }
+            }
         }
     </script>
 </body>

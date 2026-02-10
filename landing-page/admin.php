@@ -8,6 +8,7 @@ header('Content-Type: text/html; charset=utf-8');
 $admin_user = "admin";
 $admin_pass = "entelog2026"; 
 $json_file = 'messages.json';
+$config_file = 'config.json';
 // ==========================================================================
 
 // Çıkış İşlemi
@@ -31,24 +32,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username'])) {
 // Oturum Kontrolü
 $is_logged_in = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
 
+// Varsayılan Ayarlar
+$current_config = [
+    'ai_provider' => 'gemini',
+    'ai_api_key' => '',
+    'ai_model' => 'gemini-1.5-flash'
+];
+
+if (file_exists($config_file)) {
+    $loaded_config = json_decode(file_get_contents($config_file), true);
+    if (is_array($loaded_config)) {
+        $current_config = array_merge($current_config, $loaded_config);
+    }
+}
+
 // --------------------------------------------------------------------------
 // API ACTIONS (AJAX)
 // --------------------------------------------------------------------------
 if ($is_logged_in && isset($_GET['action'])) {
     
-    // Mesajları Getir (Helper)
     function getMessages($file) {
         if (!file_exists($file)) return [];
         $data = json_decode(file_get_contents($file), true);
         return is_array($data) ? $data : [];
     }
 
-    // Mesaj Kaydet (Helper)
     function saveMessages($file, $data) {
         file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     }
 
-    // 1. DURUM GÜNCELLE
     if ($_GET['action'] == 'update_status' && isset($_POST['id']) && isset($_POST['status'])) {
         $messages = getMessages($json_file);
         $updated = false;
@@ -68,7 +80,6 @@ if ($is_logged_in && isset($_GET['action'])) {
         exit;
     }
 
-    // 2. MESAJ SİL
     if ($_GET['action'] == 'delete_message' && isset($_POST['id'])) {
         $messages = getMessages($json_file);
         $new_messages = [];
@@ -76,7 +87,7 @@ if ($is_logged_in && isset($_GET['action'])) {
         foreach ($messages as $msg) {
             if ($msg['id'] == $_POST['id']) {
                 $deleted = true;
-                continue; // Bu mesajı atla (sil)
+                continue;
             }
             $new_messages[] = $msg;
         }
@@ -89,133 +100,77 @@ if ($is_logged_in && isset($_GET['action'])) {
         exit;
     }
 
-    // 3. EXCEL (CSV) İNDİR
     if ($_GET['action'] == 'export_csv') {
         $messages = getMessages($json_file);
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename=demo_talepleri_' . date('Y-m-d') . '.csv');
         $output = fopen('php://output', 'w');
-        
-        // BOM for Excel UTF-8
         fputs($output, "\xEF\xBB\xBF");
-        
-        // Başlıklar
         fputcsv($output, ['ID', 'Tarih', 'Ad Soyad', 'E-posta', 'Telefon', 'Durum', 'IP']);
-        
         foreach ($messages as $msg) {
-            fputcsv($output, [
-                $msg['id'],
-                $msg['date'],
-                $msg['name'],
-                $msg['email'],
-                $msg['phone'],
-                isset($msg['status']) ? $msg['status'] : 'Yeni',
-                $msg['ip']
-            ]);
+           fputcsv($output, [$msg['id'], $msg['date'], $msg['name'], $msg['email'], $msg['phone'], $msg['status'] ?? 'Yeni', $msg['ip']]);
         }
         fclose($output);
         exit;
     }
 
-    // 4. IMAP BODY GETİR
-    if ($_GET['action'] == 'get_body' && isset($_GET['id'])) {
-        $msg_id = intval($_GET['id']);
-        $mailbox = "{mail.kurumsaleposta.com:993/imap/ssl}INBOX";
-        $username = "info@entelog.com.tr";
-        $password = "Sg_1.E5hdwQ8W_=2";
-    
-        $inbox = @imap_open($mailbox, $username, $password);
-        if ($inbox) {
-            $structure = imap_fetchstructure($inbox, $msg_id);
-            $body = "";
-            $part_num = 1;
+    if ($_GET['action'] == 'save_settings' && isset($_POST['ai_provider'])) {
+        $new_config = [
+            'ai_provider' => $_POST['ai_provider'],
+            'ai_api_key' => $_POST['ai_api_key'] ?? '',
+            'ai_model' => $_POST['ai_model'] ?? 'gemini-1.5-flash'
+        ];
+        file_put_contents($config_file, json_encode($new_config, JSON_PRETTY_PRINT));
+        echo json_encode(['success' => true]);
+        exit;
+    }
 
-            if (isset($structure->parts) && is_array($structure->parts)) {
-                foreach ($structure->parts as $key => $part) {
-                    if ($part->subtype == 'HTML') {
-                        $part_num = $key + 1;
-                        break;
+    // MODELLERİ GETİR (Google API)
+    if ($_GET['action'] == 'get_models' && isset($_POST['api_key'])) {
+        $apiKey = $_POST['api_key'];
+        // V1BETA Endpoint (En çok model burada)
+        $url = "https://generativelanguage.googleapis.com/v1beta/models?key=" . $apiKey;
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        
+        $response = curl_exec($ch);
+        if (curl_errno($ch)) {
+            echo json_encode(['success' => false, 'message' => 'Curl Hatası: '.curl_error($ch)]);
+        } else {
+            $data = json_decode($response, true);
+            if (isset($data['models'])) {
+                $chatModels = [];
+                foreach ($data['models'] as $m) {
+                    // Sadece generateContent'i destekleyenleri al
+                    if (isset($m['supportedGenerationMethods']) && in_array("generateContent", $m['supportedGenerationMethods'])) {
+                        $name = str_replace('models/', '', $m['name']);
+                        $chatModels[] = [
+                            'id' => $name,
+                            'name' => $m['displayName'] . " ($name)"
+                        ];
                     }
                 }
-                $body = imap_fetchbody($inbox, $msg_id, $part_num); 
+                echo json_encode(['success' => true, 'models' => $chatModels]);
             } else {
-                $body = imap_body($inbox, $msg_id);
+                echo json_encode(['success' => false, 'message' => 'Model listesi alınamadı. API Key veya erişim sorunu.', 'debug' => $data]);
             }
-            
-            $encoding = $structure->encoding;
-            if (isset($structure->parts) && is_array($structure->parts)) {
-                 if(isset($structure->parts[$part_num-1]->encoding)) $encoding = $structure->parts[$part_num-1]->encoding;
-            }
-    
-            if ($encoding == 3) $body = base64_decode($body);
-            elseif ($encoding == 4) $body = quoted_printable_decode($body);
-            
-            $body = mb_convert_encoding($body, "UTF-8", "auto");
-            $body = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', "", $body);
-            
-            echo $body;
-            imap_close($inbox);
-        } else {
-            echo "E-posta içeriği alınamadı.";
         }
+        curl_close($ch);
         exit;
     }
 }
 // --------------------------------------------------------------------------
 
-// Sayfa Yükleme Verileri
 $demo_messages = [];
 if ($is_logged_in && file_exists($json_file)) {
     $demo_messages = json_decode(file_get_contents($json_file), true);
     if (!is_array($demo_messages)) $demo_messages = [];
 }
 
-$imap_emails = [];
-$imap_error = "";
 $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'demo';
-
-if ($is_logged_in && $active_tab == 'inbox') {
-    if (!function_exists('imap_open')) {
-        $imap_error = "Sunucuda PHP IMAP eklentisi yüklü değil.";
-    } else {
-        $mailbox = "{mail.kurumsaleposta.com:993/imap/ssl}INBOX";
-        $username = "info@entelog.com.tr";
-        $password = "Sg_1.E5hdwQ8W_=2";
-
-        try {
-            $inbox = @imap_open($mailbox, $username, $password);
-            if ($inbox) {
-                $total_msgs = imap_num_msg($inbox);
-                if ($total_msgs > 0) {
-                    $start = $total_msgs;
-                    $end = max(1, $total_msgs - 19);
-
-                    for ($i = $start; $i >= $end; $i--) {
-                        $overview = imap_fetch_overview($inbox, $i, 0);
-                        if (is_array($overview) && !empty($overview)) {
-                            $msg_data = $overview[0];
-                            $subject = isset($msg_data->subject) ? imap_utf8($msg_data->subject) : '(Konu Yok)';
-                            $from = isset($msg_data->from) ? imap_utf8($msg_data->from) : 'Bilinmeyen';
-                            $date = isset($msg_data->date) ? date("d.m.Y H:i", strtotime($msg_data->date)) : '-';
-                            
-                            $imap_emails[] = [
-                                'id' => $msg_data->msgno,
-                                'subject' => $subject,
-                                'from' => $from,
-                                'date' => $date
-                            ];
-                        }
-                    }
-                }
-                imap_close($inbox);
-            } else {
-                $imap_error = "IMAP Bağlantı Hatası: " . imap_last_error();
-            }
-        } catch (Exception $e) {
-            $imap_error = "Hata: " . $e->getMessage();
-        }
-    }
-}
 ?>
 <!DOCTYPE html>
 <html lang="tr">
@@ -227,28 +182,18 @@ if ($is_logged_in && $active_tab == 'inbox') {
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        [x-cloak] { display: none !important; }
-    </style>
     <script>
         tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: { brand: { 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' } }
-                }
-            }
+            theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] }, colors: { brand: { 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' } } } }
         }
     </script>
 </head>
 <body class="bg-slate-900 text-slate-50 font-sans antialiased h-screen flex flex-col">
 
     <?php if (!$is_logged_in): ?>
-        <!-- GİRİŞ EKRANI -->
         <div class="flex-1 flex items-center justify-center p-4">
             <div class="w-full max-w-md bg-slate-800 rounded-2xl shadow-xl border border-slate-700 p-8">
                 <div class="text-center mb-8">
-                    <img src="logo.png" alt="Logo" class="h-12 w-auto mx-auto mb-4 object-contain" onerror="this.style.display='none'">
                     <h1 class="text-2xl font-bold text-white">Yönetici Girişi</h1>
                 </div>
                 <?php if (isset($error)): ?>
@@ -268,19 +213,12 @@ if ($is_logged_in && $active_tab == 'inbox') {
             </div>
         </div>
     <?php else: ?>
-        <!-- PANEL EKRANI -->
         <nav class="bg-slate-800 border-b border-slate-700 px-4 py-4">
             <div class="max-w-7xl mx-auto flex justify-between items-center">
                 <div class="flex items-center gap-3">
-                    <img src="logo.png" alt="Logo" class="h-8 w-auto object-contain" onerror="this.style.display='none'">
                     <span class="text-xl font-bold text-white">Admin Paneli</span>
                 </div>
                 <div class="flex items-center gap-4">
-                    <!-- Bildirim İkonu (Basit UI) -->
-                    <div class="relative">
-                        <i data-lucide="bell" class="w-5 h-5 text-slate-400 hover:text-white cursor-pointer"></i>
-                        <span class="absolute -top-1 -right-1 bg-red-500 w-2 h-2 rounded-full"></span>
-                    </div>
                     <a href="?logout=true" class="text-red-400 hover:text-white text-sm font-medium flex items-center gap-2">
                         <i data-lucide="log-out" class="w-4 h-4"></i> Çıkış
                     </a>
@@ -291,65 +229,84 @@ if ($is_logged_in && $active_tab == 'inbox') {
         <main class="flex-1 overflow-auto p-4 sm:p-8" 
               x-data="{ 
                   activeTab: '<?php echo $active_tab; ?>',
+                  aiSettings: {
+                      provider: '<?php echo $current_config['ai_provider']; ?>',
+                      apiKey: '<?php echo $current_config['ai_api_key']; ?>',
+                      model: '<?php echo $current_config['ai_model']; ?>'
+                  },
+                  saving: false,
+                  dynamicModels: [],
+                  loadingModels: false,
+
+                  saveSettings() {
+                      this.saving = true;
+                      const formData = new FormData();
+                      formData.append('ai_provider', this.aiSettings.provider);
+                      formData.append('ai_api_key', this.aiSettings.apiKey);
+                      formData.append('ai_model', this.aiSettings.model);
+
+                      fetch('admin.php?action=save_settings', { method: 'POST', body: formData })
+                          .then(res => res.json())
+                          .then(data => {
+                              if(data.success) {
+                                  alert('Ayarlar kaydedildi!');
+                              } else {
+                                  alert('Kaydedilemedi.');
+                              }
+                          })
+                          .finally(() => { this.saving = false; });
+                  },
+
+                  fetchModels() {
+                      if (!this.aiSettings.apiKey) { alert('Lütfen önce API Anahtarı girin.'); return; }
+                      this.loadingModels = true;
+                      
+                      const formData = new FormData();
+                      formData.append('api_key', this.aiSettings.apiKey);
+                      
+                      fetch('admin.php?action=get_models', { method: 'POST', body: formData })
+                          .then(res => res.json())
+                          .then(data => {
+                              if(data.success) {
+                                  this.dynamicModels = data.models;
+                                  alert('Modeller başarıyla yüklendi! Lütfen listeden seçiminizi yapın.');
+                              } else {
+                                  alert('Hata: ' + (data.message || 'Modeller alınamadı.'));
+                                  console.error(data);
+                              }
+                          })
+                          .catch(err => alert('Bağlantı hatası.'))
+                          .finally(() => { this.loadingModels = false; });
+                  },
                   
-                  // Helper Functions
                   updateStatus(id, newStatus) {
                       const formData = new FormData();
                       formData.append('id', id);
                       formData.append('status', newStatus);
-                      
-                      fetch('admin.php?action=update_status', { method: 'POST', body: formData })
-                          .then(res => res.json())
-                          .then(data => {
-                              if(data.success) {
-                                  // UI Feedback (Opsiyonel, zaten select değişiyor)
-                              } else {
-                                  alert('Durum güncellenemedi.');
-                              }
-                          });
+                      fetch('admin.php?action=update_status', { method: 'POST', body: formData });
                   },
                   
                   deleteMessage(id) {
-                      if(!confirm('Bu mesajı silmek istediğinize emin misiniz?')) return;
-                      
+                      if(!confirm('Silmek istediğinize emin misiniz?')) return;
                       const formData = new FormData();
                       formData.append('id', id);
-                      
                       fetch('admin.php?action=delete_message', { method: 'POST', body: formData })
                           .then(res => res.json())
-                          .then(data => {
-                              if(data.success) {
-                                  location.reload(); // En temiz yöntem sayfayı yenilemek
-                              } else {
-                                  alert('Silme işlemi başarısız.');
-                              }
-                          });
+                          .then(data => { if(data.success) location.reload(); });
                   }
               }">
               
             <div class="max-w-7xl mx-auto">
-                <!-- Tabs -->
-                <div class="flex justify-between items-end border-b border-slate-700 mb-8">
-                    <div class="flex space-x-4">
-                        <a href="?tab=demo" class="pb-3 px-2 border-b-2 font-medium transition-colors <?php echo $active_tab == 'demo' ? 'border-brand-500 text-brand-500' : 'border-transparent text-slate-400 hover:text-white'; ?>">
-                            Demo Talepleri
-                            <span class="ml-2 bg-slate-700 text-white text-xs px-2 py-0.5 rounded-full"><?php echo count($demo_messages); ?></span>
-                        </a>
-                        <a href="?tab=inbox" class="pb-3 px-2 border-b-2 font-medium transition-colors <?php echo $active_tab == 'inbox' ? 'border-brand-500 text-brand-500' : 'border-transparent text-slate-400 hover:text-white'; ?>">
-                            Gelen Kutusu (info@)
-                        </a>
-                    </div>
-                    <?php if ($active_tab == 'demo'): ?>
-                        <div class="pb-2">
-                            <a href="admin.php?action=export_csv" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
-                                <i data-lucide="download" class="w-4 h-4"></i> Excel İndir
-                            </a>
-                        </div>
-                    <?php endif; ?>
+                <div class="flex border-b border-slate-700 mb-8">
+                    <a href="?tab=demo" class="pb-3 px-4 border-b-2 font-medium transition-colors <?php echo $active_tab == 'demo' ? 'border-brand-500 text-brand-500' : 'border-transparent text-slate-400 hover:text-white'; ?>">
+                        Demo Talepleri
+                    </a>
+                    <a href="?tab=settings" class="pb-3 px-4 border-b-2 font-medium transition-colors <?php echo $active_tab == 'settings' ? 'border-brand-500 text-brand-500' : 'border-transparent text-slate-400 hover:text-white'; ?>">
+                        Yapay Zeka Ayarları
+                    </a>
                 </div>
 
                 <?php if ($active_tab == 'demo'): ?>
-                    <!-- CRM TABLOSU -->
                     <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
                          <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
@@ -369,12 +326,8 @@ if ($is_logged_in && $active_tab == 'inbox') {
                                         <?php foreach ($demo_messages as $msg): ?>
                                             <?php $status = isset($msg['status']) ? $msg['status'] : 'Yeni'; ?>
                                             <tr class="hover:bg-slate-700/30 transition-colors">
-                                                <td class="px-6 py-4 text-slate-300 text-sm whitespace-nowrap">
-                                                    <?php echo date('d.m.Y H:i', strtotime($msg['date'])); ?>
-                                                </td>
-                                                <td class="px-6 py-4 text-white font-medium">
-                                                    <?php echo htmlspecialchars($msg['name']); ?>
-                                                </td>
+                                                <td class="px-6 py-4 text-slate-300 text-sm whitespace-nowrap"><?php echo date('d.m.Y H:i', strtotime($msg['date'])); ?></td>
+                                                <td class="px-6 py-4 text-white font-medium"><?php echo htmlspecialchars($msg['name']); ?></td>
                                                 <td class="px-6 py-4">
                                                     <div class="flex flex-col gap-1 text-sm">
                                                         <a href="mailto:<?php echo $msg['email']; ?>" class="text-brand-500 hover:underline"><?php echo $msg['email']; ?></a>
@@ -383,19 +336,16 @@ if ($is_logged_in && $active_tab == 'inbox') {
                                                 </td>
                                                 <td class="px-6 py-4">
                                                     <select onchange="updateStatus('<?php echo $msg['id']; ?>', this.value)" 
-                                                            class="bg-slate-900 border border-slate-700 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500
-                                                            <?php echo $status == 'Tamamlandı' ? 'text-green-400 border-green-500/30' : ($status == 'İptal' ? 'text-red-400 border-red-500/30' : 'text-slate-300'); ?>">
+                                                            class="bg-slate-900 border border-slate-700 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
                                                         <option value="Yeni" <?php echo $status == 'Yeni' ? 'selected' : ''; ?>>Yeni</option>
                                                         <option value="Arandı" <?php echo $status == 'Arandı' ? 'selected' : ''; ?>>Arandı</option>
                                                         <option value="Teklif" <?php echo $status == 'Teklif' ? 'selected' : ''; ?>>Teklif Verildi</option>
                                                         <option value="Tamamlandı" <?php echo $status == 'Tamamlandı' ? 'selected' : ''; ?>>Tamamlandı</option>
-                                                        <option value="İptal" <?php echo $status == 'İptal' ? 'selected' : ''; ?>>İptal / Olumsuz</option>
+                                                        <option value="İptal" <?php echo $status == 'İptal' ? 'selected' : ''; ?>>İptal</option>
                                                     </select>
                                                 </td>
                                                 <td class="px-6 py-4 text-right">
-                                                    <button @click="deleteMessage('<?php echo $msg['id']; ?>')" class="text-slate-500 hover:text-red-400 transition-colors p-2" title="Sil">
-                                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                                    </button>
+                                                    <button @click="deleteMessage('<?php echo $msg['id']; ?>')" class="text-slate-500 hover:text-red-400 transition-colors p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -404,57 +354,98 @@ if ($is_logged_in && $active_tab == 'inbox') {
                             </table>
                         </div>
                     </div>
-
                 <?php else: ?>
-                    <!-- GELEN KUTUSU (IMAP) -->
-                    <div x-data="{ 
-                          openMailId: null, 
-                          loading: false,
-                          mailContents: {},
-                          async toggleMail(id) {
-                              if (this.openMailId === id) { this.openMailId = null; return; }
-                              this.openMailId = id;
-                              if (this.mailContents[id]) return;
-                              this.loading = true;
-                              try {
-                                  const res = await fetch('admin.php?action=get_body&id=' + id);
-                                  const html = await res.text();
-                                  this.mailContents[id] = html;
-                              } catch(e) { this.mailContents[id] = 'Hata'; } 
-                              finally { this.loading = false; }
-                          }
-                      }">
-                        <?php if ($imap_error): ?>
-                            <div class="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-4 rounded-lg"><?php echo $imap_error; ?></div>
-                        <?php elseif (empty($imap_emails)): ?>
-                            <div class="text-center py-10 bg-slate-800/50 rounded-lg text-slate-400">Gelen kutusu boş.</div>
-                        <?php else: ?>
-                            <div class="flex flex-col gap-4">
-                                <?php foreach ($imap_emails as $email): ?>
-                                    <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-sm hover:border-brand-500/30 transition-colors">
-                                        <div class="p-4 cursor-pointer flex items-start gap-4" @click="toggleMail(<?php echo $email['id']; ?>)">
-                                            <div class="bg-slate-700/50 p-2 rounded-full"><i data-lucide="mail" class="w-5 h-5 text-slate-300"></i></div>
-                                            <div class="flex-1 min-w-0">
-                                                <div class="flex justify-between items-start">
-                                                    <h3 class="text-white font-medium truncate pr-4 text-lg"><?php echo $email['subject']; ?></h3>
-                                                    <span class="text-xs text-slate-500 whitespace-nowrap mt-1"><?php echo $email['date']; ?></span>
-                                                </div>
-                                                <div class="flex items-center gap-2 mt-1"><span class="text-brand-400 text-sm font-medium"><?php echo $email['from']; ?></span></div>
+                    <div class="max-w-2xl mx-auto">
+                        <div class="bg-slate-800 rounded-xl border border-slate-700 p-8 shadow-lg">
+                            <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                                <i data-lucide="bot" class="w-6 h-6 text-brand-500"></i> Yapay Zeka Yapılandırması
+                            </h2>
+                            
+                            <form @submit.prevent="saveSettings" class="space-y-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-400 mb-2">Servis Sağlayıcı</label>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <label class="cursor-pointer border border-slate-600 rounded-lg p-4 hover:bg-slate-700 transition-colors"
+                                            :class="aiSettings.provider === 'gemini' ? 'border-brand-500 bg-brand-500/10' : ''">
+                                            <input type="radio" value="gemini" x-model="aiSettings.provider" @change="aiSettings.model = 'gemini-1.5-flash'" class="hidden">
+                                            <div class="flex items-center gap-3">
+                                                <div class="bg-white p-1 rounded"><img src="https://upload.wikimedia.org/wikipedia/commons/8/8a/Google_Gemini_logo.svg" class="w-6 h-6"></div>
+                                                <span class="font-bold text-white">Google Gemini</span>
                                             </div>
-                                            <div>
-                                                <i x-show="loading && openMailId === <?php echo $email['id'] ?> && !mailContents[<?php echo $email['id'] ?>]" class="animate-spin w-5 h-5 text-brand-500" data-lucide="loader-2"></i>
-                                                <i x-show="!(loading && openMailId === <?php echo $email['id'] ?> && !mailContents[<?php echo $email['id'] ?>])" data-lucide="chevron-down" class="w-5 h-5 text-slate-500 transition-transform" :class="{ 'rotate-180': openMailId === <?php echo $email['id']; ?> }"></i>
+                                        </label>
+                                        <label class="cursor-pointer border border-slate-600 rounded-lg p-4 hover:bg-slate-700 transition-colors"
+                                            :class="aiSettings.provider === 'openai' ? 'border-brand-500 bg-brand-500/10' : ''">
+                                            <input type="radio" value="openai" x-model="aiSettings.provider" @change="aiSettings.model = 'gpt-3.5-turbo'" class="hidden">
+                                            <div class="flex items-center gap-3">
+                                                <div class="bg-green-100 p-1 rounded"><img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" class="w-6 h-6"></div>
+                                                <span class="font-bold text-white">OpenAI (ChatGPT)</span>
                                             </div>
-                                        </div>
-                                        <div x-show="openMailId === <?php echo $email['id']; ?>" x-cloak x-collapse class="border-t border-slate-700 bg-slate-900/50 p-6 text-slate-300 text-sm leading-relaxed overflow-x-auto">
-                                            <div x-html="mailContents[<?php echo $email['id']; ?>]" class="bg-white text-black p-4 rounded shadow-inner prose prose-sm max-w-none">
-                                                <span class="text-slate-500">Yükleniyor...</span>
-                                            </div>
-                                        </div>
+                                        </label>
                                     </div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-400 mb-2">API Anahtarı (Key)</label>
+                                    <div class="flex gap-2">
+                                        <input type="text" x-model="aiSettings.apiKey" placeholder="sk-..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand-500 font-mono text-sm">
+                                        <!-- Modelleri Çek Butonu -->
+                                        <template x-if="aiSettings.provider === 'gemini'">
+                                            <button type="button" @click="fetchModels" :disabled="loadingModels" 
+                                                class="bg-slate-700 hover:bg-slate-600 text-white px-4 rounded-lg font-medium text-sm transition-colors whitespace-nowrap flex items-center gap-2">
+                                                <i data-lucide="refresh-cw" class="w-4 h-4" :class="loadingModels ? 'animate-spin' : ''"></i>
+                                                <span x-text="loadingModels ? 'Aranıyor...' : 'Modelleri Tara'"></span>
+                                            </button>
+                                        </template>
+                                    </div>
+                                    <p class="text-xs text-slate-500 mt-2">API anahtarınız sunucuda güvenli bir şekilde saklanır.</p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-400 mb-2">Model Seçimi</label>
+                                    <select x-model="aiSettings.model" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand-500">
+                                        <template x-if="aiSettings.provider === 'gemini'">
+                                            <optgroup label="Google Modelleri">
+                                                <!-- Dinamik Modeller Varsa Buraya -->
+                                                <template x-if="dynamicModels.length > 0">
+                                                    <template x-for="m in dynamicModels" :key="m.id">
+                                                        <option :value="m.id" x-text="m.name"></option>
+                                                    </template>
+                                                </template>
+                                                
+                                                <!-- Fallback (Dinamik yoksa) -->
+                                                <template x-if="dynamicModels.length === 0">
+                                                    <fragment>
+                                                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (Standart)</option>
+                                                        <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Latest)</option>
+                                                        <option value="gemini-pro">Gemini Pro</option>
+                                                        <option value="gemini-1.0-pro">Gemini 1.0 Pro</option>
+                                                    </fragment>
+                                                </template>
+                                            </optgroup>
+                                        </template>
+                                        <template x-if="aiSettings.provider === 'openai'">
+                                            <optgroup label="OpenAI Modelleri">
+                                                <option value="gpt-4o-mini">GPT-4o Mini (Hızlı & Ucuz)</option>
+                                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                                <option value="gpt-4o">GPT-4o (En Akıllı)</option>
+                                            </optgroup>
+                                        </template>
+                                    </select>
+                                    <p x-show="dynamicModels.length > 0" class="text-xs text-green-400 mt-2 flex items-center gap-1">
+                                        <i data-lucide="check-circle" class="w-3 h-3"></i> Google API'den alınan güncel model listesi gösteriliyor.
+                                    </p>
+                                </div>
+
+                                <div class="pt-4 border-t border-slate-700">
+                                    <button type="submit" 
+                                        class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2"
+                                        :disabled="saving">
+                                        <i data-lucide="save" class="w-5 h-5"></i>
+                                        <span x-text="saving ? 'Kaydediliyor...' : 'Ayarları Kaydet'"></span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 <?php endif; ?>
             </div>
