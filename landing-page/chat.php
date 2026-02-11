@@ -8,7 +8,8 @@ error_reporting(E_ALL);
 
 function sendError($msg, $debug = null) {
     header('Content-Type: application/json');
-    echo json_encode(['error' => $msg, 'debug' => $debug]);
+    // Frontend 'response' beklediği için hatayı da bu formatta dönüyoruz
+    echo json_encode(['response' => "Üzgünüm, şu an bağlantıda bir yoğunluk var (" . $msg . "). Lütfen kısa bir süre sonra tekrar deneyin.", 'debug' => $debug]);
     exit;
 }
 
@@ -25,7 +26,7 @@ try {
     // --------------------------------------------------------------------------
     $provider = 'gemini';
     $apiKey = 'AIzaSyDYSE5v62mJekQTHiqDLroTW4z3OAqqta0'; 
-    $model = 'gemini-flash-latest'; // Listede var olan model alias'ı
+    $model = 'gemini-1.5-flash'; // Kota sorunu nedeniyle daha hafif/eski modele dönüş
     
     // --------------------------------------------------------------------------
     // İSTEK KONTROLÜ
@@ -126,11 +127,16 @@ DİL: Türkçe konuş.
     // Hata Kontrolü
     if (isset($response['error'])) {
         $errMsg = $response['error']['message'] ?? 'Bilinmeyen API Hatası';
+        
+         if(strpos($errMsg, 'quota') !== false) {
+             throw new Exception("Kota Aşıldı: Ücretsiz API limitine takıldık. 1 dakika sonra tekrar deneyin.");
+        }
+        
         throw new Exception("Gemini API Hatası: $errMsg");
     }
 
     if (isset($response['candidates'][0]['content']['parts'][0]['text'])) {
-        echo json_encode(['reply' => $response['candidates'][0]['content']['parts'][0]['text']]);
+        echo json_encode(['response' => $response['candidates'][0]['content']['parts'][0]['text']]);
     } else {
         // Yanıt boş veya farklı formatta ise debug verisi dönelim
         sendError('Gemini API beklenmedik bir yanıt döndü.', $response);

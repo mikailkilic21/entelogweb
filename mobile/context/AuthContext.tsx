@@ -4,17 +4,23 @@ import { useRouter, useSegments } from 'expo-router';
 
 // Define the shape of our user
 interface User {
+    id: number;
     username: string;
     role: 'admin' | 'user' | 'demo';
     name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    avatar?: string;
 }
 
 interface AuthContextType {
     user: User | null;
     isLoading: boolean;
-    signIn: (username: string, role: 'admin' | 'user' | 'demo', token?: string) => void;
+    signIn: (user: User, token?: string) => void;
     signOut: () => void;
     isDemo: boolean;
+    updateUserProfile: (updatedFields: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -23,6 +29,7 @@ const AuthContext = createContext<AuthContextType>({
     signIn: () => { },
     signOut: () => { },
     isDemo: false,
+    updateUserProfile: () => { },
 });
 
 // Hook to allow access to the context
@@ -57,25 +64,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         if (isLoading) return;
-
-        const inAuthGroup = segments[0] === '(auth)';
-        // Assuming our login screen is NOT in (auth), but rather 'login' at root or similar
-        // Actually simpler: if !user -> redirect to login. if user -> redirect to (tabs)
-
-        // We'll handle protection in the Root Layout more explicitly, or here.
-        // Let's rely on Root Layout Effect or similar, but for now just managing state here is safer.
-
-        // Typically useRootNavigationState is needed to know if nav is ready.
-        // We will let _layout.tsx handle the redirection logic based on useAuth().
+        // Navigation logic handled in _layout usually
     }, [user, isLoading, segments]);
 
-    const signIn = async (username: string, role: 'admin' | 'user' | 'demo', token?: string) => {
-        const newUser: User = { username, role };
-        setUser(newUser);
-        await SecureStore.setItemAsync('user', JSON.stringify(newUser));
+    const signIn = async (userData: User, token?: string) => {
+        setUser(userData);
+        await SecureStore.setItemAsync('user', JSON.stringify(userData));
         if (token) {
             await SecureStore.setItemAsync('token', token);
         }
+    };
+
+    const updateUserProfile = async (updatedFields: Partial<User>) => {
+        if (!user) return;
+        const updatedUser = { ...user, ...updatedFields };
+        setUser(updatedUser);
+        await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
     };
 
     const signOut = async () => {
@@ -92,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 signIn,
                 signOut,
                 isDemo: user?.role === 'demo',
+                updateUserProfile,
             }}
         >
             {children}

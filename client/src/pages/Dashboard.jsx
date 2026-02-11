@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense, lazy } from 'react';
 import StatCard from '../components/StatCard';
 import InvoiceList from '../components/InvoiceList';
 import { LayoutDashboard, Loader2, RotateCw } from 'lucide-react';
@@ -18,7 +18,8 @@ import {
     Sector
 } from 'recharts';
 
-import InvoiceDetailModal from '../components/InvoiceDetailModal';
+// Lazy load potentially heavy modal (includes html2pdf.js)
+const InvoiceDetailModal = lazy(() => import('../components/InvoiceDetailModal'));
 
 const Dashboard = () => {
     const [stats, setStats] = useState(null);
@@ -31,7 +32,6 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(true);
     const [period, setPeriod] = useState('weekly');
     const [selectedInvoice, setSelectedInvoice] = useState(null);
-    const [chartView1, setChartView1] = useState('amount'); // For Top Products/Customers toggle if needed
     const [activePieIndex, setActivePieIndex] = useState(0);
 
     const onPieEnter = (_, index) => {
@@ -42,7 +42,7 @@ const Dashboard = () => {
         const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, value } = props;
         return (
             <g>
-                <text x={cx} y={cy} dy={4} textAnchor="middle" fill="#fff" className="text-xs font-bold">
+                <text x={cx} y={cy} dy={4} textAnchor="middle" fill="#fff" className="text-xs font-mono font-bold">
                     {((value / (stats?.totalSales + stats?.totalPurchases)) * 100).toFixed(0)}%
                 </text>
                 <Sector
@@ -82,32 +82,12 @@ const Dashboard = () => {
                 fetch('/api/settings/company')
             ]);
 
-            if (statsRes.ok) {
-                const data = await statsRes.json();
-                setStats(data);
-            }
-            if (trendRes.ok) {
-                const data = await trendRes.json();
-                setTrendData(data);
-            }
-            if (invoicesRes.ok) {
-                const data = await invoicesRes.json();
-                if (Array.isArray(data)) {
-                    setInvoices(data);
-                }
-            }
-            if (productsRes.ok) {
-                const data = await productsRes.json();
-                if (Array.isArray(data)) setTopProducts(data);
-            }
-            if (customersRes.ok) {
-                const data = await customersRes.json();
-                if (Array.isArray(data)) setTopCustomers(data);
-            }
-            if (suppliersRes.ok) {
-                const data = await suppliersRes.json();
-                if (Array.isArray(data)) setTopSuppliers(data);
-            }
+            if (statsRes.ok) setStats(await statsRes.json());
+            if (trendRes.ok) setTrendData(await trendRes.json());
+            if (invoicesRes.ok) setInvoices(await invoicesRes.json());
+            if (productsRes.ok) setTopProducts(await productsRes.json());
+            if (customersRes.ok) setTopCustomers(await customersRes.json());
+            if (suppliersRes.ok) setTopSuppliers(await suppliersRes.json());
             if (companyRes.ok) setCompanyInfo(await companyRes.json());
 
         } catch (error) {
@@ -121,12 +101,12 @@ const Dashboard = () => {
         fetchData();
     }, [fetchData]);
 
-    // Financial Summary Pie Data
+    // Financial Summary Pie Data - Clean Colors (Emerald/Amber)
     const financialSummaryData = useMemo(() => {
         if (!stats) return [];
         return [
-            { name: 'Satış', value: stats.totalSales || 0, color: '#8b5cf6' }, // Violet
-            { name: 'Alış', value: stats.totalPurchases || 0, color: '#f43f5e' } // Rose
+            { name: 'Satış', value: stats.totalSales || 0, color: '#10b981' }, // Emerald-500
+            { name: 'Alış', value: stats.totalPurchases || 0, color: '#f59e0b' } // Amber-500
         ];
     }, [stats]);
 
@@ -140,91 +120,93 @@ const Dashboard = () => {
         }));
     }, [trendData, period]);
 
-    // Colors for Bar Charts
-    const barColors = ['#f97316', '#06b6d4', '#8b5cf6', '#10b981', '#f59e0b'];
+    // Radical Palette for Bars (Emerald, Cyan, Amber, Rose, Indigo - No Purple)
+    const barColors = ['#10b981', '#06b6d4', '#f59e0b', '#f43f5e', '#6366f1'];
 
     if (loading) {
         return (
-            <div className="flex h-screen items-center justify-center">
-                <Loader2 className="animate-spin text-blue-500" size={48} />
+            <div className="flex h-screen items-center justify-center bg-background">
+                <Loader2 className="animate-spin text-primary" size={48} />
             </div>
         );
     }
 
     return (
-        <div className="p-8 max-w-full mx-auto space-y-8 animate-fade-in pb-20">
-            {/* Header */}
-            <div className="flex justify-between items-start mb-8">
+        <div className="p-8 max-w-full mx-auto space-y-8 animate-fade-in pb-20 bg-background text-text-primary min-h-screen">
+            {/* Header - Brutalist / Clean */}
+            <div className="flex justify-between items-start mb-8 border-b border-border pb-6">
                 <div>
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                    <h1 className="text-4xl font-sans font-bold text-white tracking-tight">
                         {companyInfo?.TITLE || companyInfo?.NAME || 'Yönetim Paneli'}
                     </h1>
                     {companyInfo ? (
-                        <p className="text-slate-400 mt-2">{companyInfo.ADDR1} {companyInfo.CITY}</p>
+                        <p className="text-text-secondary mt-1 font-mono text-sm uppercase tracking-wide opacity-70">
+                            {companyInfo.ADDR1} • {companyInfo.CITY}
+                        </p>
                     ) : (
-                        <p className="text-slate-400 mt-2">İşletmenizin genel durumu</p>
+                        <p className="text-text-secondary mt-1">İşletmenizin genel durumu</p>
                     )}
                 </div>
 
-                {/* Period Filter Buttons */}
-                <div className="flex bg-slate-900/50 p-1 rounded-lg border border-slate-800">
+                {/* Period Filter Buttons - Sharp Buttons */}
+                <div className="flex bg-surface p-1 border border-border">
                     {['daily', 'weekly', 'monthly', 'yearly'].map(p => (
                         <button
                             key={p}
                             onClick={() => setPeriod(p)}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${period === p
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                                : 'text-slate-400 hover:text-white'
+                            className={`px-4 py-1.5 text-xs font-mono font-bold uppercase tracking-wider transition-all ${period === p
+                                ? 'bg-primary text-white'
+                                : 'text-text-secondary hover:text-white hover:bg-surface-highlight'
                                 }`}
                         >
-                            {p === 'daily' ? 'Günlük' : p === 'weekly' ? 'Haftalık' : p === 'monthly' ? 'Aylık' : 'Yıllık'}
+                            {p === 'daily' ? 'GÜNLÜK' : p === 'weekly' ? 'HAFTALIK' : p === 'monthly' ? 'AYLIK' : 'YILLIK'}
                         </button>
                     ))}
                     <button
                         onClick={fetchData}
-                        className="p-2 ml-2 text-slate-400 hover:text-white transition-colors"
+                        className="p-1.5 ml-1 text-text-secondary hover:text-white transition-colors border-l border-border pl-2"
                         title="Yenile"
                     >
-                        <RotateCw size={18} />
+                        <RotateCw size={16} />
                     </button>
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Stats Cards - Updated Palette */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
-                    title="Toplam Satış"
+                    title="TOPLAM SATIŞ"
                     value={stats?.totalSales || 0}
                     trend={12.5}
                     period={period}
                     icon="trending-up"
-                    color="green"
+                    color="emerald"  // Primary money color
                     isCurrency={true}
                 />
                 <StatCard
-                    title="Toplam Alış"
+                    title="TOPLAM ALIŞ"
                     value={stats?.totalPurchases || 0}
                     trend={-2.4}
                     period={period}
                     icon="shopping-cart"
-                    color="blue"
+                    color="amber" // Secondary action color
                     isCurrency={true}
                 />
                 <StatCard
-                    title="Satış Faturası"
+                    title="SATIŞ FATURASI"
                     value={stats?.salesCount || 0}
                     trend={5.2}
                     period={period}
                     icon="file-text"
-                    color="purple"
+                    color="cyan" // Replaces Purple
                 />
                 <StatCard
-                    title="Alış Faturası"
+                    title="ALIŞ FATURASI"
                     value={stats?.purchaseCount || 0}
                     trend={-0.8}
                     period={period}
                     icon="package"
-                    color="orange"
+                    color="rose" // Alert/Cost
                 />
             </div>
 
@@ -232,8 +214,10 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 
                 {/* 1. Finansal Özet (Pie) */}
-                <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 backdrop-blur-xl">
-                    <h3 className="text-xs font-semibold text-slate-400 mb-3">Finansal Dağılım</h3>
+                <div className="bg-surface border border-border p-4">
+                    <h3 className="text-xs font-mono font-bold text-text-secondary mb-3 uppercase tracking-wider border-b border-border/50 pb-2">
+                        Finansal Dağılım
+                    </h3>
                     <ResponsiveContainer width="100%" height={160}>
                         <PieChart>
                             <Pie
@@ -244,27 +228,28 @@ const Dashboard = () => {
                                 cy="50%"
                                 innerRadius={40}
                                 outerRadius={60}
-                                paddingAngle={5}
+                                paddingAngle={2}
                                 dataKey="value"
                                 onMouseEnter={onPieEnter}
+                                stroke="none"
                             >
                                 {financialSummaryData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                    <Cell key={`cell-${index}`} fill={entry.color} />
                                 ))}
                             </Pie>
                             <Tooltip
-                                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
-                                labelStyle={{ color: '#f1f5f9' }}
-                                itemStyle={{ color: '#f1f5f9' }}
+                                contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '2px', fontFamily: 'monospace' }}
+                                labelStyle={{ color: '#f8fafc' }}
+                                itemStyle={{ color: '#f8fafc' }}
                                 formatter={(value) => `₺${(value / 1000).toFixed(1)}k`}
                             />
                         </PieChart>
                     </ResponsiveContainer>
-                    <div className="flex justify-center gap-4 mt-1">
+                    <div className="flex justify-center gap-4 mt-2 font-mono text-[10px] uppercase">
                         {financialSummaryData.map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-1">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
-                                <span className="text-[10px] text-slate-400">
+                            <div key={idx} className="flex items-center gap-1.5">
+                                <div className="w-2 h-2" style={{ backgroundColor: item.color }}></div>
+                                <span className="text-text-secondary tracking-widest">
                                     {item.name}
                                 </span>
                             </div>
@@ -273,63 +258,68 @@ const Dashboard = () => {
                 </div>
 
                 {/* 2. Finansal Trend (Area) */}
-                <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 backdrop-blur-xl">
-                    <h3 className="text-xs font-semibold text-slate-400 mb-3">Finansal Trend</h3>
+                <div className="bg-surface border border-border p-4">
+                    <h3 className="text-xs font-mono font-bold text-text-secondary mb-3 uppercase tracking-wider border-b border-border/50 pb-2">
+                        Finansal Trend
+                    </h3>
                     <ResponsiveContainer width="100%" height={160}>
                         <AreaChart data={formattedTrendData}>
                             <defs>
                                 <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
                                     <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                                 </linearGradient>
                                 <linearGradient id="colorPurchase" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
+                                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} opacity={0.4} />
                             <XAxis
                                 dataKey="formattedDate"
                                 stroke="#64748b"
-                                fontSize={10}
+                                fontSize={9}
                                 tickLine={false}
                                 axisLine={false}
+                                fontFamily="monospace"
                                 interval="preserveStartEnd"
                             />
                             <Tooltip
-                                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
-                                labelStyle={{ color: '#f1f5f9' }}
-                                itemStyle={{ color: '#f1f5f9' }}
+                                contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '2px', fontFamily: 'monospace' }}
+                                labelStyle={{ color: '#f8fafc' }}
+                                itemStyle={{ color: '#f8fafc' }}
                                 formatter={(value) => `₺${(value / 1000).toFixed(1)}k`}
                             />
                             <Area type="monotone" dataKey="sales" stroke="#10b981" fillOpacity={1} fill="url(#colorSales)" strokeWidth={2} />
-                            <Area type="monotone" dataKey="purchase" stroke="#ef4444" fillOpacity={1} fill="url(#colorPurchase)" strokeWidth={2} />
+                            <Area type="monotone" dataKey="purchase" stroke="#f59e0b" fillOpacity={1} fill="url(#colorPurchase)" strokeWidth={2} />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
 
                 {/* 3. En Çok Satanlar (Bar) */}
-                <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 backdrop-blur-xl">
-                    <h3 className="text-xs font-semibold text-slate-400 mb-3">En Çok Satanlar</h3>
+                <div className="bg-surface border border-border p-4">
+                    <h3 className="text-xs font-mono font-bold text-text-secondary mb-3 uppercase tracking-wider border-b border-border/50 pb-2">
+                        En Çok Satanlar
+                    </h3>
                     <ResponsiveContainer width="100%" height={160}>
                         <BarChart data={topProducts} layout="vertical" margin={{ left: 0, right: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={true} vertical={false} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={true} vertical={false} opacity={0.4} />
                             <XAxis type="number" hide />
                             <YAxis
                                 dataKey="name"
                                 type="category"
                                 width={80}
-                                tick={{ fill: '#94a3b8', fontSize: 10 }}
-                                tickFormatter={(value) => value.length > 10 ? value.substring(0, 10) + '..' : value}
+                                tick={{ fill: '#94a3b8', fontSize: 9, fontFamily: 'monospace' }}
+                                tickFormatter={(value) => value.length > 8 ? value.substring(0, 8) + '..' : value}
                             />
                             <Tooltip
-                                cursor={{ fill: 'transparent' }}
-                                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
-                                labelStyle={{ color: '#f1f5f9' }}
-                                itemStyle={{ color: '#f1f5f9' }}
+                                cursor={{ fill: '#1e293b' }}
+                                contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '2px', fontFamily: 'monospace' }}
+                                labelStyle={{ color: '#f8fafc' }}
+                                itemStyle={{ color: '#f8fafc' }}
                                 formatter={(value) => `₺${(value / 1000).toFixed(0)}k`}
                             />
-                            <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={12}>
+                            <Bar dataKey="value" barSize={12} radius={[0, 2, 2, 0]}>
                                 {topProducts.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={barColors[index % barColors.length]} />
                                 ))}
@@ -339,27 +329,29 @@ const Dashboard = () => {
                 </div>
 
                 {/* 4. En İyi Müşteriler (Bar) */}
-                <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 backdrop-blur-xl">
-                    <h3 className="text-xs font-semibold text-slate-400 mb-3">En İyi Müşteriler</h3>
+                <div className="bg-surface border border-border p-4">
+                    <h3 className="text-xs font-mono font-bold text-text-secondary mb-3 uppercase tracking-wider border-b border-border/50 pb-2">
+                        En İyi Müşteriler
+                    </h3>
                     <ResponsiveContainer width="100%" height={160}>
                         <BarChart data={topCustomers} layout="vertical" margin={{ left: 0, right: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={true} vertical={false} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={true} vertical={false} opacity={0.4} />
                             <XAxis type="number" hide />
                             <YAxis
                                 dataKey="name"
                                 type="category"
                                 width={80}
-                                tick={{ fill: '#94a3b8', fontSize: 10 }}
-                                tickFormatter={(value) => value.length > 10 ? value.substring(0, 10) + '..' : value}
+                                tick={{ fill: '#94a3b8', fontSize: 9, fontFamily: 'monospace' }}
+                                tickFormatter={(value) => value.length > 8 ? value.substring(0, 8) + '..' : value}
                             />
                             <Tooltip
-                                cursor={{ fill: 'transparent' }}
-                                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
-                                labelStyle={{ color: '#f1f5f9' }}
-                                itemStyle={{ color: '#f1f5f9' }}
+                                cursor={{ fill: '#1e293b' }}
+                                contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '2px', fontFamily: 'monospace' }}
+                                labelStyle={{ color: '#f8fafc' }}
+                                itemStyle={{ color: '#f8fafc' }}
                                 formatter={(value) => `₺${(value / 1000).toFixed(0)}k`}
                             />
-                            <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={12}>
+                            <Bar dataKey="value" barSize={12} radius={[0, 2, 2, 0]}>
                                 {topCustomers.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={barColors[index % barColors.length]} />
                                 ))}
@@ -375,12 +367,21 @@ const Dashboard = () => {
                 <InvoiceList invoices={invoices} onInvoiceClick={setSelectedInvoice} />
             </div>
 
-            {/* Modals */}
+            {/* Modals - Lazy Loaded & Suspended */}
             {selectedInvoice && (
-                <InvoiceDetailModal
-                    invoice={selectedInvoice}
-                    onClose={() => setSelectedInvoice(null)}
-                />
+                <Suspense fallback={
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                        <div className="bg-surface p-4 rounded-xl border border-border flex items-center gap-3">
+                            <Loader2 className="animate-spin text-primary" size={24} />
+                            <span className="text-white font-mono text-sm">Fatura Detayı Yükleniyor...</span>
+                        </div>
+                    </div>
+                }>
+                    <InvoiceDetailModal
+                        invoice={selectedInvoice}
+                        onClose={() => setSelectedInvoice(null)}
+                    />
+                </Suspense>
             )}
         </div>
     );

@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { X, Package, Box, RefreshCw, Loader2, ArrowRightLeft, User, FileText, ChevronRight } from 'lucide-react';
+import { X, Package, Box, RefreshCw, Loader2, ArrowRightLeft, User, FileText, ChevronRight, ImageOff, Image as ImageIcon, ZoomIn } from 'lucide-react';
 import InvoiceDetailModal from './InvoiceDetailModal';
 
 const ProductDetailModal = ({ productId, selectedWarehouse, onClose }) => {
     const [product, setProduct] = useState(null);
+    const [productImage, setProductImage] = useState(null);
+    const [imageLoading, setImageLoading] = useState(false);
+    const [imageZoomed, setImageZoomed] = useState(false);
 
     // Helper for transaction colors
     const getTransactionBadgeColor = (type) => {
@@ -55,7 +58,28 @@ const ProductDetailModal = ({ productId, selectedWarehouse, onClose }) => {
                 ]);
 
                 if (productRes.ok) {
-                    setProduct(await productRes.json());
+                    const productData = await productRes.json();
+                    setProduct(productData);
+
+                    // Fetch product image using stock code
+                    if (productData.code) {
+                        setImageLoading(true);
+                        try {
+                            const imgRes = await fetch(`/api/products/image-check/${encodeURIComponent(productData.code)}`);
+                            if (imgRes.ok) {
+                                const imgData = await imgRes.json();
+                                if (imgData.exists) {
+                                    setProductImage(`/api/products/image/${encodeURIComponent(productData.code)}`);
+                                } else {
+                                    setProductImage(null);
+                                }
+                            }
+                        } catch {
+                            setProductImage(null);
+                        } finally {
+                            setImageLoading(false);
+                        }
+                    }
                 }
                 if (ordersRes.ok) {
                     setPendingOrders(await ordersRes.json());
@@ -135,7 +159,41 @@ const ProductDetailModal = ({ productId, selectedWarehouse, onClose }) => {
                             {/* Summary View */}
                             {activeTab === 'summary' && (
                                 <div className="space-y-6 animate-fade-in">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Product Image + Info Row */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        {/* Product Image */}
+                                        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex flex-col items-center justify-center min-h-[220px] relative group">
+                                            {imageLoading ? (
+                                                <div className="flex flex-col items-center gap-3 text-slate-500">
+                                                    <Loader2 className="animate-spin" size={32} />
+                                                    <span className="text-xs">Resim yükleniyor...</span>
+                                                </div>
+                                            ) : productImage ? (
+                                                <>
+                                                    <img
+                                                        src={productImage}
+                                                        alt={product.name}
+                                                        className="max-h-[200px] max-w-full object-contain rounded-lg cursor-pointer hover:scale-105 transition-transform duration-300"
+                                                        onClick={() => setImageZoomed(true)}
+                                                        onError={() => setProductImage(null)}
+                                                    />
+                                                    <button
+                                                        onClick={() => setImageZoomed(true)}
+                                                        className="absolute bottom-2 right-2 p-1.5 bg-slate-800/80 hover:bg-slate-700 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        title="Büyüt"
+                                                    >
+                                                        <ZoomIn size={16} className="text-slate-300" />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <div className="flex flex-col items-center gap-3 text-slate-600">
+                                                    <ImageOff size={48} strokeWidth={1} />
+                                                    <span className="text-xs text-slate-500">Resim bulunamadı</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Product Info */}
                                         <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800">
                                             <h3 className="text-lg font-semibold text-white mb-4">Ürün Bilgileri</h3>
                                             <div className="space-y-3">
@@ -158,6 +216,7 @@ const ProductDetailModal = ({ productId, selectedWarehouse, onClose }) => {
                                             </div>
                                         </div>
 
+                                        {/* Warehouse Stocks */}
                                         <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800">
                                             <h3 className="text-lg font-semibold text-white mb-4">Ambar Stokları</h3>
                                             {product.warehouses?.length > 0 ? (
@@ -177,6 +236,32 @@ const ProductDetailModal = ({ productId, selectedWarehouse, onClose }) => {
                                             ) : (
                                                 <p className="text-slate-500">Ambar bilgisi yok</p>
                                             )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Image Zoom Modal */}
+                            {imageZoomed && productImage && (
+                                <div
+                                    className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[70] p-8 cursor-pointer"
+                                    onClick={() => setImageZoomed(false)}
+                                >
+                                    <div className="relative max-w-4xl max-h-[85vh]">
+                                        <img
+                                            src={productImage}
+                                            alt={product?.name}
+                                            className="max-h-[85vh] max-w-full object-contain rounded-xl shadow-2xl"
+                                        />
+                                        <button
+                                            onClick={() => setImageZoomed(false)}
+                                            className="absolute top-3 right-3 p-2 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors"
+                                        >
+                                            <X size={20} className="text-white" />
+                                        </button>
+                                        <div className="absolute bottom-3 left-3 bg-slate-800/80 px-3 py-1.5 rounded-lg">
+                                            <p className="text-sm text-white font-medium">{product?.name}</p>
+                                            <p className="text-xs text-slate-400 font-mono">{product?.code}</p>
                                         </div>
                                     </div>
                                 </div>

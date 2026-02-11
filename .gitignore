@@ -45,3 +45,4 @@ server/check_*.js
 server/list_*.js
 server/find_*.js
 server/verify_*.js
+server/entelog_api.exe

@@ -321,6 +321,7 @@ exports.getAccountOrders = async (req, res) => {
     const orficheTable = `LG_${firm}_${period}_ORFICHE`; // Sipariş Fişleri
     const orflineTable = `LG_${firm}_${period}_ORFLINE`; // Sipariş Satırları
     const itemsTable = `LG_${firm}_ITEMS`;
+    const unitsetTable = `LG_${firm}_UNITSETL`;
 
     const { id } = req.params;
 
@@ -349,7 +350,7 @@ exports.getAccountOrders = async (req, res) => {
             FROM ${orflineTable} L
             JOIN ${orficheTable} O ON L.ORDFICHEREF = O.LOGICALREF
             JOIN ${itemsTable} I ON L.STOCKREF = I.LOGICALREF
-            LEFT JOIN LG_${firm}_UNITSETL U ON L.UOMREF = U.LOGICALREF
+            LEFT JOIN ${unitsetTable} U ON L.UOMREF = U.LOGICALREF
             WHERE O.CLIENTREF = ${id} 
               AND L.CLOSED = 0  -- Bekleyen siparişler
               AND L.AMOUNT > L.SHIPPEDAMOUNT -- Sadece sevk edilmemiş miktarı olanlar
@@ -451,6 +452,59 @@ exports.getClientPurchaseTurnover = async (req, res) => {
 
   } catch (err) {
     console.error('❌ getClientPurchaseTurnover Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getTopPurchasedProducts = async (req, res) => {
+  try {
+    const config = getConfig();
+    const firm = config.firmNo || '113';
+    const period = config.periodNo || '01';
+    const stLineTable = `LG_${firm}_${period}_STLINE`;
+    const itemsTable = `LG_${firm}_ITEMS`;
+    const unitsetTable = `LG_${firm}_UNITSETL`;
+    const clcardTable = `LG_${firm}_CLCARD`;
+
+    const { id } = req.params;
+    const { limit } = req.query;
+
+    let accountRef = id;
+
+    // Resolve ID if it's a code (string)
+    if (isNaN(id)) {
+      const accountResult = await sql.query(`SELECT LOGICALREF FROM ${clcardTable} WHERE CODE = '${id}'`);
+      if (accountResult.recordset.length > 0) {
+        accountRef = accountResult.recordset[0].LOGICALREF;
+      } else {
+        return res.status(404).json({ message: 'Cari bulunamadı' });
+      }
+    }
+
+    const topClause = limit === 'all' ? '' : 'TOP 5';
+
+    const query = `
+            SELECT ${topClause}
+                I.CODE as productCode,
+                I.NAME as productName,
+                SUM(L.AMOUNT) as totalQuantity,
+                SUM(L.TOTAL) as totalAmount,
+                MAX(U.CODE) as unit
+            FROM ${stLineTable} L
+            JOIN ${itemsTable} I ON L.STOCKREF = I.LOGICALREF
+            LEFT JOIN ${unitsetTable} U ON L.UOMREF = U.LOGICALREF
+            WHERE L.CLIENTREF = ${accountRef}
+              AND L.TRCODE = 1 -- Sadece Satınalma Faturası
+              AND L.CANCELLED = 0
+            GROUP BY I.CODE, I.NAME
+            ORDER BY totalAmount DESC -- Varsayılan olarak tutara göre sırala
+        `;
+
+    const result = await sql.query(query);
+    res.json(result.recordset);
+
+  } catch (err) {
+    console.error('❌ getTopPurchasedProducts Error:', err.message);
     res.status(500).json({ error: err.message });
   }
 };

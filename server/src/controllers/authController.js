@@ -101,6 +101,10 @@ exports.updateUser = (req, res) => {
     if (name) users[index].name = name;
     if (role) users[index].role = role;
     if (password) users[index].password = password; // In real app, hash this
+    if (req.body.email) users[index].email = req.body.email;
+    if (req.body.phone) users[index].phone = req.body.phone;
+    if (req.body.address) users[index].address = req.body.address;
+    if (req.body.avatar) users[index].avatar = req.body.avatar;
 
     saveUsersData(users);
 

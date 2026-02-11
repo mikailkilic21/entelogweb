@@ -332,7 +332,7 @@ const Accounts = () => {
                                 accounts.map((account) => (
                                     <tr
                                         key={account.id}
-                                        onDoubleClick={() => setSelectedAccountId(account.id)}
+                                        onClick={() => setSelectedAccountId(account.id)}
                                         className="hover:bg-slate-800/40 transition-colors cursor-pointer group"
                                     >
                                         <td className="p-4 text-sm font-mono text-slate-400 group-hover:text-blue-400 transition-colors">

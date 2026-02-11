@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Server, Database, User, Key, CheckCircle, AlertCircle, Loader2, Building2, Upload, Image as ImageIcon, MapPin, Phone, Mail, Globe, FileText, Plus, Trash2, Edit2, X } from 'lucide-react';
+import { Save, Server, Database, User, Key, CheckCircle, AlertCircle, Loader2, Building2, Upload, Image as ImageIcon, MapPin, Phone, Mail, Globe, FileText, Plus, Trash2, Edit2, X, FolderOpen, Camera, RefreshCw, ChevronRight, HardDrive, ArrowLeft } from 'lucide-react';
 
 const Settings = () => {
     const [activeTab, setActiveTab] = useState('company');
@@ -32,6 +32,44 @@ const Settings = () => {
         firmNo: '',
         periodNo: ''
     });
+
+    // Image Dir State
+    const [imageStats, setImageStats] = useState(null);
+    const [testingImageDir, setTestingImageDir] = useState(false);
+
+    // Folder Browser State
+    const [showFolderBrowser, setShowFolderBrowser] = useState(false);
+    const [folderItems, setFolderItems] = useState([]);
+    const [folderPath, setFolderPath] = useState('');
+    const [folderParent, setFolderParent] = useState(null);
+    const [folderImageCount, setFolderImageCount] = useState(0);
+    const [folderLoading, setFolderLoading] = useState(false);
+
+    const browseFolders = async (targetPath = '') => {
+        setFolderLoading(true);
+        try {
+            const url = targetPath
+                ? `/api/settings/browse-folders?path=${encodeURIComponent(targetPath)}`
+                : '/api/settings/browse-folders';
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                setFolderItems(data.items || []);
+                setFolderPath(data.currentPath || '');
+                setFolderParent(data.parent || null);
+                setFolderImageCount(data.imageCount || 0);
+            }
+        } catch (err) {
+            console.error('Browse error:', err);
+        } finally {
+            setFolderLoading(false);
+        }
+    };
+
+    const selectFolder = (selectedPath) => {
+        setDbConfig({ ...dbConfig, imageDir: selectedPath });
+        setShowFolderBrowser(false);
+    };
 
     // Users State
     const [users, setUsers] = useState([]);
@@ -557,6 +595,108 @@ const Settings = () => {
                             <Field label="Firma No" name="firmNo" value={dbConfig.firmNo} onChange={handleDbChange} icon={Database} />
                             <Field label="Dönem No" name="periodNo" value={dbConfig.periodNo} onChange={handleDbChange} icon={Database} />
                         </div>
+
+                        {/* Product Image Directory */}
+                        <div className="border-t border-slate-800 pt-6 mt-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="p-2 bg-cyan-500/10 rounded-lg">
+                                    <Camera size={20} className="text-cyan-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-semibold text-white">Ürün Resimleri</h3>
+                                    <p className="text-sm text-slate-400">Stok kartı resimlerinin bulunduğu klasör yolunu belirtin</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Resim Klasörü Yolu</label>
+                                    <div className="flex gap-3">
+                                        <div className="relative flex-1">
+                                            <input
+                                                type="text"
+                                                name="imageDir"
+                                                value={dbConfig.imageDir || ''}
+                                                onChange={handleDbChange}
+                                                className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-4 pl-10 text-white focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 outline-none transition-all placeholder:text-slate-600 font-mono text-sm"
+                                                placeholder="C:\Users\Administrator\Desktop\resim_indir"
+                                            />
+                                            <FolderOpen className="absolute left-3 top-3 text-slate-500" size={18} />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setShowFolderBrowser(true); browseFolders(dbConfig.imageDir || ''); }}
+                                            className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-all whitespace-nowrap border border-slate-600"
+                                        >
+                                            <FolderOpen size={16} />
+                                            Gözat
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={testingImageDir}
+                                            onClick={async () => {
+                                                setTestingImageDir(true);
+                                                setImageStats(null);
+                                                try {
+                                                    const res = await fetch('/api/products/image/clear-cache');
+                                                    if (res.ok) {
+                                                        const data = await res.json();
+                                                        setImageStats(data);
+                                                    } else {
+                                                        setImageStats({ error: 'Bağlantı hatası' });
+                                                    }
+                                                } catch (err) {
+                                                    setImageStats({ error: err.message });
+                                                } finally {
+                                                    setTestingImageDir(false);
+                                                }
+                                            }}
+                                            className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-all whitespace-nowrap disabled:opacity-50"
+                                        >
+                                            {testingImageDir ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
+                                            Test Et
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-1.5">
+                                        Stok kodlarıyla eşleşen resim dosyalarının (jpg, png) bulunduğu klasör. Alt klasörler otomatik taranır.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Test Result */}
+                            {imageStats && (
+                                <div className={`mt-4 p-4 rounded-xl flex items-center gap-3 border ${imageStats.error
+                                    ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                                    : imageStats.totalImages > 0
+                                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                        : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                                    }`}>
+                                    {imageStats.error ? (
+                                        <>
+                                            <AlertCircle size={20} />
+                                            <span>Hata: {imageStats.error}</span>
+                                        </>
+                                    ) : imageStats.totalImages > 0 ? (
+                                        <>
+                                            <CheckCircle size={20} />
+                                            <span>
+                                                <strong>{imageStats.totalImages}</strong> resim bulundu
+                                                <span className="text-slate-400 ml-2 text-xs font-mono">{imageStats.imageDir}</span>
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <AlertCircle size={20} />
+                                            <span>
+                                                Klasörde resim bulunamadı
+                                                <span className="text-slate-400 ml-2 text-xs font-mono">{imageStats.imageDir}</span>
+                                            </span>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
                         <SubmitButton saving={saving} text="Veritabanı Ayarlarını Kaydet" color="emerald" />
                     </form>
                 )}
@@ -601,6 +741,163 @@ const Settings = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* --- FOLDER BROWSER MODAL --- */}
+            {showFolderBrowser && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col" style={{ maxHeight: '80vh' }}>
+                        {/* Header */}
+                        <div className="flex justify-between items-center p-5 border-b border-slate-800">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-cyan-500/10 rounded-lg">
+                                    <FolderOpen size={20} className="text-cyan-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white">Klasör Seç</h3>
+                                    <p className="text-sm text-slate-400">Yerel veya ağ klasörünü seçin</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowFolderBrowser(false)} className="text-slate-400 hover:text-white p-1">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Network Path Input */}
+                        <div className="px-5 py-3 border-b border-slate-800">
+                            <label className="block text-xs font-medium text-slate-400 mb-1.5">Yol girin (yerel veya ağ)</label>
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                const input = e.target.elements.networkPath.value.trim();
+                                if (input) browseFolders(input);
+                            }} className="flex gap-2">
+                                <div className="relative flex-1">
+                                    <input
+                                        name="networkPath"
+                                        type="text"
+                                        defaultValue={folderPath}
+                                        key={folderPath}
+                                        placeholder="\\\\YSERVER\resim_indir veya C:\klasor"
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 pl-9 text-white text-sm font-mono focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 outline-none placeholder:text-slate-600"
+                                    />
+                                    <Server className="absolute left-3 top-2.5 text-slate-500" size={14} />
+                                </div>
+                                <button
+                                    type="submit"
+                                    className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
+                                >
+                                    Git
+                                </button>
+                            </form>
+                        </div>
+
+                        {/* Current Path / Breadcrumb */}
+                        <div className="px-5 py-3 bg-slate-800/50 border-b border-slate-800">
+                            <div className="flex items-center gap-2">
+                                {folderParent !== null && (
+                                    <button
+                                        onClick={() => browseFolders(folderParent)}
+                                        className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors"
+                                        title="Üst klasöre git"
+                                    >
+                                        <ArrowLeft size={18} />
+                                    </button>
+                                )}
+                                {!folderPath && (
+                                    <button
+                                        onClick={() => browseFolders('')}
+                                        className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors"
+                                    >
+                                        <HardDrive size={16} className="text-cyan-400" />
+                                    </button>
+                                )}
+                                <div className="flex items-center gap-1 text-sm overflow-x-auto flex-1">
+                                    {folderPath ? (
+                                        folderPath.split('\\').filter(Boolean).map((segment, idx, arr) => {
+                                            const fullPath = arr.slice(0, idx + 1).join('\\');
+                                            const isLast = idx === arr.length - 1;
+                                            return (
+                                                <span key={idx} className="flex items-center gap-1 whitespace-nowrap">
+                                                    {idx > 0 && <ChevronRight size={14} className="text-slate-600" />}
+                                                    <button
+                                                        onClick={() => !isLast && browseFolders(fullPath + '\\')}
+                                                        className={`px-1.5 py-0.5 rounded ${isLast ? 'text-cyan-400 font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                                                    >
+                                                        {segment}
+                                                    </button>
+                                                </span>
+                                            );
+                                        })
+                                    ) : (
+                                        <span className="text-slate-400 font-medium px-1.5">Sürücüler</span>
+                                    )}
+                                </div>
+                                {folderPath && folderImageCount > 0 && (
+                                    <span className="text-xs bg-cyan-500/10 text-cyan-400 px-2 py-1 rounded-full border border-cyan-500/20 whitespace-nowrap">
+                                        📸 {folderImageCount} resim
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Folder List */}
+                        <div className="flex-1 overflow-y-auto p-3" style={{ minHeight: '300px' }}>
+                            {folderLoading ? (
+                                <div className="flex items-center justify-center py-12">
+                                    <Loader2 className="animate-spin text-cyan-400" size={32} />
+                                </div>
+                            ) : folderItems.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+                                    <FolderOpen size={40} className="mb-3 opacity-30" />
+                                    <p>Bu klasörde alt klasör yok</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-1">
+                                    {folderItems.map((item) => (
+                                        <button
+                                            key={item.path}
+                                            onClick={() => browseFolders(item.path)}
+                                            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800/80 transition-colors text-left group"
+                                        >
+                                            {item.type === 'drive' ? (
+                                                <HardDrive size={20} className="text-cyan-400 flex-shrink-0" />
+                                            ) : (
+                                                <FolderOpen size={20} className="text-amber-400 flex-shrink-0" />
+                                            )}
+                                            <span className="text-white font-medium text-sm flex-1 truncate">{item.name}</span>
+                                            <ChevronRight size={16} className="text-slate-600 group-hover:text-slate-400 flex-shrink-0" />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer - Select Button */}
+                        <div className="p-4 border-t border-slate-800 flex items-center justify-between gap-3">
+                            <div className="text-xs text-slate-500 font-mono truncate flex-1">
+                                {folderPath || 'Bir klasör seçin'}
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowFolderBrowser(false)}
+                                    className="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium border border-slate-700"
+                                >
+                                    İptal
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={!folderPath}
+                                    onClick={() => selectFolder(folderPath)}
+                                    className="bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                >
+                                    <CheckCircle size={16} />
+                                    Bu Klasörü Seç
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

@@ -35,6 +35,7 @@ router.post('/settings/db', settingsController.updateDbSettings);
 router.get('/firms', settingsController.getFirms);
 router.get('/firms/:firmNo/periods', settingsController.getFirmPeriods);
 router.post('/settings/db/switch', settingsController.switchDbConfig);
+router.get('/settings/browse-folders', settingsController.browseFolders);
 
 
 
@@ -49,6 +50,7 @@ router.get('/accounts/stats', accountsController.getAccountStats);
 router.get('/accounts/:id', accountsController.getAccountDetails);
 router.get('/accounts/:id/orders', accountsController.getAccountOrders);
 router.get('/accounts/:id/turnover', accountsController.getClientPurchaseTurnover);
+router.get('/accounts/:id/top-purchased-products', accountsController.getTopPurchasedProducts);
 
 
 
@@ -104,5 +106,11 @@ router.get('/dbs/settings/global', dbsController.getGlobalSettings);
 router.post('/dbs/settings/global', dbsController.saveGlobalSettings);
 router.get('/dbs/invoices', dbsController.getDBSInvoices);
 router.get('/dbs/invoice/:id', dbsController.getInvoiceDetails);
+
+// Product Image Routes
+const imageController = require('../controllers/imageController');
+router.get('/products/image/clear-cache', imageController.clearImageCache);
+router.get('/products/image/:stockCode', imageController.getProductImage);
+router.get('/products/image-check/:stockCode', imageController.checkProductImage);
 
 module.exports = router;

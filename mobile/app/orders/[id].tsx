@@ -1,10 +1,60 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, FileText, Layers } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { LinearGradient } from 'expo-linear-gradient';
+
+// Separate component to handle image state per item
+const OrderLineItem = ({ line }: { line: any }) => {
+    const [imageError, setImageError] = useState(false);
+
+    return (
+        <View className="bg-slate-900/50 border border-slate-800 p-3 rounded-lg mb-2">
+            <View className="flex-row justify-between items-start mb-2">
+
+                {/* Image / Icon */}
+                <View className="w-10 h-10 bg-slate-800 rounded mr-3 overflow-hidden items-center justify-center border border-slate-700">
+                    {!imageError ? (
+                        <Image
+                            source={{ uri: `${API_URL}/products/image/${encodeURIComponent(line.code)}` }}
+                            style={{ width: '100%', height: '100%' }}
+                            resizeMode="cover"
+                            onError={() => setImageError(true)}
+                        />
+                    ) : (
+                        <Layers size={16} color="#475569" />
+                    )}
+                </View>
+
+                <View className="flex-1 mr-2">
+                    <Text className="text-slate-200 font-medium text-sm mb-1">{line.name}</Text>
+                    <Text className="text-slate-500 text-xs font-mono">{line.code}</Text>
+                </View>
+                <Text className="text-white font-bold text-sm">
+                    {line.total?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                </Text>
+            </View>
+
+            <View className="flex-row items-center gap-4 bg-slate-950/50 p-2 rounded ml-12">
+                <View className="flex-row items-center gap-1">
+                    <Text className="text-slate-500 text-xs">Miktar:</Text>
+                    <Text className="text-slate-300 text-xs font-bold">{line.quantity} {line.unit}</Text>
+                </View>
+                <View className="flex-row items-center gap-1">
+                    <Text className="text-slate-500 text-xs">Sevk:</Text>
+                    <Text className={`text-xs font-bold ${line.shippedAmount > 0 ? 'text-green-400' : 'text-slate-300'}`}>
+                        {line.shippedAmount || 0}
+                    </Text>
+                </View>
+                <View className="flex-1 items-end">
+                    <Text className="text-slate-400 text-xs">{line.price?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</Text>
+                </View>
+            </View>
+        </View>
+    );
+};
 
 export default function OrderDetailScreen() {
     const { id } = useLocalSearchParams();
@@ -114,33 +164,7 @@ export default function OrderDetailScreen() {
                         </View>
 
                         {(lines || []).map((line: any, index: number) => (
-                            <View key={index} className="bg-slate-900/50 border border-slate-800 p-3 rounded-lg mb-2">
-                                <View className="flex-row justify-between items-start mb-2">
-                                    <View className="flex-1 mr-2">
-                                        <Text className="text-slate-200 font-medium text-sm mb-1">{line.name}</Text>
-                                        <Text className="text-slate-500 text-xs font-mono">{line.code}</Text>
-                                    </View>
-                                    <Text className="text-white font-bold text-sm">
-                                        {line.total?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
-                                    </Text>
-                                </View>
-
-                                <View className="flex-row items-center gap-4 bg-slate-950/50 p-2 rounded">
-                                    <View className="flex-row items-center gap-1">
-                                        <Text className="text-slate-500 text-xs">Miktar:</Text>
-                                        <Text className="text-slate-300 text-xs font-bold">{line.quantity} {line.unit}</Text>
-                                    </View>
-                                    <View className="flex-row items-center gap-1">
-                                        <Text className="text-slate-500 text-xs">Sevk:</Text>
-                                        <Text className={`text-xs font-bold ${line.shippedAmount > 0 ? 'text-green-400' : 'text-slate-300'}`}>
-                                            {line.shippedAmount || 0}
-                                        </Text>
-                                    </View>
-                                    <View className="flex-1 items-end">
-                                        <Text className="text-slate-400 text-xs">{line.price?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</Text>
-                                    </View>
-                                </View>
-                            </View>
+                            <OrderLineItem key={index} line={line} />
                         ))}
                     </View>
 

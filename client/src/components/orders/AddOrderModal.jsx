@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Plus, Trash2, Save, Loader2, Calendar, FileText, User } from 'lucide-react';
+import { X, Search, Plus, Trash2, Save, Loader2, Calendar, FileText, User, ImageOff } from 'lucide-react';
 
 const AddOrderModal = ({ onClose, onSave, onDelete, editOrder, isCopy }) => {
     const [loading, setLoading] = useState(false);
@@ -400,18 +400,35 @@ const AddOrderModal = ({ onClose, onSave, onDelete, editOrder, isCopy }) => {
                                 </div>
                             )}
                             {showProductResults && productResults.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 max-h-60 overflow-y-auto">
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 max-h-72 overflow-y-auto">
                                     {productResults.map(p => (
                                         <button
                                             key={p.id}
                                             onClick={() => addLine(p)}
-                                            className="w-full text-left p-3 hover:bg-slate-700 border-b border-slate-700/50 last:border-0 flex justify-between items-center group"
+                                            className="w-full text-left p-3 hover:bg-slate-700 border-b border-slate-700/50 last:border-0 flex items-center gap-3 group"
                                         >
-                                            <div>
-                                                <div className="text-white font-medium group-hover:text-emerald-400 transition-colors">{p.name}</div>
+                                            {/* Product Image Thumbnail */}
+                                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-900 border border-slate-700 flex-shrink-0 flex items-center justify-center">
+                                                <img
+                                                    src={`/api/products/image/${encodeURIComponent(p.code)}`}
+                                                    alt=""
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        e.target.nextSibling.style.display = 'flex';
+                                                    }}
+                                                />
+                                                <div style={{ display: 'none' }} className="items-center justify-center w-full h-full">
+                                                    <ImageOff size={16} className="text-slate-600" />
+                                                </div>
+                                            </div>
+                                            {/* Product Info */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-white font-medium group-hover:text-emerald-400 transition-colors truncate">{p.name}</div>
                                                 <div className="text-slate-500 text-xs font-mono">{p.code}</div>
                                             </div>
-                                            <div className="flex items-center gap-3">
+                                            {/* Stock & Add */}
+                                            <div className="flex items-center gap-3 flex-shrink-0">
                                                 <div className="text-right">
                                                     <div className="text-xs text-slate-400">Stok</div>
                                                     <div className={`text-sm font-medium ${p.stockLevel > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -455,8 +472,26 @@ const AddOrderModal = ({ onClose, onSave, onDelete, editOrder, isCopy }) => {
                                         <tr key={index} className="hover:bg-slate-800 transition-colors group">
                                             <td className="p-4 text-slate-500 text-xs font-mono">{index + 1}</td>
                                             <td className="p-4">
-                                                <div className="font-medium text-white">{line.name}</div>
-                                                <div className="text-xs text-slate-500 font-mono">{line.code}</div>
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="w-7 h-7 rounded overflow-hidden bg-slate-900 border border-slate-700 flex-shrink-0 flex items-center justify-center">
+                                                        <img
+                                                            src={`/api/products/image/${encodeURIComponent(line.code)}`}
+                                                            alt=""
+                                                            className="w-full h-full object-cover"
+                                                            onError={(e) => {
+                                                                e.target.style.display = 'none';
+                                                                e.target.nextSibling.style.display = 'flex';
+                                                            }}
+                                                        />
+                                                        <div style={{ display: 'none' }} className="items-center justify-center w-full h-full">
+                                                            <ImageOff size={12} className="text-slate-700" />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-medium text-white">{line.name}</div>
+                                                        <div className="text-xs text-slate-500 font-mono">{line.code}</div>
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td className="p-4 text-center">
                                                 <input

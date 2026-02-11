@@ -27,7 +27,7 @@ export default function LoginScreen() {
         try {
             // Check for Demo shortcut
             if (username === 'demo' && password === 'demo123') {
-                signIn('demo', 'demo');
+                signIn({ id: 0, username: 'demo', role: 'demo', name: 'Demo Kullanıcı' });
                 router.replace('/(tabs)');
                 return;
             }
@@ -52,7 +52,7 @@ export default function LoginScreen() {
                 const data = JSON.parse(text);
 
                 if (data.success) {
-                    signIn(data.user.username, data.user.role, data.token);
+                    signIn(data.user, data.token);
                     router.replace('/(tabs)');
                 } else {
                     Alert.alert('Giriş Başarısız', data.message || 'Kullanıcı adı veya şifre hatalı.');

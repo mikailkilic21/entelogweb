@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ActivityIndicator, ScrollView, TouchableOpacity, Image, Modal, StatusBar } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, User, Box, TrendingUp, ShoppingCart } from 'lucide-react-native';
+import { ArrowLeft, User, Box, TrendingUp, ShoppingCart, X } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { useAuth } from '@/context/AuthContext';
 
@@ -16,6 +16,8 @@ export default function ProductDetailScreen() {
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('summary'); // 'summary' | 'transactions' | 'orders'
+    const [imageError, setImageError] = useState(false);
+    const [isImageModalVisible, setIsImageModalVisible] = useState(false);
 
     useEffect(() => {
         const fetchDetails = async () => {
@@ -56,22 +58,13 @@ export default function ProductDetailScreen() {
     const renderTabContent = () => {
         switch (activeTab) {
             case 'transactions':
-                // Filter transactions by warehouse if selected (client-side filter if not already filtered by API)
-                // Note: API already filters if we passed the warehouse parameter.
-                // But let's be safe.
-                const _filteredTransactions = warehouseName
-                    ? (product.transactions || []).filter((tr: any) => tr.warehouseName === warehouseName || !tr.warehouseName) // Assuming API returns warehouseName or we filter by something else?
-                    // actually, the API `getProductDetails` accepts `warehouse` param.
-                    // If we passed `warehouseName` (which is just a name) we need the ID.
-                    // But wait, `useLocalSearchParams` only has `id` and `warehouseName`. We don't have warehouse ID here easily unless we look it up.
-                    // Better approach: The previous screen passed `warehouseName` purely for display. 
-                    // To fetch filtered data, we need the ID. 
-                    // Let's modify the previous screen to pass ID as well.
+                const filteredTransactions = warehouseName
+                    ? (product.transactions || []).filter((tr: any) => tr.warehouseName === warehouseName || !tr.warehouseName)
                     : product.transactions;
 
                 return (
                     <View className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden mb-6">
-                        {product.transactions?.map((tr: any, index: number) => {
+                        {filteredTransactions?.map((tr: any, index: number) => {
                             // Check if clickable (Invoice types)
                             const isClickable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(tr.trcode);
                             // Check if account name should be shown (Not for internal slips like 14, 25, 50, 51)
@@ -120,7 +113,7 @@ export default function ProductDetailScreen() {
                             );
                         })
                         }
-                        {(!product.transactions || product.transactions.length === 0) && (
+                        {(!filteredTransactions || filteredTransactions.length === 0) && (
                             <View className="p-8 items-center">
                                 <Text className="text-slate-500">Hareket bulunamadı</Text>
                             </View>
@@ -226,7 +219,7 @@ export default function ProductDetailScreen() {
             <LinearGradient colors={['#0f172a', '#020617']} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />
             <SafeAreaView className="flex-1">
                 {/* Header */}
-                <View className="px-4 py-3 flex-row items-center gap-3 border-b border-slate-800/50">
+                <View className="px-4 py-3 flex-row items-center gap-3 border-b border-slate-800/50 bg-slate-900/50 z-10">
                     <TouchableOpacity onPress={() => router.back()} className="p-2 bg-slate-800 rounded-full">
                         <ArrowLeft size={20} color="#e2e8f0" />
                     </TouchableOpacity>
@@ -236,48 +229,107 @@ export default function ProductDetailScreen() {
                     </View>
                 </View>
 
-                {/* Warehouse Badge (If Selected) */}
-                {warehouseName && (
-                    <View className="mx-4 mt-3 bg-orange-500/20 border border-orange-500/50 p-2 rounded-lg flex-row items-center justify-center">
-                        <Box size={16} color="#fb923c" />
-                        <Text className="text-orange-400 font-bold ml-2 text-sm uppercase tracking-wide">
-                            {warehouseName}
-                        </Text>
+                <ScrollView className="flex-1">
+                    {/* Product Image - Full Width */}
+                    <View className="w-full h-72 bg-slate-900 justify-center items-center overflow-hidden border-b border-slate-800 relative">
+                        <TouchableOpacity
+                            className="w-full h-full"
+                            activeOpacity={0.9}
+                            onPress={() => !imageError && setIsImageModalVisible(true)}
+                            disabled={imageError}
+                        >
+                            {!imageError ? (
+                                <Image
+                                    source={{ uri: `${API_URL}/products/image/${encodeURIComponent(product.code)}` }}
+                                    style={{ width: '100%', height: '100%' }}
+                                    resizeMode="contain"
+                                    onError={() => setImageError(true)}
+                                />
+                            ) : (
+                                <View className="items-center justify-center">
+                                    <Box size={64} color="#334155" />
+                                    <Text className="text-slate-600 mt-4 font-bold">Resim Yok</Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+
+                        {/* Gradient Overlay for Text Readability if needed */}
+                        <LinearGradient
+                            colors={['transparent', 'rgba(15, 23, 42, 0.8)']}
+                            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60 }}
+                            pointerEvents="none"
+                        />
                     </View>
-                )}
 
-                {/* Tabs */}
-                <View className="flex-row px-4 py-4 gap-2">
-                    <TouchableOpacity
-                        onPress={() => setActiveTab('summary')}
-                        className={`flex-1 py-2.5 rounded-xl border items-center ${activeTab === 'summary' ? 'bg-indigo-600 border-indigo-500' : 'bg-slate-900 border-slate-800'}`}
-                    >
-                        <Box size={18} color={activeTab === 'summary' ? '#fff' : '#94a3b8'} />
-                        <Text className={`text-xs mt-1 font-bold ${activeTab === 'summary' ? 'text-white' : 'text-slate-400'}`}>Özet</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => setActiveTab('transactions')}
-                        className={`flex-1 py-2.5 rounded-xl border items-center ${activeTab === 'transactions' ? 'bg-indigo-600 border-indigo-500' : 'bg-slate-900 border-slate-800'}`}
-                    >
-                        <TrendingUp size={18} color={activeTab === 'transactions' ? '#fff' : '#94a3b8'} />
-                        <Text className={`text-xs mt-1 font-bold ${activeTab === 'transactions' ? 'text-white' : 'text-slate-400'}`}>Hareketler</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => setActiveTab('orders')}
-                        className={`flex-1 py-2.5 rounded-xl border items-center ${activeTab === 'orders' ? 'bg-indigo-600 border-indigo-500' : 'bg-slate-900 border-slate-800'}`}
-                    >
-                        <View className="relative">
-                            <ShoppingCart size={18} color={activeTab === 'orders' ? '#fff' : '#94a3b8'} />
-                            {orders.length > 0 && <View className="absolute -top-1.5 -right-2 w-3 h-3 bg-rose-500 rounded-full" />}
+                    {/* Warehouse Badge (If Selected) */}
+                    {warehouseName && (
+                        <View className="mx-4 mt-4 bg-orange-500/20 border border-orange-500/50 p-2 rounded-lg flex-row items-center justify-center">
+                            <Box size={16} color="#fb923c" />
+                            <Text className="text-orange-400 font-bold ml-2 text-sm uppercase tracking-wide">
+                                {warehouseName}
+                            </Text>
                         </View>
-                        <Text className={`text-xs mt-1 font-bold ${activeTab === 'orders' ? 'text-white' : 'text-slate-400'}`}>Siparişler</Text>
-                    </TouchableOpacity>
-                </View>
+                    )}
 
-                {/* Content */}
-                <ScrollView className="flex-1 px-4">
-                    {renderTabContent()}
+                    {/* Tabs */}
+                    <View className="flex-row px-4 py-4 gap-2">
+                        <TouchableOpacity
+                            onPress={() => setActiveTab('summary')}
+                            className={`flex-1 py-2.5 rounded-xl border items-center ${activeTab === 'summary' ? 'bg-indigo-600 border-indigo-500' : 'bg-slate-900 border-slate-800'}`}
+                        >
+                            <Box size={18} color={activeTab === 'summary' ? '#fff' : '#94a3b8'} />
+                            <Text className={`text-xs mt-1 font-bold ${activeTab === 'summary' ? 'text-white' : 'text-slate-400'}`}>Özet</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setActiveTab('transactions')}
+                            className={`flex-1 py-2.5 rounded-xl border items-center ${activeTab === 'transactions' ? 'bg-indigo-600 border-indigo-500' : 'bg-slate-900 border-slate-800'}`}
+                        >
+                            <TrendingUp size={18} color={activeTab === 'transactions' ? '#fff' : '#94a3b8'} />
+                            <Text className={`text-xs mt-1 font-bold ${activeTab === 'transactions' ? 'text-white' : 'text-slate-400'}`}>Hareketler</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setActiveTab('orders')}
+                            className={`flex-1 py-2.5 rounded-xl border items-center ${activeTab === 'orders' ? 'bg-indigo-600 border-indigo-500' : 'bg-slate-900 border-slate-800'}`}
+                        >
+                            <View className="relative">
+                                <ShoppingCart size={18} color={activeTab === 'orders' ? '#fff' : '#94a3b8'} />
+                                {orders.length > 0 && <View className="absolute -top-1.5 -right-2 w-3 h-3 bg-rose-500 rounded-full" />}
+                            </View>
+                            <Text className={`text-xs mt-1 font-bold ${activeTab === 'orders' ? 'text-white' : 'text-slate-400'}`}>Siparişler</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Content */}
+                    <View className="px-4 pb-10">
+                        {renderTabContent()}
+                    </View>
                 </ScrollView>
+
+                {/* Full Screen Image Modal */}
+                <Modal visible={isImageModalVisible} transparent={true} animationType="fade" onRequestClose={() => setIsImageModalVisible(false)}>
+                    <View className="flex-1 bg-black/95 justify-center items-center relative">
+                        <StatusBar hidden />
+                        <TouchableOpacity
+                            onPress={() => setIsImageModalVisible(false)}
+                            className="absolute top-10 right-6 z-20 bg-slate-800/50 p-2 rounded-full"
+                        >
+                            <X size={28} color="white" />
+                        </TouchableOpacity>
+
+                        <View className="w-full h-full justify-center items-center">
+                            <Image
+                                source={{ uri: `${API_URL}/products/image/${encodeURIComponent(product.code)}` }}
+                                style={{ width: '100%', height: '80%' }}
+                                resizeMode="contain"
+                            />
+                        </View>
+
+                        <View className="absolute bottom-10 w-full px-6 items-center">
+                            <Text className="text-white text-lg font-bold text-center mb-1">{product.name}</Text>
+                            <Text className="text-slate-400 font-mono">{product.code}</Text>
+                        </View>
+                    </View>
+                </Modal>
             </SafeAreaView>
         </View>
     );

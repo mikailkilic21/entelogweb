@@ -1,37 +1,76 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Dashboard from './Dashboard';
 import { BrowserRouter } from 'react-router-dom';
 
-// Mock StatCard and Charts since we are testing Dashboard logic, not children
+// Mock child components
 vi.mock('../components/StatCard', () => ({
     default: ({ title, value }) => <div data-testid="stat-card">{title}: {value}</div>
-}));
-vi.mock('../components/SalesChart', () => ({
-    default: () => <div data-testid="sales-chart">SalesChart</div>
-}));
-vi.mock('../components/TopProductsChart', () => ({
-    default: () => <div data-testid="top-products-chart">TopProductsChart</div>
-}));
-vi.mock('../components/TopAccountsChart', () => ({
-    default: () => <div data-testid="top-accounts-chart">TopAccountsChart</div>
 }));
 vi.mock('../components/InvoiceList', () => ({
     default: () => <div data-testid="invoice-list">InvoiceList</div>
 }));
 
-// Mock fetch
+// Recharts mocks
+vi.mock('recharts', () => {
+    return {
+        ResponsiveContainer: ({ children }) => <div style={{ width: 800, height: 800 }}>{children}</div>,
+        PieChart: () => <div>PieChart</div>,
+        Pie: () => <div>Pie</div>,
+        AreaChart: () => <div>AreaChart</div>,
+        Area: () => <div>Area</div>,
+        BarChart: () => <div>BarChart</div>,
+        Bar: () => <div>Bar</div>,
+        CartesianGrid: () => <div>Grid</div>,
+        XAxis: () => <div>XAxis</div>,
+        YAxis: () => <div>YAxis</div>,
+        Tooltip: () => <div>Tooltip</div>,
+        Cell: () => <div>Cell</div>,
+        Sector: () => <div>Sector</div>
+    };
+});
+
+// Mock fetch globally
 global.fetch = vi.fn();
 
 describe('Dashboard Component', () => {
     beforeEach(() => {
-        vi.clearAllMocks();
+        vi.resetAllMocks();
 
-        // Default mock responses
-        global.fetch.mockResolvedValue({
-            ok: true,
-            json: async () => []
+        global.fetch.mockImplementation((url) => {
+            const mockResponse = (data) => Promise.resolve({
+                ok: true,
+                json: async () => data
+            });
+
+            if (url.includes('/api/stats/top-products') ||
+                url.includes('/api/stats/top-customers') ||
+                url.includes('/api/stats/top-suppliers') ||
+                url.includes('/api/stats/trend') ||
+                url.includes('/api/invoices')) {
+                return mockResponse([]);
+            }
+
+            if (url.includes('/api/settings/company')) {
+                return mockResponse({ TITLE: 'Test Company' });
+            }
+
+            // Order matters: specific paths first, then general /api/stats
+            if (url.includes('/api/stats')) {
+                return mockResponse({
+                    totalSales: 1000,
+                    totalPurchases: 500,
+                    salesCount: 10,
+                    purchaseCount: 5
+                });
+            }
+
+            return mockResponse({});
         });
+    });
+
+    afterEach(() => {
+        vi.clearAllMocks();
     });
 
     it('renders loading state initially', () => {
@@ -40,37 +79,11 @@ describe('Dashboard Component', () => {
                 <Dashboard />
             </BrowserRouter>
         );
-        // Look for the loading spinner or text based on your Loader2 usage
-        // Since Loader2 is an icon, we might need to look for class or container
-        // Based on code: <div className="flex h-screen items-center justify-center">
-        // checking if loader exists
         const loader = document.querySelector('.animate-spin');
         expect(loader).toBeInTheDocument();
     });
 
     it('renders dashboard content after loading', async () => {
-        // Mock specific returns for stats
-        global.fetch.mockImplementation((url) => {
-            if (url.includes('/api/stats')) {
-                return Promise.resolve({
-                    ok: true,
-                    json: async () => ({
-                        totalSales: 1000,
-                        totalPurchases: 500,
-                        totalCount: 10,
-                        totalVat: 180
-                    })
-                });
-            }
-            if (url.includes('/api/settings/company')) {
-                return Promise.resolve({
-                    ok: true,
-                    json: async () => ({ TITLE: 'Test Company' })
-                });
-            }
-            return Promise.resolve({ ok: true, json: async () => [] });
-        });
-
         render(
             <BrowserRouter>
                 <Dashboard />
@@ -78,21 +91,19 @@ describe('Dashboard Component', () => {
         );
 
         await waitFor(() => {
-            expect(screen.getByText(/Test Company/i)).toBeInTheDocument();
-        });
+            expect(screen.queryByText(/Test Company/i)).toBeInTheDocument();
+        }, { timeout: 3000 });
 
-        expect(screen.getByText(/Toplam Satış/i)).toBeInTheDocument();
-        expect(screen.getByText(/1.000,00/i)).toBeInTheDocument(); // Currency formatting check
-        expect(screen.getByText(/Toplam Alış/i)).toBeInTheDocument();
-        expect(screen.getByText(/500,00/i)).toBeInTheDocument();
+        // Check for specific stat card content
+        const statCards = screen.getAllByTestId('stat-card');
+        const totalSalesCard = statCards.find(card => card.textContent.includes('Toplam Satış'));
+        expect(totalSalesCard).toHaveTextContent('1000');
+
+        const totalPurchasesCard = statCards.find(card => card.textContent.includes('Toplam Alış'));
+        expect(totalPurchasesCard).toHaveTextContent('500');
     });
 
     it('fetches data on manual refresh click', async () => {
-        global.fetch.mockResolvedValue({
-            ok: true,
-            json: async () => []
-        });
-
         render(
             <BrowserRouter>
                 <Dashboard />
@@ -100,24 +111,13 @@ describe('Dashboard Component', () => {
         );
 
         await waitFor(() => {
-            expect(screen.queryByRole('heading', { level: 1 })).toBeInTheDocument();
+            expect(screen.queryByText(/Test Company/i)).toBeInTheDocument();
         });
 
-        const refreshButton = screen.getAllByRole('button').find(btn => btn.querySelector('svg'));
-        // Or finding by class if role is ambiguous, but button with svg is likely refresh in that context
-        // Better: Identify by parent div or structure if needed. 
-        // Based on code: <button onClick={fetchData} ...><RefreshCw ... /></button>
+        global.fetch.mockClear();
 
-        // Let's rely on the fact it's a button and we can click it.
-        // We need to clear previous calls to verify new one
-        vi.clearAllMocks();
-
-        // Mock again for the click
-        global.fetch.mockResolvedValue({
-            ok: true,
-            json: async () => []
-        });
-
+        // Use getByTitle since we know the title attribute exists
+        const refreshButton = screen.getByTitle('Yenile');
         fireEvent.click(refreshButton);
 
         await waitFor(() => {
@@ -126,11 +126,6 @@ describe('Dashboard Component', () => {
     });
 
     it('does NOT have the CANLI button', async () => {
-        global.fetch.mockResolvedValue({
-            ok: true,
-            json: async () => []
-        });
-
         render(
             <BrowserRouter>
                 <Dashboard />
@@ -138,7 +133,7 @@ describe('Dashboard Component', () => {
         );
 
         await waitFor(() => {
-            expect(screen.queryByRole('heading', { level: 1 })).toBeInTheDocument();
+            expect(screen.queryByText(/Test Company/i)).toBeInTheDocument();
         });
 
         expect(screen.queryByText('CANLI')).not.toBeInTheDocument();

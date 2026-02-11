@@ -239,6 +239,107 @@ const getFirmPeriods = async (req, res) => {
     }
 };
 
+/**
+ * GET /api/settings/browse-folders?path=C:\
+ * Lists subdirectories at the given path for the folder picker
+ * Supports both local paths (C:\folder) and UNC paths (\\server\share)
+ */
+const browseFolders = (req, res) => {
+    try {
+        let targetPath = req.query.path || '';
+
+        // If no path provided, list available drives
+        if (!targetPath) {
+            const drives = [];
+            // Check common Windows drive letters
+            for (const letter of 'CDEFGHIJ') {
+                const drive = `${letter}:\\`;
+                try {
+                    if (fs.existsSync(drive)) {
+                        drives.push({ name: `${letter}:`, path: drive, type: 'drive' });
+                    }
+                } catch { /* skip inaccessible drives */ }
+            }
+            return res.json({ currentPath: '', items: drives, parent: null });
+        }
+
+        // Check if it's a UNC path
+        const isUNC = targetPath.startsWith('\\\\');
+
+        // Normalize path - preserve UNC format
+        if (isUNC) {
+            // Clean up extra slashes but keep UNC prefix
+            targetPath = '\\\\' + targetPath.slice(2).replace(/\//g, '\\');
+            // Remove trailing backslash unless it's the share root
+            if (targetPath.endsWith('\\') && targetPath.split('\\').filter(Boolean).length > 2) {
+                targetPath = targetPath.slice(0, -1);
+            }
+        } else {
+            targetPath = path.resolve(targetPath);
+        }
+
+        if (!fs.existsSync(targetPath)) {
+            return res.status(404).json({ error: 'Yol bulunamadı: ' + targetPath, path: targetPath });
+        }
+
+        const stat = fs.statSync(targetPath);
+        if (!stat.isDirectory()) {
+            return res.status(400).json({ error: 'Bu bir klasör değil', path: targetPath });
+        }
+
+        const entries = fs.readdirSync(targetPath, { withFileTypes: true });
+        const items = [];
+        let imageCount = 0;
+
+        for (const entry of entries) {
+            if (entry.isDirectory()) {
+                // Skip hidden/system folders
+                if (entry.name.startsWith('.') || entry.name.startsWith('$') || entry.name === 'System Volume Information') continue;
+
+                items.push({
+                    name: entry.name,
+                    path: path.join(targetPath, entry.name),
+                    type: 'folder'
+                });
+            } else if (entry.isFile()) {
+                const ext = path.extname(entry.name).toLowerCase();
+                if (['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif'].includes(ext)) {
+                    imageCount++;
+                }
+            }
+        }
+
+        // Sort folders alphabetically
+        items.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+
+        // Parent path - handle UNC root correctly
+        let parent = null;
+        if (isUNC) {
+            const parts = targetPath.split('\\').filter(Boolean);
+            // \\server\share = 2 parts, don't go higher than share root
+            if (parts.length > 2) {
+                parent = '\\\\' + parts.slice(0, parts.length - 1).join('\\');
+            }
+            // If at share root (\\server\share), parent goes back to drive list
+            // parent stays null
+        } else {
+            const parentPath = path.dirname(targetPath);
+            parent = parentPath !== targetPath ? parentPath : null;
+        }
+
+        res.json({
+            currentPath: targetPath,
+            items,
+            parent,
+            imageCount
+        });
+
+    } catch (err) {
+        console.error('Browse folders error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+};
+
 module.exports = {
     getSettings,
     updateSettings,
@@ -248,5 +349,7 @@ module.exports = {
     updateDbSettings,
     getFirms,
     switchDbConfig,
-    getFirmPeriods
+    getFirmPeriods,
+    browseFolders
 };
+

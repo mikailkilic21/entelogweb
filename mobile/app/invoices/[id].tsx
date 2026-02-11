@@ -1,10 +1,46 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, CreditCard, Layers } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { LinearGradient } from 'expo-linear-gradient';
+
+// Separate component for line item with image
+const InvoiceLineItem = ({ line }: { line: any }) => {
+    const [imageError, setImageError] = useState(false);
+
+    return (
+        <View className="bg-slate-900/50 border border-slate-800 p-3 rounded-lg mb-2 flex-row items-center">
+            {/* Thumbnail Image */}
+            <View className="w-10 h-10 bg-slate-800 rounded mr-3 overflow-hidden items-center justify-center border border-slate-700">
+                {!imageError && line.code ? (
+                    <Image
+                        source={{ uri: `${API_URL}/products/image/${encodeURIComponent(line.code)}` }}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                        onError={() => setImageError(true)}
+                    />
+                ) : (
+                    <Layers size={16} color="#475569" />
+                )}
+            </View>
+
+            <View className="flex-1 mr-2">
+                <Text className="text-slate-200 font-medium text-sm mb-1">{line.name}</Text>
+                {line.code && <Text className="text-slate-500 text-[10px] font-mono mb-1">{line.code}</Text>}
+                <View className="flex-row gap-2">
+                    <Text className="text-slate-500 text-xs">{line.quantity} {line.unit}</Text>
+                    <Text className="text-slate-600 text-xs">•</Text>
+                    <Text className="text-slate-500 text-xs">{line.price?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</Text>
+                </View>
+            </View>
+            <Text className="text-white font-bold text-sm">
+                {line.total?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+            </Text>
+        </View>
+    );
+};
 
 export default function InvoiceDetailScreen() {
     const { id } = useLocalSearchParams();
@@ -108,19 +144,7 @@ export default function InvoiceDetailScreen() {
                         </View>
 
                         {(lines || []).map((line: any, index: number) => (
-                            <View key={index} className="bg-slate-900/50 border border-slate-800 p-3 rounded-lg mb-2 flex-row justify-between items-center">
-                                <View className="flex-1 mr-2">
-                                    <Text className="text-slate-200 font-medium text-sm mb-1">{line.name}</Text>
-                                    <View className="flex-row gap-2">
-                                        <Text className="text-slate-500 text-xs">{line.quantity} {line.unit}</Text>
-                                        <Text className="text-slate-600 text-xs">•</Text>
-                                        <Text className="text-slate-500 text-xs">{line.price?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</Text>
-                                    </View>
-                                </View>
-                                <Text className="text-white font-bold text-sm">
-                                    {line.total?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
-                                </Text>
-                            </View>
+                            <InvoiceLineItem key={index} line={line} />
                         ))}
                     </View>
 

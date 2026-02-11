@@ -18,7 +18,7 @@ const MenuCard = ({ children, onPress, colors = ['#1e293b', '#0f172a'] }: any) =
         scale.value = withSpring(1, { damping: 12 });
         opacity.value = withTiming(1, { duration: 500 });
         rotateX.value = withSpring(0, { damping: 15, mass: 1.2 }); // Settle to 0
-    }, [scale, opacity, rotateX]);
+    }, []);
 
     const pressed = useSharedValue(false);
 

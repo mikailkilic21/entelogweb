@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { X, Building2, Phone, Mail, MapPin, FileText, Calendar, TrendingUp, TrendingDown, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { X, Building2, Phone, Mail, MapPin, FileText, Calendar, TrendingUp, TrendingDown, Loader2, ChevronDown, ChevronRight, Package, Box, Download, FileSpreadsheet } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
+import * as XLSX from 'xlsx';
 import InvoiceDetailModal from './InvoiceDetailModal';
 import CheckDetailModal from './CheckDetailModal';
+import PurchasedProductsReportTemplate from './PurchasedProductsReportTemplate';
 
 const AccountDetailModal = ({ accountId, onClose }) => {
     const [account, setAccount] = useState(null);
@@ -9,9 +12,16 @@ const AccountDetailModal = ({ accountId, onClose }) => {
     const [loading, setLoading] = useState(true);
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [selectedPayroll, setSelectedPayroll] = useState(null);
-    const [activeTab, setActiveTab] = useState('summary'); // 'summary', 'transactions', 'orders'
+    const [activeTab, setActiveTab] = useState('summary'); // 'summary', 'transactions', 'orders', 'products'
     const [turnover, setTurnover] = useState(null);
     const [loadingTurnover, setLoadingTurnover] = useState(false);
+    const [topProducts, setTopProducts] = useState(null);
+    const [loadingProducts, setLoadingProducts] = useState(false);
+    const [companyInfo, setCompanyInfo] = useState(null);
+    const [generatingReport, setGeneratingReport] = useState(false);
+    const [generatingExcel, setGeneratingExcel] = useState(false);
+    const [allProducts, setAllProducts] = useState(null);
+    const reportRef = useRef();
 
     useEffect(() => {
         if (!accountId) return;
@@ -19,9 +29,10 @@ const AccountDetailModal = ({ accountId, onClose }) => {
         const fetchAccountDetails = async () => {
             setLoading(true);
             try {
-                const [accountRes, ordersRes] = await Promise.all([
+                const [accountRes, ordersRes, companyRes] = await Promise.all([
                     fetch(`/api/accounts/${accountId}`),
-                    fetch(`/api/accounts/${accountId}/orders`)
+                    fetch(`/api/accounts/${accountId}/orders`),
+                    fetch('/api/settings/company')
                 ]);
 
                 if (accountRes.ok) {
@@ -30,16 +41,21 @@ const AccountDetailModal = ({ accountId, onClose }) => {
                 if (ordersRes.ok) {
                     setPendingOrders(await ordersRes.json());
                 }
+                if (companyRes.ok) {
+                    setCompanyInfo(await companyRes.json());
+                }
             } catch (error) {
-                console.error('Error fetching account details:', error);
+                console.error('Error fetching details:', error);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchAccountDetails();
-        // Reset turnover on open
+        // Reset turnover and products on open
         setTurnover(null);
+        setTopProducts(null);
+        setAllProducts(null);
     }, [accountId]);
 
     const fetchTurnover = async () => {
@@ -56,6 +72,117 @@ const AccountDetailModal = ({ accountId, onClose }) => {
         }
     };
 
+    const fetchTopProducts = async () => {
+        if (topProducts) return; // Don't fetch if already loaded
+        setLoadingProducts(true);
+        try {
+            const res = await fetch(`/api/accounts/${accountId}/top-purchased-products`);
+            if (res.ok) {
+                setTopProducts(await res.json());
+            }
+        } catch (error) {
+            console.error('Error fetching top products:', error);
+        } finally {
+            setLoadingProducts(false);
+        }
+    };
+
+    const fetchAllProductsIfNeeded = async () => {
+        if (allProducts) return allProducts;
+
+        try {
+            const res = await fetch(`/api/accounts/${accountId}/top-purchased-products?limit=all`);
+            if (res.ok) {
+                const data = await res.json();
+                setAllProducts(data);
+                return data;
+            }
+        } catch (error) {
+            console.error('Error fetching all products:', error);
+        }
+        return null;
+    };
+
+    const handleDownloadReport = async () => {
+        setGeneratingReport(true);
+        try {
+            const data = await fetchAllProductsIfNeeded();
+            if (data) {
+                // Wait for render
+                setTimeout(async () => {
+                    if (reportRef.current) {
+                        const element = reportRef.current;
+                        const opt = {
+                            margin: 10,
+                            filename: `${account?.code}_SatinAlinanUrunler_${new Date().toISOString().split('T')[0]}.pdf`,
+                            image: { type: 'jpeg', quality: 0.98 },
+                            html2canvas: { scale: 2, useCORS: true },
+                            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                        };
+                        await html2pdf().set(opt).from(element).save();
+                    }
+                    setGeneratingReport(false);
+                }, 500); // Slight delay to ensure React renders the hidden component
+            } else {
+                setGeneratingReport(false);
+            }
+        } catch (error) {
+            console.error('Report generation error:', error);
+            setGeneratingReport(false);
+        }
+    };
+
+    const handleDownloadExcel = async () => {
+        setGeneratingExcel(true);
+        try {
+            const data = await fetchAllProductsIfNeeded();
+
+            if (data) {
+                // Format Data for Excel
+                const excelRows = data.map((item, index) => ({
+                    "Sıra": index + 1,
+                    "Ürün Kodu": item.productCode,
+                    "Ürün Adı": item.productName,
+                    "Miktar": item.totalQuantity,
+                    "Birim": item.unit || '',
+                    "Toplam Tutar": item.totalAmount
+                }));
+
+                // Create Worksheet
+                const worksheet = XLSX.utils.json_to_sheet(excelRows);
+
+                // Auto-width columns
+                const wscols = [
+                    { wch: 6 },  // Sira
+                    { wch: 20 }, // Urun Kodu
+                    { wch: 40 }, // Urun Adi
+                    { wch: 12 }, // Miktar
+                    { wch: 10 }, // Birim
+                    { wch: 15 }  // Tutar
+                ];
+                worksheet['!cols'] = wscols;
+
+                // Create Workbook
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "En Çok Alınan Ürünler");
+
+                // Generate Filename
+                const dateStr = new Date().toISOString().split('T')[0];
+                const safeAccountCode = account?.code?.replace(/[^a-z0-9]/gi, '_') || 'Cari';
+                XLSX.writeFile(workbook, `${safeAccountCode}_SatinAlinanUrunler_${dateStr}.xlsx`);
+            }
+        } catch (error) {
+            console.error('Excel generation error:', error);
+        } finally {
+            setGeneratingExcel(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'products') {
+            fetchTopProducts();
+        }
+    }, [activeTab]);
 
 
     if (!accountId) return null;
@@ -87,10 +214,10 @@ const AccountDetailModal = ({ accountId, onClose }) => {
 
 
                 {/* Tabs */}
-                <div className="flex border-b border-slate-800 px-6 shrink-0 bg-slate-900/50">
+                <div className="flex border-b border-slate-800 px-6 shrink-0 bg-slate-900/50 overflow-x-auto">
                     <button
                         onClick={() => setActiveTab('summary')}
-                        className={`px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'summary'
+                        className={`px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${activeTab === 'summary'
                             ? 'border-blue-500 text-blue-400'
                             : 'border-transparent text-slate-400 hover:text-white'
                             }`}
@@ -99,7 +226,7 @@ const AccountDetailModal = ({ accountId, onClose }) => {
                     </button>
                     <button
                         onClick={() => setActiveTab('transactions')}
-                        className={`px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'transactions'
+                        className={`px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${activeTab === 'transactions'
                             ? 'border-blue-500 text-blue-400'
                             : 'border-transparent text-slate-400 hover:text-white'
                             }`}
@@ -108,7 +235,7 @@ const AccountDetailModal = ({ accountId, onClose }) => {
                     </button>
                     <button
                         onClick={() => setActiveTab('orders')}
-                        className={`px-4 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'orders'
+                        className={`px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${activeTab === 'orders'
                             ? 'border-blue-500 text-blue-400'
                             : 'border-transparent text-slate-400 hover:text-white'
                             }`}
@@ -119,6 +246,15 @@ const AccountDetailModal = ({ accountId, onClose }) => {
                                 {pendingOrders.length}
                             </span>
                         )}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('products')}
+                        className={`px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${activeTab === 'products'
+                            ? 'border-blue-500 text-blue-400'
+                            : 'border-transparent text-slate-400 hover:text-white'
+                            }`}
+                    >
+                        En Çok Alınan Ürünler
                     </button>
                 </div>
 
@@ -348,6 +484,80 @@ const AccountDetailModal = ({ accountId, onClose }) => {
                             {activeTab === 'orders' && (
                                 <OrdersAccordion orders={pendingOrders} />
                             )}
+
+                            {/* Top Products Tab */}
+                            {activeTab === 'products' && (
+                                <div className="space-y-4 animate-fade-in">
+                                    <div className="flex justify-between items-center bg-slate-900/50 border border-slate-800 rounded-t-xl p-4">
+                                        <h3 className="text-sm font-semibold text-slate-300">Bu Firmadan En Çok Alınan 5 Ürün</h3>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={handleDownloadExcel}
+                                                disabled={generatingExcel}
+                                                className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-medium rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+                                            >
+                                                {generatingExcel ? <Loader2 size={14} className="animate-spin" /> : <FileSpreadsheet size={14} />}
+                                                {generatingExcel ? 'Hazırlanıyor...' : 'Excel İndir'}
+                                            </button>
+                                            <button
+                                                onClick={handleDownloadReport}
+                                                disabled={generatingReport}
+                                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+                                            >
+                                                {generatingReport ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                                                {generatingReport ? 'PDF İndir' : 'PDF İndir'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {loadingProducts ? (
+                                        <div className="flex justify-center p-12 bg-slate-900/50 border-x border-b border-slate-800 rounded-b-xl">
+                                            <Loader2 className="animate-spin text-blue-400" size={32} />
+                                        </div>
+                                    ) : topProducts && topProducts.length > 0 ? (
+                                        <div className="bg-slate-900/50 border-x border-b border-slate-800 rounded-b-xl overflow-hidden">
+                                            <table className="w-full">
+                                                <thead className="bg-slate-800/50">
+                                                    <tr>
+                                                        <th className="text-left p-4 text-xs font-medium text-slate-400 uppercase">Ürün Adı</th>
+                                                        <th className="text-right p-4 text-xs font-medium text-slate-400 uppercase">Toplam Miktar</th>
+                                                        <th className="text-right p-4 text-xs font-medium text-slate-400 uppercase">Toplam Tutar</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-800/50">
+                                                    {topProducts.map((product, index) => (
+                                                        <tr key={index} className="hover:bg-slate-800/20 transition-colors">
+                                                            <td className="p-4 text-sm font-medium text-white flex items-center gap-3">
+                                                                <div className="p-2 rounded bg-slate-800 text-blue-400">
+                                                                    {index + 1}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-slate-200">{product.productName}</div>
+                                                                    <div className="text-xs text-slate-400 font-mono">{product.productCode}</div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-4 text-right text-sm text-slate-300">
+                                                                <div className="flex items-center justify-end gap-2">
+                                                                    <Box size={14} className="text-slate-500" />
+                                                                    {product.totalQuantity.toLocaleString('tr-TR')} {product.unit}
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-4 text-right text-sm font-bold text-white">
+                                                                {product.totalAmount.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <div className="p-12 text-center text-slate-500 bg-slate-900/50 rounded-b-xl border-x border-b border-slate-800">
+                                            <Package size={48} className="mx-auto mb-4 opacity-20" />
+                                            <p>Kayıtlı satınalma verisi bulunamadı.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </>
                     ) : (
                         <div className="text-center py-20 text-slate-500">
@@ -355,6 +565,18 @@ const AccountDetailModal = ({ accountId, onClose }) => {
                         </div>
                     )}
                 </div>
+
+                {/* Hidden Report Template for PDF Generation */}
+                <div style={{ position: 'absolute', left: '-10000px', top: 0 }}>
+                    <div ref={reportRef}>
+                        <PurchasedProductsReportTemplate
+                            products={allProducts}
+                            account={account}
+                            companyInfo={companyInfo}
+                        />
+                    </div>
+                </div>
+
             </div>
 
             {selectedInvoice && (
