@@ -4,14 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Building, User, Phone, Mail, FileText } from 'lucide-react-native';
 import * as Linking from 'expo-linking';
-import { useAuth } from '../../context/AuthContext';
+// import { useAuth } from '../../context/AuthContext';
 
 import { API_URL } from '@/constants/Config';
 
 
 export default function LicenseApplicationScreen() {
     const router = useRouter();
-    const { } = useAuth();
+    // const { } = useAuth();
 
     const [companyName, setCompanyName] = useState('');
     const [officialName, setOfficialName] = useState('');

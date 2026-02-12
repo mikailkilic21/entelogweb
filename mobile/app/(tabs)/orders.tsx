@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Clock, AlertCircle, PackageCheck, Package, PackageX, ShoppingCart } from 'lucide-react-native';
+import { Search, ShoppingCart } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
-import { useRouter } from 'expo-router';
+// import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+// import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '@/context/AuthContext';
 import OrderItem from '@/components/OrderItem';
 
@@ -14,7 +14,7 @@ type ShipmentStatus = 'all' | 'pending' | 'partial' | 'closed';
 
 export default function OrdersScreen() {
     const { isDemo } = useAuth();
-    const router = useRouter();
+    // const router = useRouter();
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);

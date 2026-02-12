@@ -1,1 +1,16 @@
-[]
+[
+    {
+        "id": "test-12345",
+        "date": "2026-02-12 12:30:00",
+        "name": "Test Kullanıcısı",
+        "company": "EnteLog Test A.Ş.",
+        "email": "test@entelog.com",
+        "phone": "0555 123 45 67",
+        "erp": "Logo Tiger",
+        "sector": "İnşaat",
+        "employees": "11-50",
+        "message": "Bu, admin panelini test etmek için oluşturulmuş örnek bir taleptir. Panel üzerinden durumu değiştirebilirsiniz.",
+        "ip": "127.0.0.1",
+        "status": "new"
+    }
+]

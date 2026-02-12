@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image, Modal, StyleSheet, Alert, Button, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Package, TrendingUp, AlertTriangle, CheckCircle, Box, ScanLine, X } from 'lucide-react-native';
+import { Search, Package, TrendingUp, AlertTriangle, CheckCircle, ScanLine, X } from 'lucide-react-native';
 import { API_URL, BASE_URL } from '@/constants/Config';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';

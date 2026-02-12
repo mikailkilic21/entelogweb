@@ -7,7 +7,7 @@ import { ChevronLeft, Moon, Sun, Globe, Trash2, Smartphone } from 'lucide-react-
 export default function AppSettingsScreen() {
     const router = useRouter();
     const [isDarkMode, setIsDarkMode] = useState(true);
-    const [language, setLanguage] = useState('tr'); // 'tr' | 'en'
+    // const [language, setLanguage] = useState('tr'); // 'tr' | 'en'
 
     const handleClearCache = () => {
         Alert.alert(

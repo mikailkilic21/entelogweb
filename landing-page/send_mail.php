@@ -22,18 +22,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $name = strip_tags(trim($_POST["name"]));
     $email = filter_var(trim($_POST["email"]), FILTER_SANITIZE_EMAIL);
     $phone = strip_tags(trim($_POST["phone"]));
+    $company = strip_tags(trim($_POST["company"] ?? ''));
+    $erp = strip_tags(trim($_POST["erp_software"] ?? ''));
+    $sector = strip_tags(trim($_POST["sector"] ?? ''));
+    $employees = strip_tags(trim($_POST["employee_count"] ?? ''));
+    $message = strip_tags(trim($_POST["message"] ?? ''));
 
     if (empty($name) || empty($phone) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        echo json_encode(["status" => "error", "message" => "Lütfen bilgileri eksiksiz doldurunuz."]);
+        echo json_encode(["status" => "error", "message" => "Lütfen zorunlu alanları doldurunuz."]);
         exit;
     }
 
-    $subject = "YENI DEMO TALEBI: $name";
+    $subject = "YENI TALEP: $company - $name";
     $body = "
-    <h2>Yeni Demo Talebi</h2>
-    <p><strong>Ad Soyad:</strong> $name</p>
-    <p><strong>E-posta:</strong> $email</p>
-    <p><strong>Telefon:</strong> $phone</p>
+    <h2>Yeni Web Talebi</h2>
+    <table border='1' cellpadding='10' cellspacing='0' style='border-collapse: collapse; width: 100%; max-width: 600px;'>
+        <tr><td width='30%'><strong>Ad Soyad:</strong></td><td>$name</td></tr>
+        <tr><td><strong>Firma:</strong></td><td>$company</td></tr>
+        <tr><td><strong>E-posta:</strong></td><td>$email</td></tr>
+        <tr><td><strong>Telefon:</strong></td><td>$phone</td></tr>
+        <tr><td><strong>ERP Yazılımı:</strong></td><td>$erp</td></tr>
+        <tr><td><strong>Sektör:</strong></td><td>$sector</td></tr>
+        <tr><td><strong>Çalışan Sayısı:</strong></td><td>$employees</td></tr>
+        <tr><td><strong>Mesaj:</strong></td><td>$message</td></tr>
+    </table>
     <hr>
     <p>Bu mesaj entelog.com.tr web sitesinden gönderilmiştir.</p>
     ";
@@ -49,9 +61,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             'id' => uniqid(),
             'date' => date('Y-m-d H:i:s'),
             'name' => $name,
+            'company' => $company,
             'email' => $email,
             'phone' => $phone,
-            'ip' => $_SERVER['REMOTE_ADDR']
+            'erp' => $erp,
+            'sector' => $sector,
+            'employees' => $employees,
+            'message' => $message,
+            'ip' => $_SERVER['REMOTE_ADDR'],
+            'status' => 'new' // Okunmadı/Yeni durumu
         ];
 
         $file = 'messages.json';

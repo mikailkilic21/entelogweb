@@ -1,459 +1,352 @@
 <?php
 session_start();
-header('Content-Type: text/html; charset=utf-8');
 
-// ==========================================================================
-// AYARLAR
-// ==========================================================================
-$admin_user = "admin";
-$admin_pass = "entelog2026"; 
-$json_file = 'messages.json';
-$config_file = 'config.json';
-// ==========================================================================
+// GÜVENLİK AYARLARI
+$ADMIN_USER = 'admin';
+$ADMIN_PASS = 'entelog2026';
 
-// Çıkış İşlemi
+if (isset($_POST['username']) && isset($_POST['password'])) {
+    if ($_POST['username'] === $ADMIN_USER && $_POST['password'] === $ADMIN_PASS) {
+        $_SESSION['admin_logged_in'] = true;
+        $_SESSION['admin_user'] = $ADMIN_USER;
+    } else {
+        $error = "Hatalı kullanıcı adı veya şifre!";
+    }
+}
+
 if (isset($_GET['logout'])) {
     session_destroy();
     header("Location: admin.php");
     exit;
 }
 
-// Giriş Kontrolü
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username'])) {
-    if ($_POST['username'] === $admin_user && $_POST['password'] === $admin_pass) {
-        $_SESSION['logged_in'] = true;
-        header("Location: admin.php");
-        exit;
-    } else {
-        $error = "Hatalı kullanıcı adı veya şifre!";
-    }
-}
-
-// Oturum Kontrolü
-$is_logged_in = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
-
-// Varsayılan Ayarlar
-$current_config = [
-    'ai_provider' => 'gemini',
-    'ai_api_key' => '',
-    'ai_model' => 'gemini-1.5-flash'
-];
-
-if (file_exists($config_file)) {
-    $loaded_config = json_decode(file_get_contents($config_file), true);
-    if (is_array($loaded_config)) {
-        $current_config = array_merge($current_config, $loaded_config);
-    }
-}
-
-// --------------------------------------------------------------------------
-// API ACTIONS (AJAX)
-// --------------------------------------------------------------------------
-if ($is_logged_in && isset($_GET['action'])) {
+// Mesaj Durumu Güncelleme
+if (isset($_POST['action']) && isset($_POST['id']) && $_SESSION['admin_logged_in']) {
+    $file = 'messages.json';
+    $data = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
     
-    function getMessages($file) {
-        if (!file_exists($file)) return [];
-        $data = json_decode(file_get_contents($file), true);
-        return is_array($data) ? $data : [];
-    }
-
-    function saveMessages($file, $data) {
-        file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-    }
-
-    if ($_GET['action'] == 'update_status' && isset($_POST['id']) && isset($_POST['status'])) {
-        $messages = getMessages($json_file);
-        $updated = false;
-        foreach ($messages as &$msg) {
-            if ($msg['id'] == $_POST['id']) {
-                $msg['status'] = $_POST['status'];
-                $updated = true;
-                break;
-            }
+    foreach ($data as &$msg) {
+        if ($msg['id'] === $_POST['id']) {
+            if ($_POST['action'] === 'archive') $msg['status'] = 'archived';
+            if ($_POST['action'] === 'reply') $msg['status'] = 'replied';
+            if ($_POST['action'] === 'delete') $msg['status'] = 'deleted';
+            break;
         }
-        if ($updated) {
-            saveMessages($json_file, $messages);
-            echo json_encode(['success' => true]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Mesaj bulunamadı']);
-        }
-        exit;
     }
-
-    if ($_GET['action'] == 'delete_message' && isset($_POST['id'])) {
-        $messages = getMessages($json_file);
-        $new_messages = [];
-        $deleted = false;
-        foreach ($messages as $msg) {
-            if ($msg['id'] == $_POST['id']) {
-                $deleted = true;
-                continue;
-            }
-            $new_messages[] = $msg;
-        }
-        if ($deleted) {
-            saveMessages($json_file, $new_messages);
-            echo json_encode(['success' => true]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Mesaj bulunamadı']);
-        }
-        exit;
-    }
-
-    if ($_GET['action'] == 'export_csv') {
-        $messages = getMessages($json_file);
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename=demo_talepleri_' . date('Y-m-d') . '.csv');
-        $output = fopen('php://output', 'w');
-        fputs($output, "\xEF\xBB\xBF");
-        fputcsv($output, ['ID', 'Tarih', 'Ad Soyad', 'E-posta', 'Telefon', 'Durum', 'IP']);
-        foreach ($messages as $msg) {
-           fputcsv($output, [$msg['id'], $msg['date'], $msg['name'], $msg['email'], $msg['phone'], $msg['status'] ?? 'Yeni', $msg['ip']]);
-        }
-        fclose($output);
-        exit;
-    }
-
-    if ($_GET['action'] == 'save_settings' && isset($_POST['ai_provider'])) {
-        $new_config = [
-            'ai_provider' => $_POST['ai_provider'],
-            'ai_api_key' => $_POST['ai_api_key'] ?? '',
-            'ai_model' => $_POST['ai_model'] ?? 'gemini-1.5-flash'
-        ];
-        file_put_contents($config_file, json_encode($new_config, JSON_PRETTY_PRINT));
-        echo json_encode(['success' => true]);
-        exit;
-    }
-
-    // MODELLERİ GETİR (Google API)
-    if ($_GET['action'] == 'get_models' && isset($_POST['api_key'])) {
-        $apiKey = $_POST['api_key'];
-        // V1BETA Endpoint (En çok model burada)
-        $url = "https://generativelanguage.googleapis.com/v1beta/models?key=" . $apiKey;
-
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        
-        $response = curl_exec($ch);
-        if (curl_errno($ch)) {
-            echo json_encode(['success' => false, 'message' => 'Curl Hatası: '.curl_error($ch)]);
-        } else {
-            $data = json_decode($response, true);
-            if (isset($data['models'])) {
-                $chatModels = [];
-                foreach ($data['models'] as $m) {
-                    // Sadece generateContent'i destekleyenleri al
-                    if (isset($m['supportedGenerationMethods']) && in_array("generateContent", $m['supportedGenerationMethods'])) {
-                        $name = str_replace('models/', '', $m['name']);
-                        $chatModels[] = [
-                            'id' => $name,
-                            'name' => $m['displayName'] . " ($name)"
-                        ];
-                    }
-                }
-                echo json_encode(['success' => true, 'models' => $chatModels]);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Model listesi alınamadı. API Key veya erişim sorunu.', 'debug' => $data]);
-            }
-        }
-        curl_close($ch);
-        exit;
-    }
-}
-// --------------------------------------------------------------------------
-
-$demo_messages = [];
-if ($is_logged_in && file_exists($json_file)) {
-    $demo_messages = json_decode(file_get_contents($json_file), true);
-    if (!is_array($demo_messages)) $demo_messages = [];
+    file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    header("Location: admin.php");
+    exit;
 }
 
-$active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'demo';
+// Giriş Kontrolü
+if (!isset($_SESSION['admin_logged_in'])) {
 ?>
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EnteLog - Admin Paneli V2</title>
+    <title>EnteLog Admin Giriş</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-slate-900 flex items-center justify-center h-screen transition-colors duration-300">
+    <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center border border-gray-200 dark:border-slate-700">
+        <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-6">Yönetici Girişi</h2>
+        <?php if(isset($error)) echo "<p class='text-red-500 mb-4 text-sm'>$error</p>"; ?>
+        <form method="POST" class="space-y-4">
+            <input type="text" name="username" placeholder="Kullanıcı Adı" class="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" required>
+            <input type="password" name="password" placeholder="Şifre" class="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" required>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition-colors">Giriş Yap</button>
+        </form>
+    </div>
+</body>
+</html>
+<?php
+    exit;
+}
+
+// Mesajları Getir
+$file = 'messages.json';
+$messages = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
+if (!is_array($messages)) $messages = []; // Hata önlemek için
+
+// Filtreleme (Silinenleri gösterme)
+$messages = array_filter($messages, function($m) {
+    return isset($m['status']) && $m['status'] !== 'deleted';
+});
+?>
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EnteLog Talep Yönetimi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script>
-        tailwind.config = {
-            theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] }, colors: { brand: { 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' } } } }
+        tailwind.config = { 
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#1e293b' } 
+                    }
+                }
+            }
         }
     </script>
 </head>
-<body class="bg-slate-900 text-slate-50 font-sans antialiased h-screen flex flex-col">
+<body class="bg-gray-50 dark:bg-slate-950 min-h-screen font-sans text-slate-800 dark:text-slate-200" x-data="{ darkMode: localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches) }" :class="{ 'dark': darkMode }">
 
-    <?php if (!$is_logged_in): ?>
-        <div class="flex-1 flex items-center justify-center p-4">
-            <div class="w-full max-w-md bg-slate-800 rounded-2xl shadow-xl border border-slate-700 p-8">
-                <div class="text-center mb-8">
-                    <h1 class="text-2xl font-bold text-white">Yönetici Girişi</h1>
-                </div>
-                <?php if (isset($error)): ?>
-                    <div class="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-6 text-sm text-center"><?php echo $error; ?></div>
-                <?php endif; ?>
-                <form method="POST" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-400 mb-1">Kullanıcı Adı</label>
-                        <input type="text" name="username" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand-500" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-400 mb-1">Şifre</label>
-                        <input type="password" name="password" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand-500" required>
-                    </div>
-                    <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-3 rounded-lg transition-all mt-4">Giriş Yap</button>
-                </form>
+    <!-- Navbar -->
+    <nav class="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm transition-colors duration-300">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
+                <i data-lucide="shield" class="w-6 h-6"></i>
+            </div>
+            <h1 class="text-xl font-bold text-slate-800 dark:text-white">EnteLog <span class="text-slate-500 dark:text-slate-400 font-normal ml-1">Talep Paneli</span></h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <!-- Dark Mode Toggle -->
+            <button @click="darkMode = !darkMode; localStorage.setItem('theme', darkMode ? 'dark' : 'light'); document.documentElement.classList.toggle('dark', darkMode)" 
+                class="p-2 rounded-lg bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                <i x-show="!darkMode" data-lucide="moon" class="w-5 h-5"></i>
+                <i x-show="darkMode" data-lucide="sun" class="w-5 h-5" style="display: none;"></i>
+            </button>
+            
+            <span class="text-sm font-medium text-slate-600 dark:text-slate-400 hidden md:block">
+                Merhaba, <?php echo htmlspecialchars($_SESSION['admin_user']); ?>
+            </span>
+            <a href="?logout=true" class="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-lg transition-colors text-sm font-medium border border-red-200 dark:border-red-900/30">Çıkış</a>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-6 transition-colors duration-300">
+        
+        <!-- İstatistik Kartları -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm transition-colors">
+                <p class="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Toplam Talep</p>
+                <h3 class="text-3xl font-bold text-slate-800 dark:text-white mt-2"><?php echo count($messages); ?></h3>
+            </div>
+            <div class="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 shadow-sm transition-colors">
+                <p class="text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-wider">Bekleyen</p>
+                <h3 class="text-3xl font-bold text-blue-700 dark:text-blue-400 mt-2">
+                    <?php echo count(array_filter($messages, fn($m) => ($m['status'] ?? 'new') === 'new')); ?>
+                </h3>
             </div>
         </div>
-    <?php else: ?>
-        <nav class="bg-slate-800 border-b border-slate-700 px-4 py-4">
-            <div class="max-w-7xl mx-auto flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <span class="text-xl font-bold text-white">Admin Paneli</span>
-                </div>
-                <div class="flex items-center gap-4">
-                    <a href="?logout=true" class="text-red-400 hover:text-white text-sm font-medium flex items-center gap-2">
-                        <i data-lucide="log-out" class="w-4 h-4"></i> Çıkış
-                    </a>
-                </div>
+
+        <!-- Tablo -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none overflow-hidden transition-colors duration-300">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-b border-gray-200 dark:border-slate-700 uppercase tracking-wider text-xs">
+                        <tr>
+                            <th class="p-4 font-bold">Tarih</th>
+                            <th class="p-4 font-bold">Firma / Kişi</th>
+                            <th class="p-4 font-bold">Sektör & ERP</th>
+                            <th class="p-4 font-bold">İletişim</th>
+                            <th class="p-4 font-bold">Durum</th>
+                            <th class="p-4 font-bold text-right">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
+                        <?php foreach ($messages as $msg): ?>
+                        <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors <?php echo ($msg['status']=='new') ? 'bg-blue-50/40 dark:bg-blue-900/10' : ''; ?>">
+                            <td class="p-4 text-slate-500 dark:text-slate-400 whitespace-nowrap font-medium">
+                                <?php echo date('d.m.Y H:i', strtotime($msg['date'])); ?>
+                            </td>
+                            <td class="p-4">
+                                <div class="font-bold text-slate-800 dark:text-white text-base"><?php echo htmlspecialchars($msg['company'] ?? '-'); ?></div>
+                                <div class="text-slate-500 dark:text-slate-400 text-xs mt-1 font-medium"><?php echo htmlspecialchars($msg['name']); ?></div>
+                            </td>
+                            <td class="p-4">
+                                <div class="inline-flex flex-col gap-1.5">
+                                    <span class="px-2.5 py-1 rounded-md bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold w-fit border border-gray-200 dark:border-slate-700">
+                                        <?php echo htmlspecialchars($msg['erp'] ?? 'Belirtilmedi'); ?>
+                                    </span>
+                                    <span class="text-xs text-slate-500 dark:text-slate-400">
+                                        <?php echo htmlspecialchars($msg['sector'] ?? '-'); ?>
+                                        (<?php echo htmlspecialchars($msg['employees'] ?? '-'); ?>)
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="p-4 text-slate-600 dark:text-slate-400">
+                                <div class="flex items-center gap-2 text-xs font-medium bg-gray-50 dark:bg-slate-800/50 p-1.5 rounded-lg w-fit mb-1">
+                                    <i data-lucide="mail" class="w-3.5 h-3.5 text-slate-400"></i> <?php echo htmlspecialchars($msg['email']); ?>
+                                </div>
+                                <div class="flex items-center gap-2 text-xs font-medium bg-gray-50 dark:bg-slate-800/50 p-1.5 rounded-lg w-fit">
+                                    <i data-lucide="phone" class="w-3.5 h-3.5 text-slate-400"></i> <?php echo htmlspecialchars($msg['phone']); ?>
+                                </div>
+                            </td>
+                            <td class="p-4">
+                                <?php if(($msg['status'] ?? 'new') === 'new'): ?>
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 ring-1 ring-blue-500/20">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> Yeni
+                                    </span>
+                                <?php elseif($msg['status'] === 'replied'): ?>
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 ring-1 ring-green-500/20">
+                                        <i data-lucide="check" class="w-3 h-3"></i> Cevaplandı
+                                    </span>
+                                <?php else: ?>
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-400 ring-1 ring-gray-500/20">
+                                        Arşiv
+                                    </span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="p-4 text-right" x-data>
+                                <button @click="$dispatch('open-modal', {id: '<?php echo $msg['id']; ?>'})" 
+                                    class="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 font-semibold text-xs border border-blue-200 dark:border-blue-800 px-4 py-2 rounded-lg transition-all flex items-center gap-2 ml-auto">
+                                    <i data-lucide="eye" class="w-3.5 h-3.5"></i> İncele
+                                </button>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                        
+                        <?php if (empty($messages)): ?>
+                        <tr>
+                            <td colspan="6" class="p-12 text-center text-slate-400 dark:text-slate-500 flex flex-col items-center justify-center">
+                                <div class="bg-gray-100 dark:bg-slate-800 p-4 rounded-full mb-4">
+                                    <i data-lucide="inbox" class="w-8 h-8 text-slate-300 dark:text-slate-600"></i>
+                                </div>
+                                <span class="font-medium">Henüz hiç talep yok.</span>
+                            </td>
+                        </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
-        </nav>
+        </div>
+    </div>
 
-        <main class="flex-1 overflow-auto p-4 sm:p-8" 
-              x-data="{ 
-                  activeTab: '<?php echo $active_tab; ?>',
-                  aiSettings: {
-                      provider: '<?php echo $current_config['ai_provider']; ?>',
-                      apiKey: '<?php echo $current_config['ai_api_key']; ?>',
-                      model: '<?php echo $current_config['ai_model']; ?>'
-                  },
-                  saving: false,
-                  dynamicModels: [],
-                  loadingModels: false,
+    <!-- DETAY MODALI (Alpine.js) -->
+    <div x-data="{ open: false, activeMsg: {} }" 
+         @open-modal.window="activeMsg = $event.detail; open = true"
+         x-show="open" style="display: none;"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-100"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-95"
+         class="fixed inset-0 z-[100] flex items-center justify-center px-4">
+         
+         <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="open = false"></div>
 
-                  saveSettings() {
-                      this.saving = true;
-                      const formData = new FormData();
-                      formData.append('ai_provider', this.aiSettings.provider);
-                      formData.append('ai_api_key', this.aiSettings.apiKey);
-                      formData.append('ai_model', this.aiSettings.model);
+        <!-- Modal Content -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl relative z-10 overflow-hidden transform transition-all p-8 border border-gray-200 dark:border-slate-700">
+            <button @click="open = false" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors bg-gray-100 dark:bg-slate-800 rounded-full p-2">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
 
-                      fetch('admin.php?action=save_settings', { method: 'POST', body: formData })
-                          .then(res => res.json())
-                          .then(data => {
-                              if(data.success) {
-                                  alert('Ayarlar kaydedildi!');
-                              } else {
-                                  alert('Kaydedilemedi.');
-                              }
-                          })
-                          .finally(() => { this.saving = false; });
-                  },
+            <!-- İçerik JS ile dolacak -->
+            <div id="modalContent"></div>
 
-                  fetchModels() {
-                      if (!this.aiSettings.apiKey) { alert('Lütfen önce API Anahtarı girin.'); return; }
-                      this.loadingModels = true;
-                      
-                      const formData = new FormData();
-                      formData.append('api_key', this.aiSettings.apiKey);
-                      
-                      fetch('admin.php?action=get_models', { method: 'POST', body: formData })
-                          .then(res => res.json())
-                          .then(data => {
-                              if(data.success) {
-                                  this.dynamicModels = data.models;
-                                  alert('Modeller başarıyla yüklendi! Lütfen listeden seçiminizi yapın.');
-                              } else {
-                                  alert('Hata: ' + (data.message || 'Modeller alınamadı.'));
-                                  console.error(data);
-                              }
-                          })
-                          .catch(err => alert('Bağlantı hatası.'))
-                          .finally(() => { this.loadingModels = false; });
-                  },
-                  
-                  updateStatus(id, newStatus) {
-                      const formData = new FormData();
-                      formData.append('id', id);
-                      formData.append('status', newStatus);
-                      fetch('admin.php?action=update_status', { method: 'POST', body: formData });
-                  },
-                  
-                  deleteMessage(id) {
-                      if(!confirm('Silmek istediğinize emin misiniz?')) return;
-                      const formData = new FormData();
-                      formData.append('id', id);
-                      fetch('admin.php?action=delete_message', { method: 'POST', body: formData })
-                          .then(res => res.json())
-                          .then(data => { if(data.success) location.reload(); });
-                  }
-              }">
-              
-            <div class="max-w-7xl mx-auto">
-                <div class="flex border-b border-slate-700 mb-8">
-                    <a href="?tab=demo" class="pb-3 px-4 border-b-2 font-medium transition-colors <?php echo $active_tab == 'demo' ? 'border-brand-500 text-brand-500' : 'border-transparent text-slate-400 hover:text-white'; ?>">
-                        Demo Talepleri
-                    </a>
-                    <a href="?tab=settings" class="pb-3 px-4 border-b-2 font-medium transition-colors <?php echo $active_tab == 'settings' ? 'border-brand-500 text-brand-500' : 'border-transparent text-slate-400 hover:text-white'; ?>">
-                        Yapay Zeka Ayarları
-                    </a>
-                </div>
+            <script>
+                // PHP verisini JS nesnesine aktar
+                const messagesData = <?php echo json_encode(array_values($messages)); ?>;
+                
+                window.addEventListener('open-modal', event => {
+                    const id = event.detail.id;
+                    const msg = messagesData.find(m => m.id === id);
+                    const container = document.getElementById('modalContent');
+                    
+                    if(msg) {
+                        const statusBadge = msg.status === 'new' 
+                            ? '<span class="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold ring-1 ring-blue-500/20">Yeni</span>' 
+                            : (msg.status === 'replied' 
+                                ? '<span class="px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-bold ring-1 ring-green-500/20">Cevaplandı</span>' 
+                                : '<span class="px-3 py-1 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-400 text-xs font-bold ring-1 ring-gray-500/20">Arşiv</span>');
 
-                <?php if ($active_tab == 'demo'): ?>
-                    <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
-                         <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="bg-slate-900/50 border-b border-slate-700 text-xs uppercase text-slate-400 tracking-wider">
-                                        <th class="px-6 py-4 font-semibold">Tarih</th>
-                                        <th class="px-6 py-4 font-semibold">Ad Soyad</th>
-                                        <th class="px-6 py-4 font-semibold">İletişim</th>
-                                        <th class="px-6 py-4 font-semibold">Durum</th>
-                                        <th class="px-6 py-4 font-semibold text-right">İşlem</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-700">
-                                    <?php if(empty($demo_messages)): ?>
-                                        <tr><td colspan="5" class="px-6 py-8 text-center text-slate-400">Henüz talep yok.</td></tr>
-                                    <?php else: ?>
-                                        <?php foreach ($demo_messages as $msg): ?>
-                                            <?php $status = isset($msg['status']) ? $msg['status'] : 'Yeni'; ?>
-                                            <tr class="hover:bg-slate-700/30 transition-colors">
-                                                <td class="px-6 py-4 text-slate-300 text-sm whitespace-nowrap"><?php echo date('d.m.Y H:i', strtotime($msg['date'])); ?></td>
-                                                <td class="px-6 py-4 text-white font-medium"><?php echo htmlspecialchars($msg['name']); ?></td>
-                                                <td class="px-6 py-4">
-                                                    <div class="flex flex-col gap-1 text-sm">
-                                                        <a href="mailto:<?php echo $msg['email']; ?>" class="text-brand-500 hover:underline"><?php echo $msg['email']; ?></a>
-                                                        <span class="text-slate-400"><?php echo $msg['phone']; ?></span>
-                                                    </div>
-                                                </td>
-                                                <td class="px-6 py-4">
-                                                    <select onchange="updateStatus('<?php echo $msg['id']; ?>', this.value)" 
-                                                            class="bg-slate-900 border border-slate-700 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
-                                                        <option value="Yeni" <?php echo $status == 'Yeni' ? 'selected' : ''; ?>>Yeni</option>
-                                                        <option value="Arandı" <?php echo $status == 'Arandı' ? 'selected' : ''; ?>>Arandı</option>
-                                                        <option value="Teklif" <?php echo $status == 'Teklif' ? 'selected' : ''; ?>>Teklif Verildi</option>
-                                                        <option value="Tamamlandı" <?php echo $status == 'Tamamlandı' ? 'selected' : ''; ?>>Tamamlandı</option>
-                                                        <option value="İptal" <?php echo $status == 'İptal' ? 'selected' : ''; ?>>İptal</option>
-                                                    </select>
-                                                </td>
-                                                <td class="px-6 py-4 text-right">
-                                                    <button @click="deleteMessage('<?php echo $msg['id']; ?>')" class="text-slate-500 hover:text-red-400 transition-colors p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                <?php else: ?>
-                    <div class="max-w-2xl mx-auto">
-                        <div class="bg-slate-800 rounded-xl border border-slate-700 p-8 shadow-lg">
-                            <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                                <i data-lucide="bot" class="w-6 h-6 text-brand-500"></i> Yapay Zeka Yapılandırması
-                            </h2>
+                        container.innerHTML = `
+                            <div class="flex justify-between items-start mb-6 border-b border-gray-100 dark:border-slate-800 pb-4">
+                                <h3 class="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
+                                    <div class="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg text-blue-600 dark:text-blue-400">
+                                        <i data-lucide="file-text" class="w-5 h-5"></i>
+                                    </div>
+                                    Talep Detayı
+                                </h3>
+                                <div>${statusBadge}</div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-6 mb-6">
+                                <div class="space-y-1">
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Firma</p>
+                                    <p class="font-bold text-slate-800 dark:text-white text-lg">${msg.company || '-'}</p>
+                                </div>
+                                <div class="space-y-1">
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Yetkili</p>
+                                    <p class="font-medium text-slate-800 dark:text-slate-200">${msg.name}</p>
+                                </div>
+                                <div class="space-y-1">
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">İletişim</p>
+                                    <div class="text-sm text-slate-700 dark:text-slate-300">
+                                        <div class="flex items-center gap-2 mb-1"><i data-lucide="mail" class="w-3.5 h-3.5 text-slate-400"></i> ${msg.email}</div>
+                                        <div class="flex items-center gap-2"><i data-lucide="phone" class="w-3.5 h-3.5 text-slate-400"></i> ${msg.phone}</div>
+                                    </div>
+                                </div>
+                                <div class="space-y-1">
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Teknik Detay</p>
+                                    <div class="text-sm text-slate-700 dark:text-slate-300 bg-gray-50 dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700">
+                                        <div class="flex justify-between border-b border-gray-200 dark:border-slate-700 pb-1 mb-1 last:border-0 last:pb-0 last:mb-0">
+                                            <span class="text-slate-500 dark:text-slate-400 font-medium">ERP:</span> 
+                                            <span class="font-bold">${msg.erp || '-'}</span>
+                                        </div>
+                                        <div class="flex justify-between border-b border-gray-200 dark:border-slate-700 pb-1 mb-1 last:border-0 last:pb-0 last:mb-0">
+                                            <span class="text-slate-500 dark:text-slate-400 font-medium">Sektör:</span> 
+                                            <span class="font-bold">${msg.sector || '-'}</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-slate-500 dark:text-slate-400 font-medium">Çalışan:</span> 
+                                            <span class="font-bold">${msg.employees || '-'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             
-                            <form @submit.prevent="saveSettings" class="space-y-6">
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-400 mb-2">Servis Sağlayıcı</label>
-                                    <div class="grid grid-cols-2 gap-4">
-                                        <label class="cursor-pointer border border-slate-600 rounded-lg p-4 hover:bg-slate-700 transition-colors"
-                                            :class="aiSettings.provider === 'gemini' ? 'border-brand-500 bg-brand-500/10' : ''">
-                                            <input type="radio" value="gemini" x-model="aiSettings.provider" @change="aiSettings.model = 'gemini-1.5-flash'" class="hidden">
-                                            <div class="flex items-center gap-3">
-                                                <div class="bg-white p-1 rounded"><img src="https://upload.wikimedia.org/wikipedia/commons/8/8a/Google_Gemini_logo.svg" class="w-6 h-6"></div>
-                                                <span class="font-bold text-white">Google Gemini</span>
-                                            </div>
-                                        </label>
-                                        <label class="cursor-pointer border border-slate-600 rounded-lg p-4 hover:bg-slate-700 transition-colors"
-                                            :class="aiSettings.provider === 'openai' ? 'border-brand-500 bg-brand-500/10' : ''">
-                                            <input type="radio" value="openai" x-model="aiSettings.provider" @change="aiSettings.model = 'gpt-3.5-turbo'" class="hidden">
-                                            <div class="flex items-center gap-3">
-                                                <div class="bg-green-100 p-1 rounded"><img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" class="w-6 h-6"></div>
-                                                <span class="font-bold text-white">OpenAI (ChatGPT)</span>
-                                            </div>
-                                        </label>
-                                    </div>
+                            <div class="space-y-2 mb-8">
+                                <p class="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Müşteri Mesajı</p>
+                                <div class="bg-gray-50 dark:bg-slate-800 p-5 rounded-xl border border-gray-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed shadow-inner font-medium text-sm">
+                                    ${msg.message || '<span class="text-slate-400 italic">Mesaj içeriği yok.</span>'}
                                 </div>
+                                <div class="text-right text-xs text-slate-400 dark:text-slate-500 font-mono">IP: ${msg.ip}</div>
+                            </div>
 
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-400 mb-2">API Anahtarı (Key)</label>
-                                    <div class="flex gap-2">
-                                        <input type="text" x-model="aiSettings.apiKey" placeholder="sk-..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand-500 font-mono text-sm">
-                                        <!-- Modelleri Çek Butonu -->
-                                        <template x-if="aiSettings.provider === 'gemini'">
-                                            <button type="button" @click="fetchModels" :disabled="loadingModels" 
-                                                class="bg-slate-700 hover:bg-slate-600 text-white px-4 rounded-lg font-medium text-sm transition-colors whitespace-nowrap flex items-center gap-2">
-                                                <i data-lucide="refresh-cw" class="w-4 h-4" :class="loadingModels ? 'animate-spin' : ''"></i>
-                                                <span x-text="loadingModels ? 'Aranıyor...' : 'Modelleri Tara'"></span>
-                                            </button>
-                                        </template>
-                                    </div>
-                                    <p class="text-xs text-slate-500 mt-2">API anahtarınız sunucuda güvenli bir şekilde saklanır.</p>
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-400 mb-2">Model Seçimi</label>
-                                    <select x-model="aiSettings.model" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand-500">
-                                        <template x-if="aiSettings.provider === 'gemini'">
-                                            <optgroup label="Google Modelleri">
-                                                <!-- Dinamik Modeller Varsa Buraya -->
-                                                <template x-if="dynamicModels.length > 0">
-                                                    <template x-for="m in dynamicModels" :key="m.id">
-                                                        <option :value="m.id" x-text="m.name"></option>
-                                                    </template>
-                                                </template>
-                                                
-                                                <!-- Fallback (Dinamik yoksa) -->
-                                                <template x-if="dynamicModels.length === 0">
-                                                    <fragment>
-                                                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (Standart)</option>
-                                                        <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Latest)</option>
-                                                        <option value="gemini-pro">Gemini Pro</option>
-                                                        <option value="gemini-1.0-pro">Gemini 1.0 Pro</option>
-                                                    </fragment>
-                                                </template>
-                                            </optgroup>
-                                        </template>
-                                        <template x-if="aiSettings.provider === 'openai'">
-                                            <optgroup label="OpenAI Modelleri">
-                                                <option value="gpt-4o-mini">GPT-4o Mini (Hızlı & Ucuz)</option>
-                                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                                                <option value="gpt-4o">GPT-4o (En Akıllı)</option>
-                                            </optgroup>
-                                        </template>
-                                    </select>
-                                    <p x-show="dynamicModels.length > 0" class="text-xs text-green-400 mt-2 flex items-center gap-1">
-                                        <i data-lucide="check-circle" class="w-3 h-3"></i> Google API'den alınan güncel model listesi gösteriliyor.
-                                    </p>
-                                </div>
-
-                                <div class="pt-4 border-t border-slate-700">
-                                    <button type="submit" 
-                                        class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2"
-                                        :disabled="saving">
-                                        <i data-lucide="save" class="w-5 h-5"></i>
-                                        <span x-text="saving ? 'Kaydediliyor...' : 'Ayarları Kaydet'"></span>
+                            <div class="grid grid-cols-3 gap-3 pt-6 border-t border-gray-100 dark:border-slate-800">
+                                <form method="POST" class="col-span-1">
+                                    <input type="hidden" name="id" value="${msg.id}">
+                                    <input type="hidden" name="action" value="reply">
+                                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold transition-all shadow-lg shadow-green-600/20 hover:shadow-green-600/30 flex items-center justify-center gap-2 text-sm">
+                                        <i data-lucide="check-circle" class="w-4 h-4"></i> Cevaplandı
                                     </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </main>
-    <?php endif; ?>
-
-    <script>
-        lucide.createIcons();
-    </script>
+                                </form>
+                                <form method="POST" class="col-span-1">
+                                    <input type="hidden" name="id" value="${msg.id}">
+                                    <input type="hidden" name="action" value="archive">
+                                    <button type="submit" class="w-full bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-gray-200 dark:border-slate-700 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm" title="Arşivle">
+                                        <i data-lucide="archive" class="w-4 h-4"></i> Arşivle
+                                    </button>
+                                </form>
+                                <form method="POST" onsubmit="return confirm('Bu kaydı silmek istediğinize emin misiniz?');" class="col-span-1">
+                                    <input type="hidden" name="id" value="${msg.id}">
+                                    <input type="hidden" name="action" value="delete">
+                                    <button type="submit" class="w-full bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 border border-gray-200 dark:border-slate-700 hover:border-red-200 dark:hover:border-red-900 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm" title="Sil">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i> Sil
+                                    </button>
+                                </form>
+                            </div>
+                        `;
+                        lucide.createIcons();
+                    }
+                });
+            </script>
+        </div>
+    </div>
 </body>
 </html>

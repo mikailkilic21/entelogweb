@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { AlertCircle, Clock, PackageCheck, Package, PackageX, ChevronRight } from 'lucide-react-native';
+import { AlertCircle, Clock, PackageCheck, Package, PackageX } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
 interface OrderItemProps {

@@ -96,10 +96,10 @@ describe('Dashboard Component', () => {
 
         // Check for specific stat card content
         const statCards = screen.getAllByTestId('stat-card');
-        const totalSalesCard = statCards.find(card => card.textContent.includes('Toplam Satış'));
+        const totalSalesCard = statCards.find(card => card.textContent.includes('TOPLAM SATIŞ'));
         expect(totalSalesCard).toHaveTextContent('1000');
 
-        const totalPurchasesCard = statCards.find(card => card.textContent.includes('Toplam Alış'));
+        const totalPurchasesCard = statCards.find(card => card.textContent.includes('TOPLAM ALIŞ'));
         expect(totalPurchasesCard).toHaveTextContent('500');
     });
 
