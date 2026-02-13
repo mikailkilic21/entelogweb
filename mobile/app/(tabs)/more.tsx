@@ -49,14 +49,7 @@ export default function MoreMenu() {
     };
 
     const menuItems: MenuItem[] = [
-        {
-            id: 'settings',
-            title: 'Ayarlar',
-            subtitle: 'Uygulama ayarları ve tercihler',
-            icon: <Settings size={24} color="#3b82f6" />,
-            onPress: () => router.push('/settings' as any),
-            color: '#3b82f6',
-        },
+
         {
             id: 'profile',
             title: 'Profil',
@@ -72,14 +65,6 @@ export default function MoreMenu() {
             icon: <Bell size={24} color="#f59e0b" />,
             onPress: () => router.push('/more/notifications' as any),
             color: '#f59e0b',
-        },
-        {
-            id: 'reports',
-            title: 'Raporlar',
-            subtitle: 'Detaylı raporlama ve analiz',
-            icon: <BarChart3 size={24} color="#8b5cf6" />,
-            onPress: () => router.push('/more/reports' as any),
-            color: '#8b5cf6',
         },
         {
             id: 'security',

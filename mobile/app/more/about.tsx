@@ -42,7 +42,7 @@ export default function AboutScreen() {
 
                     {/* Social Links */}
                     <View className="flex-row gap-4 mb-10">
-                        <TouchableOpacity onPress={() => openLink('https://entelog.com')} className="bg-slate-900 p-3 rounded-full border border-slate-800">
+                        <TouchableOpacity onPress={() => openLink('https://www.entelog.com.tr')} className="bg-slate-900 p-3 rounded-full border border-slate-800">
                             <Globe size={24} color="#3b82f6" />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => openLink('https://twitter.com')} className="bg-slate-900 p-3 rounded-full border border-slate-800">
@@ -58,13 +58,13 @@ export default function AboutScreen() {
 
                     {/* Legal Links */}
                     <View className="w-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-8">
-                        <TouchableOpacity className="p-4 border-b border-slate-800 active:bg-slate-800" onPress={() => openLink('https://entelog.com/terms')}>
+                        <TouchableOpacity className="p-4 border-b border-slate-800 active:bg-slate-800" onPress={() => openLink('https://www.entelog.com.tr/terms.html')}>
                             <Text className="text-white font-bold">Kullanım Koşulları</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity className="p-4 border-b border-slate-800 active:bg-slate-800" onPress={() => openLink('https://entelog.com/privacy')}>
+                        <TouchableOpacity className="p-4 border-b border-slate-800 active:bg-slate-800" onPress={() => openLink('https://www.entelog.com.tr/privacy.html')}>
                             <Text className="text-white font-bold">Gizlilik Politikası</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity className="p-4 active:bg-slate-800" onPress={() => openLink('https://entelog.com/licenses')}>
+                        <TouchableOpacity className="p-4 active:bg-slate-800" onPress={() => openLink('https://www.entelog.com.tr/license.html')}>
                             <Text className="text-white font-bold">Açık Kaynak Lisansları</Text>
                         </TouchableOpacity>
                     </View>

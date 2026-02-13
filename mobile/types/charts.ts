@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * Chart Data Types
  * Type definitions for dashboard charts
@@ -54,7 +55,7 @@ export interface BarDataPoint {
     frontColor: string;
     gradientColor: string;
     label: string;
-    topLabelComponent: () => JSX.Element;
+    topLabelComponent: () => React.JSX.Element;
 }
 
 export interface PieDataPoint {

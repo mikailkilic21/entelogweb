@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal } from 'react-native';
-import { ENVIRONMENT, CONFIG } from '@/constants/Config';
+import { ENVIRONMENT, CONFIG, isVPN, isProduction } from '@/constants/Config';
 
 export const EnvironmentBadge = () => {
     const [showModal, setShowModal] = useState(false);
@@ -22,7 +22,7 @@ export const EnvironmentBadge = () => {
                 style={{ elevation: 10 }}
             >
                 <Text className="text-white text-xs font-bold">
-                    {ENVIRONMENT === 'vpn' ? '🌍 VPN' : ENVIRONMENT === 'production' ? '🏢 PROD' : '💻 DEV'}
+                    {isVPN() ? '🌍 VPN' : isProduction() ? '🏢 PROD' : '💻 DEV'}
                 </Text>
             </TouchableOpacity>
 
@@ -47,7 +47,7 @@ export const EnvironmentBadge = () => {
                                 <Text className="text-blue-400 font-mono text-sm">{CONFIG.BASE_URL}</Text>
                             </View>
 
-                            {ENVIRONMENT === 'vpn' && (
+                            {isVPN() && (
                                 <View className="bg-green-900/20 border border-green-500/30 p-4 rounded-xl">
                                     <Text className="text-green-400 text-xs mb-1">✅ VPN Mode Active</Text>
                                     <Text className="text-green-300 text-xs">

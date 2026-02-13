@@ -113,4 +113,8 @@ router.get('/products/image/clear-cache', imageController.clearImageCache);
 router.get('/products/image/:stockCode', imageController.getProductImage);
 router.get('/products/image-check/:stockCode', imageController.checkProductImage);
 
+// Reports Routes
+const reportsController = require('../controllers/reportsController');
+router.get('/reports/:reportId', reportsController.getReportData);
+
 module.exports = router;

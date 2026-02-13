@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="tr" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Açık Kaynak Lisansları - EnteLog</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
+</head>
+
+<body class="bg-gray-50 text-slate-900 dark:bg-slate-900 dark:text-slate-50 antialiased transition-colors duration-300">
+
+    <!-- Navigation -->
+    <nav
+        class="fixed w-full z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-gray-200 dark:border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <a href="index.html" class="flex items-center gap-3">
+                    <img src="logo.png" alt="EnteLog" class="h-8 w-auto brightness-0 dark:brightness-100">
+                    <span class="text-xl font-bold uppercase text-slate-900 dark:text-white">ENTELOG</span>
+                </a>
+                <a href="index.html"
+                    class="text-sm font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 transition-colors">Ana
+                    Sayfaya Dön</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <main class="pt-32 pb-24">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-8">Açık Kaynak Lisansları</h1>
+
+            <div class="prose prose-lg dark:prose-invert max-w-none text-slate-600 dark:text-slate-400">
+                <p class="lead text-xl">Bu yazılım aşağıdaki açık kaynak projelerden faydalanmaktadır:</p>
+
+                <div class="space-y-6 mt-8">
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-slate-700">
+                        <h3 class="mt-0 font-bold text-lg text-slate-900 dark:text-white">React Native</h3>
+                        <p class="text-sm">MIT License. Copyright © Meta Platforms, Inc.</p>
+                        <a href="https://github.com/facebook/react-native" class="text-blue-500 text-sm hover:underline"
+                            target="_blank">Lisansı Görüntüle</a>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-slate-700">
+                        <h3 class="mt-0 font-bold text-lg text-slate-900 dark:text-white">Expo</h3>
+                        <p class="text-sm">MIT License. Copyright © Expo.</p>
+                        <a href="https://github.com/expo/expo" class="text-blue-500 text-sm hover:underline"
+                            target="_blank">Lisansı Görüntüle</a>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-slate-700">
+                        <h3 class="mt-0 font-bold text-lg text-slate-900 dark:text-white">Tailwind CSS</h3>
+                        <p class="text-sm">MIT License. Copyright © Tailwind Labs, Inc.</p>
+                        <a href="https://github.com/tailwindlabs/tailwindcss"
+                            class="text-blue-500 text-sm hover:underline" target="_blank">Lisansı Görüntüle</a>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-slate-700">
+                        <h3 class="mt-0 font-bold text-lg text-slate-900 dark:text-white">Lucide Icons</h3>
+                        <p class="text-sm">ISC License. Copyright © Lucide Contributors.</p>
+                        <a href="https://lucide.dev/license" class="text-blue-500 text-sm hover:underline"
+                            target="_blank">Lisansı Görüntüle</a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-slate-950 py-12 border-t border-gray-200 dark:border-slate-800 text-center">
+        <span class="text-xl font-bold uppercase text-slate-900 dark:text-white tracking-widest">EnteLog</span>
+        <p class="text-slate-500 text-sm mt-4">&copy; 2026. Tüm hakları saklıdır.</p>
+    </footer>
+
+    <script>lucide.createIcons();</script>
+</body>
+
+</html>

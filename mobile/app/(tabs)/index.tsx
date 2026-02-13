@@ -2,12 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Image, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_URL } from '@/constants/Config';
-import { SalesTrendChart, TopProductsChart, TopCustomersChart } from '@/components/DashboardCharts';
+import { TopProductsChart, TopCustomersChart } from '@/components/DashboardCharts';
 import { EnvironmentBadge } from '@/components/EnvironmentBadge';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Bell, TrendingUp, TrendingDown, Package, Users, AlertCircle, LayoutDashboard, Receipt, RefreshCcw, X } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
-import { generateMockTrendData } from '@/utils/chartHelpers';
 
 export default function DashboardScreen() {
   const { isDemo } = useAuth();
@@ -20,7 +19,6 @@ export default function DashboardScreen() {
   const [customerType, setCustomerType] = useState<'sales' | 'purchases'>('sales');
 
   const [stats, setStats] = useState<any>(null);
-  const [trendData, setTrendData] = useState<any>(null);
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [topCustomers, setTopCustomers] = useState<any[]>([]);
 
@@ -32,9 +30,8 @@ export default function DashboardScreen() {
         'Bypass-Tunnel-Reminder': 'true'
       };
       // Parallel Fetching for Perforamnce
-      const [statsRes, trendRes, productsRes, customersRes] = await Promise.all([
+      const [statsRes, productsRes, customersRes] = await Promise.all([
         fetch(`${API_URL}/stats?period=${period}`, { headers }),
-        fetch(`${API_URL}/stats/trend?period=${period}`, { headers }),
         fetch(`${API_URL}/stats/top-products?period=${period}`, { headers }),
         fetch(`${API_URL}/stats/top-${customerType === 'sales' ? 'customers' : 'suppliers'}?period=${period}`, { headers })
       ]);
@@ -42,13 +39,10 @@ export default function DashboardScreen() {
       if (!statsRes.ok) throw new Error('Sunucu yanıt vermedi: ' + statsRes.status);
 
       const statsData = await statsRes.json();
-      const trendData = await trendRes.json();
       const productsData = await productsRes.json();
       const customersData = await customersRes.json();
 
       setStats(statsData);
-      // Ensure trendData is array, if error object comes it might crash charts
-      setTrendData(Array.isArray(trendData) ? trendData : []);
       setTopProducts(Array.isArray(productsData) ? productsData : []);
       setTopCustomers(Array.isArray(customersData) ? customersData : []);
 
@@ -56,7 +50,6 @@ export default function DashboardScreen() {
       console.warn('Network error or API issue, using mock data:', error.message);
       // Fallback to Mock Data for Charts & Stats
       if (true) { // Always fallback on error to show UI
-        setTrendData(generateMockTrendData(period));
         // Mock Stats
         setStats({
           totalSales: 1250000,
@@ -255,12 +248,7 @@ export default function DashboardScreen() {
           </View>
 
           {/* Charts Section */}
-          <View className="px-6 space-y-2">
-            <SalesTrendChart
-              data={trendData}
-              period={period}
-              isLoading={loading}
-            />
+          <View className="px-6 space-y-2 pb-6">
             <TopProductsChart
               data={topProducts}
               isLoading={loading}
@@ -313,7 +301,7 @@ export default function DashboardScreen() {
                   </View>
                   <View>
                     <Text className="text-slate-400 text-xs uppercase font-bold">E-Posta</Text>
-                    <Text className="text-white font-medium">mikailkilic21@gmail.com</Text>
+                    <Text className="text-white font-medium">info@entelog.com.tr</Text>
                   </View>
                 </View>
 
@@ -323,7 +311,7 @@ export default function DashboardScreen() {
                   </View>
                   <View>
                     <Text className="text-slate-400 text-xs uppercase font-bold">Telefon</Text>
-                    <Text className="text-white font-medium">+90 553 391 22 86</Text>
+                    <Text className="text-white font-medium">0.553 391 22 86</Text>
                   </View>
                 </View>
               </View>

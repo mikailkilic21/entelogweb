@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="tr" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kullanım Koşulları - EnteLog</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
+</head>
+
+<body class="bg-gray-50 text-slate-900 dark:bg-slate-900 dark:text-slate-50 antialiased transition-colors duration-300">
+
+    <!-- Navigation -->
+    <nav
+        class="fixed w-full z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-gray-200 dark:border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <a href="index.html" class="flex items-center gap-3">
+                    <img src="logo.png" alt="EnteLog" class="h-8 w-auto brightness-0 dark:brightness-100">
+                    <span class="text-xl font-bold uppercase text-slate-900 dark:text-white">ENTELOG</span>
+                </a>
+                <a href="index.html"
+                    class="text-sm font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 transition-colors">Ana
+                    Sayfaya Dön</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <main class="pt-32 pb-24">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-8">Kullanım Koşulları</h1>
+
+            <div class="prose prose-lg dark:prose-invert max-w-none text-slate-600 dark:text-slate-400">
+                <p class="lead text-xl">Son Güncelleme: 13 Şubat 2026</p>
+
+                <h3>1. Giriş</h3>
+                <p>EnteLog Web ve Mobil ERP uygulamasını ("Hizmet") kullanarak aşağıdaki şartları kabul etmiş olursunuz.
+                    Lütfen bu koşulları dikkatlice okuyunuz.</p>
+
+                <h3>2. Hizmetin Kullanımı</h3>
+                <p>Hizmetimiz, işletmelerin finansal, stok ve müşteri ilişkilerini yönetmeleri için tasarlanmıştır.
+                    Hizmeti yasa dışı veya yetkisiz bir amaçla kullanamazsınız.</p>
+
+                <h3>3. Hesap Güvenliği</h3>
+                <p>Hesabınızın güvenliğinden siz sorumlusunuz. Şifrenizi kimseyle paylaşmayınız. Yetkisiz erişim şüphesi
+                    durumunda derhal bize bildiriniz.</p>
+
+                <h3>4. Veri ve Gizlilik</h3>
+                <p>Verilerinizin nasıl işlendiği hakkında bilgi için lütfen <a href="privacy.html"
+                        class="text-blue-600 hover:underline">Gizlilik Politikamızı</a> inceleyiniz.</p>
+
+                <h3>5. Değişiklikler</h3>
+                <p>EnteLog, bu koşulları dilediği zaman güncelleme hakkını saklı tutar. Değişiklikler yayınlandığı
+                    tarihte yürürlüğe girer.</p>
+
+                <h3>6. İletişim</h3>
+                <p>Sorularınız için bizimle <a href="mailto:info@entelog.com.tr"
+                        class="text-blue-600">info@entelog.com.tr</a> adresinden iletişime geçebilirsiniz.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-slate-950 py-12 border-t border-gray-200 dark:border-slate-800 text-center">
+        <span class="text-xl font-bold uppercase text-slate-900 dark:text-white tracking-widest">EnteLog</span>
+        <p class="text-slate-500 text-sm mt-4">&copy; 2026. Tüm hakları saklıdır.</p>
+    </footer>
+
+    <script>lucide.createIcons();</script>
+</body>
+
+</html>

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, ShoppingCart } from 'lucide-react-native';
+import { Search, ShoppingCart, Plus } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
-// import { useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-// import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '@/context/AuthContext';
 import OrderItem from '@/components/OrderItem';
 
@@ -14,7 +13,7 @@ type ShipmentStatus = 'all' | 'pending' | 'partial' | 'closed';
 
 export default function OrdersScreen() {
     const { isDemo } = useAuth();
-    // const router = useRouter();
+    const router = useRouter();
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -28,7 +27,6 @@ export default function OrdersScreen() {
             if (statusFilter !== 'all') url += `&status=${statusFilter}`;
             if (shipmentFilter !== 'all') url += `&shipmentStatus=${shipmentFilter}`;
             if (searchText) url += `&search=${encodeURIComponent(searchText)}`;
-
 
             const res = await fetch(url, {
                 headers: {
@@ -166,6 +164,15 @@ export default function OrdersScreen() {
                         }
                     />
                 )}
+
+                {/* Create Order FAB */}
+                <TouchableOpacity
+                    className="absolute bottom-8 right-6 bg-blue-600 w-14 h-14 rounded-full items-center justify-center shadow-lg shadow-blue-500/30 z-50 elevation-10"
+                    activeOpacity={0.8}
+                    onPress={() => router.push('/orders/create')}
+                >
+                    <Plus color="white" size={28} />
+                </TouchableOpacity>
             </SafeAreaView>
         </View>
     );

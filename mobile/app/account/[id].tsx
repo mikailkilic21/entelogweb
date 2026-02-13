@@ -109,7 +109,7 @@ export default function AccountDetailScreen() {
 
                 <ScrollView contentContainerStyle={{ padding: 20 }}>
                     {activeTab === 'summary' ? (
-                        <Animated.View incoming={FadeInDown.springify()}>
+                        <Animated.View entering={FadeInDown.springify()}>
                             {/* Balance Card */}
                             <LinearGradient
                                 colors={account.balance >= 0 ? ['#059669', '#047857'] : ['#dc2626', '#b91c1c']}
@@ -189,7 +189,7 @@ export default function AccountDetailScreen() {
                             </View>
                         </Animated.View>
                     ) : (
-                        <Animated.View incoming={FadeInDown.springify()} className="gap-3">
+                        <Animated.View entering={FadeInDown.springify()} className="gap-3">
                             {transactions && transactions.length > 0 ? (
                                 transactions.map((tr: any, i) => (
                                     <View key={tr.id} className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl flex-row justify-between items-center">

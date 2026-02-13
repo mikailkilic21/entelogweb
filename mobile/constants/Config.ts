@@ -7,13 +7,13 @@
 export type Environment = 'development' | 'production' | 'vpn';
 
 // Current environment - CHANGE THIS BASED ON YOUR NEEDS
-const CURRENT_ENV: Environment = 'vpn'; // 'development' | 'production' | 'vpn'
+const CURRENT_ENV: Environment = 'development'; // 'development' | 'production' | 'vpn'
 
 // Environment configurations
 const ENV_CONFIG = {
     development: {
-        API_URL: 'http://192.168.1.11:3001/api',
-        BASE_URL: 'http://192.168.1.11:3001',
+        API_URL: 'http://192.168.1.7:3001/api',
+        BASE_URL: 'http://192.168.1.7:3001',
         name: 'Local Development',
     },
     production: {
@@ -36,9 +36,9 @@ export const ENVIRONMENT = CURRENT_ENV;
 export const ENVIRONMENT_NAME = CONFIG.name;
 
 // Helper function to check environment
-export const isDevelopment = (): boolean => CURRENT_ENV === 'development';
-export const isProduction = (): boolean => CURRENT_ENV === 'production';
-export const isVPN = (): boolean => CURRENT_ENV === 'vpn';
+export const isDevelopment = (): boolean => (CURRENT_ENV as string) === 'development';
+export const isProduction = (): boolean => (CURRENT_ENV as string) === 'production';
+export const isVPN = (): boolean => (CURRENT_ENV as string) === 'vpn';
 
 // Debug info (remove in production)
 if (__DEV__) {

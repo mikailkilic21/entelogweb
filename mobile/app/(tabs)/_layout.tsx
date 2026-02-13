@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Home, LayoutGrid, Landmark, MoreHorizontal } from 'lucide-react-native';
+import { Home, LayoutGrid, Settings as SettingsIcon, MoreHorizontal, BarChart3 } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -38,22 +38,37 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 3. Banks (NEW!) */}
+      {/* 3. Reports */}
       <Tabs.Screen
-        name="banks"
+        name="reports"
         options={{
-          title: 'Bankalar',
-          tabBarIcon: ({ color }) => <Landmark size={26} color={color} />,
+          title: 'Raporlar',
+          tabBarIcon: ({ color }) => <BarChart3 size={26} color={color} />,
         }}
       />
 
-      {/* 4. More Menu */}
+      {/* 4. Settings */}
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Ayarlar',
+          tabBarIcon: ({ color }) => <SettingsIcon size={26} color={color} />,
+        }}
+      />
+
+      {/* 5. More Menu */}
       <Tabs.Screen
         name="more"
         options={{
           title: 'Daha Fazla',
           tabBarIcon: ({ color }) => <MoreHorizontal size={26} color={color} />,
         }}
+      />
+
+      {/* Hidden tabs - accessible via router but not in tab bar */}
+      <Tabs.Screen
+        name="banks"
+        options={{ href: null }}
       />
 
       {/* Hidden tabs - accessible via router but not in tab bar */}
@@ -87,10 +102,7 @@ export default function TabLayout() {
         options={{ href: null }}
       />
 
-      <Tabs.Screen
-        name="settings"
-        options={{ href: null }}
-      />
+
 
       <Tabs.Screen
         name="menu"
