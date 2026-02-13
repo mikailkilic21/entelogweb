@@ -49,7 +49,7 @@ export default function DashboardScreen() {
     } catch (error: any) {
       console.warn('Network error or API issue, using mock data:', error.message);
       // Fallback to Mock Data for Charts & Stats
-      if (true) { // Always fallback on error to show UI
+      if (isDemo) { // Fallback to Mock Data ONLY in Demo Mode
         // Mock Stats
         setStats({
           totalSales: 1250000,
@@ -69,10 +69,12 @@ export default function DashboardScreen() {
           { name: 'MediaMarkt', value: 420000 },
           { name: 'Vatan', value: 280000 },
         ]);
+
+        setError(null); // Clear error for demo experience
+      } else {
+        // REAL USER: Show the actual error
+        setError(error.message || 'Sunucuya bağlanılamadı. Lütfen internet bağlantınızı ve VPN durumunu kontrol edin.');
       }
-      // Only set error if we really want to show the red alert (optional)
-      // setError(error.message); 
-      setError(null); // Clear error since we are showing mock data
     } finally {
       setLoading(false);
       setRefreshing(false);
