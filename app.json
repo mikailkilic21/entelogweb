@@ -4,6 +4,9 @@
       "eas": {
         "projectId": "33344bf3-8236-41de-ad07-6fa0e78d54a9"
       }
+    },
+    "android": {
+      "package": "com.mikailkilic21.entelogweb"
     }
   }
 }

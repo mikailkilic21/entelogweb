@@ -5,8 +5,8 @@
     "password": "Logo.123",
     "encrypt": false,
     "trustServerCertificate": true,
-    "firmNo": "113",
+    "firmNo": "115",
     "periodNo": "01",
-    "firmName": "TEST YAKISIKLI",
+    "firmName": "YAKISIKLI ELEKTRIK 2026 GR",
     "imageDir": "\\\\YSERVER\\resim_indir\\"
 }

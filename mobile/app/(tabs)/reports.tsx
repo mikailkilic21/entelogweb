@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Dimensions, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { BarChart3, TrendingUp, PieChart, ArrowUpRight, Download, ChevronLeft, Wallet, Users, FileText, Layers, Activity, Share2 } from 'lucide-react-native';
+
+import { BarChart3, TrendingUp, PieChart, ArrowUpRight, ChevronLeft, Wallet, Users, FileText, Layers, Activity, Share2 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as SecureStore from 'expo-secure-store';
 import * as Print from 'expo-print';
@@ -12,7 +12,6 @@ import { SalesData } from '../../types/charts';
 import { useAuth } from '@/context/AuthContext';
 import { API_URL } from '@/constants/Config';
 
-const { width } = Dimensions.get('window');
 
 // Categories
 const CATEGORIES = [
@@ -47,7 +46,6 @@ const REPORTS_BY_CATEGORY = {
 };
 
 export default function ReportsScreen() {
-    const router = useRouter();
     const { isDemo } = useAuth();
     const [selectedCategory, setSelectedCategory] = useState('sales');
     const [viewingReport, setViewingReport] = useState<any | null>(null);
@@ -188,10 +186,6 @@ export default function ReportsScreen() {
         }
     };
 
-    // Helper wrapper to switch view
-    const setViewReport = (report: any) => {
-        setViewingReport(report);
-    };
 
     const renderDetailView = () => {
         if (!viewingReport) return null;

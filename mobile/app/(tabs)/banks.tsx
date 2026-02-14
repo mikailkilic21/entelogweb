@@ -13,45 +13,37 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
     Landmark,
-    TrendingUp,
-    TrendingDown,
     Wallet,
-    ChevronDown,
-    ChevronRight,
     Search,
-    LayoutGrid,
-    List,
     CreditCard,
     HandCoins,
     Receipt,
     DownloadCloud,
     SendHorizontal,
-    History
+    ScrollText
 } from 'lucide-react-native';
 import { API_URL } from '@/constants/Config';
 import { useAuth } from '@/context/AuthContext';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import FinanceDetailModal from '@/components/FinanceDetailModal';
 import { Bank, Transaction } from '@/types';
 
-import { BankCard, BankLogo } from '@/components/BankCard';
+import { BankLogo } from '@/components/BankCard';
 import TransactionItem from '@/components/TransactionItem';
 
+// Redesigned Banks Screen with Grid Box Model
 export default function BanksScreen() {
     const { isDemo } = useAuth();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
-    const [expandedBanks, setExpandedBanks] = useState<{ [key: string]: boolean }>({});
+    const [activeCategory, setActiveCategory] = useState('accounts');
     const [search, setSearch] = useState('');
-    const [activeTab, setActiveTab] = useState('accounts'); // 'accounts', 'pos', 'cc', 'havale-in', 'havale-out', 'dbs'
-
 
     // Data states
     const [banks, setBanks] = useState<Bank[]>([]);
-    const [stats, setStats] = useState<any>(null); // Stats interface is complex, keeping any for now or define separately if needed
-    const [dbsInvoices, setDbsInvoices] = useState<any[]>([]); // DBS interface needed later
+    const [stats, setStats] = useState<any>(null);
+    const [dbsInvoices, setDbsInvoices] = useState<any[]>([]);
     const [financeTransactions, setFinanceTransactions] = useState<Transaction[]>([]);
+    const [expandedBanks, setExpandedBanks] = useState<{ [key: string]: boolean }>({});
 
     // Modal
     const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
@@ -59,68 +51,36 @@ export default function BanksScreen() {
 
     const fetchData = useCallback(async () => {
         try {
-            // Parallel fetch for stats and banks (always needed)
             const [banksRes, statsRes] = await Promise.all([
-                fetch(`${API_URL}/banks?search=${encodeURIComponent(search)}`, {
-                    headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
-                }),
-                fetch(`${API_URL}/banks/stats`, {
-                    headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
-                })
+                fetch(`${API_URL}/banks?search=${encodeURIComponent(search)}`, { headers: { 'x-demo-mode': isDemo ? 'true' : 'false' } }),
+                fetch(`${API_URL}/banks/stats`, { headers: { 'x-demo-mode': isDemo ? 'true' : 'false' } })
             ]);
 
-            // Handle Banks Data
-            if (banksRes.ok) {
-                const banksData = await banksRes.json();
-                setBanks(Array.isArray(banksData) ? banksData : []);
-            } else {
-                console.warn("Banks API failed, using fallback data");
-                setBanks(getMockBanks());
-            }
+            if (banksRes.ok) setBanks(await banksRes.json());
+            else setBanks((getMockBanks()));
 
-            // Handle Stats Data
-            if (statsRes.ok) {
-                const statsData = await statsRes.json();
-                setStats(statsData.stats || statsData);
-            } else {
-                setStats(getMockStats());
-            }
+            if (statsRes.ok) setStats((await statsRes.json()).stats);
+            else setStats(getMockStats());
 
-            // Fetch transactions based on active tab
-            if (activeTab === 'dbs') {
-                const dbsRes = await fetch(`${API_URL}/dbs/invoices`, {
-                    headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
-                });
-                if (dbsRes.ok) {
-                    const dbsData = await dbsRes.json();
-                    setDbsInvoices(Array.isArray(dbsData) ? dbsData : []);
-                }
-            } else if (activeTab !== 'accounts') {
-                const txRes = await fetch(`${API_URL}/banks/finance-transactions?type=${activeTab}`, {
-                    headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
-                });
-
-                if (txRes.ok) {
-                    const txData = await txRes.json();
-                    setFinanceTransactions(Array.isArray(txData) ? txData : []);
-                } else {
-                    setFinanceTransactions(getMockTransactions(activeTab));
-                }
+            // Fetch specific data based on activeCategory
+            if (activeCategory === 'dbs') {
+                const dbsRes = await fetch(`${API_URL}/dbs/invoices`, { headers: { 'x-demo-mode': isDemo ? 'true' : 'false' } });
+                if (dbsRes.ok) setDbsInvoices(await dbsRes.json());
+            } else if (activeCategory !== 'accounts' && activeCategory !== 'loans') {
+                // Includes 'checks-in-bank'
+                const txRes = await fetch(`${API_URL}/banks/finance-transactions?type=${activeCategory}`, { headers: { 'x-demo-mode': isDemo ? 'true' : 'false' } });
+                if (txRes.ok) setFinanceTransactions(await txRes.json());
             }
 
         } catch (error) {
-            console.error('Banks fetch error:', error);
-            setBanks(getMockBanks());
-            setStats(getMockStats());
-            if (activeTab !== 'accounts' && activeTab !== 'dbs') setFinanceTransactions(getMockTransactions(activeTab));
+            console.error('Fetch error:', error);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [search, isDemo, activeTab]);
+    }, [search, isDemo, activeCategory]);
 
     useEffect(() => {
-        // Initial Loading
         setLoading(true);
         fetchData();
     }, [fetchData]);
@@ -131,379 +91,188 @@ export default function BanksScreen() {
     };
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('tr-TR', {
-            style: 'currency',
-            currency: 'TRY',
-            maximumFractionDigits: 0
-        }).format(amount || 0);
+        return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(amount || 0);
     };
 
     const toggleBank = (bankName: string) => {
-        setExpandedBanks(prev => ({
-            ...prev,
-            [bankName]: !prev[bankName]
-        }));
+        setExpandedBanks(prev => ({ ...prev, [bankName]: !prev[bankName] }));
     };
 
-    const handleTransactionClick = (transaction: any) => {
-        setSelectedTransaction(transaction);
-        setIsModalOpen(true);
-    };
-
-    // Group banks by bankName
+    // Calculate Groups
     const groupedBanks = banks.reduce((acc: any, bank) => {
         const name = bank.bankName || 'Diğer';
-        if (!acc[name]) {
-            acc[name] = {
-                name,
-                accounts: [],
-                totalBalance: 0
-            };
-        }
+        if (!acc[name]) acc[name] = { name, accounts: [], totalBalance: 0 };
         acc[name].accounts.push(bank);
         acc[name].totalBalance += bank.balance;
         return acc;
     }, {});
 
-    // Render Logic Components
-    const renderStats = () => (
-        <View className="mb-6">
-            {/* Total Balance - Main Card */}
-            <LinearGradient
-                colors={['#3b82f6', '#1d4ed8']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                className="rounded-3xl p-6 mb-4 border-t border-white/10 shadow-lg"
-            >
-                <View className="flex-row items-center mb-3">
-                    <View className="bg-white/20 p-2.5 rounded-xl mr-3">
-                        <Wallet size={24} color="white" />
-                    </View>
-                    <Text className="text-white/80 text-[10px] font-bold uppercase tracking-widest">
-                        Mevduat Bakiyesi
-                    </Text>
-                </View>
-                <Text className="text-white text-3xl font-black">
-                    {formatCurrency(stats?.totalBalance || 0)}
-                </Text>
-                {/* Daily Movement */}
-                <View className="mt-3 flex-row items-center gap-3">
-                    <View className="flex-row items-center">
-                        <TrendingUp size={12} color="#10b981" />
-                        <Text className="text-emerald-300 text-[10px] ml-1 font-bold">
-                            {formatCurrency(stats?.dailyIncoming || 0)}
+    // Grid Menu Definition
+    const menuItems = [
+        { id: 'accounts', label: 'Banka Hesapları', icon: Landmark, color: '#3b82f6', value: stats?.totalBalance || 0 },
+        { id: 'checks-in-bank', label: 'Bankadaki Çekler', icon: ScrollText, color: '#8b5cf6', value: stats?.totalChecksInBank || 0 },
+        { id: 'havale-in', label: 'Gelen Havaleler', icon: DownloadCloud, color: '#10b981', value: stats?.totalHavaleIncoming || 0 },
+        { id: 'havale-out', label: 'Gönderilenler', icon: SendHorizontal, color: '#ef4444', value: stats?.totalHavaleOutgoing || 0 },
+        { id: 'pos', label: 'POS Tahsilat', icon: HandCoins, color: '#f59e0b', value: stats?.totalPOS || 0 },
+        { id: 'cc', label: 'Kredi Kartlarımız', icon: CreditCard, color: '#ec4899', value: stats?.totalFirmCC || 0 },
+        { id: 'dbs', label: 'DBS Sistemi', icon: Receipt, color: '#06b6d4', value: 0 },
+        { id: 'loans', label: 'Ticari Krediler', icon: Wallet, color: '#6366f1', value: 0 },
+    ];
+
+    const renderGridMenu = () => (
+        <View className="flex-row flex-wrap justify-between gap-y-2 px-2 mb-4">
+            {menuItems.map((item, index) => {
+                const isActive = activeCategory === item.id;
+                return (
+                    <TouchableOpacity
+                        key={item.id}
+                        onPress={() => setActiveCategory(item.id)}
+                        activeOpacity={0.8}
+                        className={`w-[31%] p-2 rounded-xl border`}
+                        style={{
+                            backgroundColor: isActive ? item.color : `${item.color}10`,
+                            borderColor: isActive ? 'white' : `${item.color}60`, // 60% opacity border for "drawn" look
+                            borderWidth: 1,
+                            shadowColor: item.color,
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: isActive ? 0.4 : 0,
+                            shadowRadius: 8,
+                            elevation: isActive ? 5 : 0
+                        }}
+                    >
+                        <View className="mb-2">
+                            <View className={`w-8 h-8 rounded-lg items-center justify-center`} style={{ backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : `${item.color}20` }}>
+                                <item.icon size={16} color={isActive ? '#fff' : item.color} />
+                            </View>
+                        </View>
+                        <Text className={`${isActive ? 'text-white/90' : 'text-slate-400'} text-[10px] font-bold uppercase mb-0.5`} numberOfLines={1}>{item.label}</Text>
+                        <Text className={`${isActive ? 'text-white' : 'text-slate-200'} font-bold text-xs`} numberOfLines={1} adjustsFontSizeToFit>
+                            {formatCurrency(item.value)}
                         </Text>
-                    </View>
-                    <View className="flex-row items-center">
-                        <TrendingDown size={12} color="#ef4444" />
-                        <Text className="text-rose-300 text-[10px] ml-1 font-bold">
-                            {formatCurrency(stats?.dailyOutgoing || 0)}
-                        </Text>
-                    </View>
-                </View>
-            </LinearGradient>
-
-            {/* Other Stats - Grid */}
-            <View className="flex-row gap-3 mb-3">
-                {/* POS */}
-                <View className="flex-1 bg-emerald-600/20 border border-emerald-500/30 rounded-2xl p-4">
-                    <View className="flex-row items-center mb-2">
-                        <HandCoins size={16} color="#10b981" />
-                        <Text className="text-emerald-400 text-[9px] ml-1.5 font-bold uppercase">POS</Text>
-                    </View>
-                    <Text className="text-white font-black text-base">
-                        {formatCurrency(stats?.totalPOS || 0)}
-                    </Text>
-                </View>
-
-                {/* Credit Card */}
-                <View className="flex-1 bg-rose-600/20 border border-rose-500/30 rounded-2xl p-4">
-                    <View className="flex-row items-center mb-2">
-                        <CreditCard size={16} color="#ef4444" />
-                        <Text className="text-rose-400 text-[9px] ml-1.5 font-bold uppercase">KK</Text>
-                    </View>
-                    <Text className="text-white font-black text-base">
-                        {formatCurrency(stats?.totalFirmCC || 0)}
-                    </Text>
-                </View>
-            </View>
-
-            {/* Havale In/Out */}
-            <View className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4">
-                <View className="flex-row justify-between items-center mb-2">
-                    <Text className="text-emerald-400 text-[10px] font-bold uppercase">Gelen Havale</Text>
-                    <Text className="text-white font-black text-sm">
-                        {formatCurrency(stats?.totalHavaleIncoming || 0)}
-                    </Text>
-                </View>
-                <View className="flex-row justify-between items-center">
-                    <Text className="text-rose-400 text-[10px] font-bold uppercase">Giden Havale</Text>
-                    <Text className="text-white font-black text-sm">
-                        {formatCurrency(stats?.totalHavaleOutgoing || 0)}
-                    </Text>
-                </View>
-            </View>
+                    </TouchableOpacity>
+                );
+            })}
         </View>
     );
 
-    const renderTabs = () => (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6 flex-grow-0" contentContainerStyle={{ paddingRight: 20 }}>
-            {[
-                { id: 'accounts', label: 'Hesaplar', icon: Landmark },
-                { id: 'pos', label: 'POS', icon: HandCoins },
-                { id: 'cc', label: 'Kredi Kartı', icon: CreditCard },
-                { id: 'havale-in', label: 'Gelen', icon: DownloadCloud },
-                { id: 'havale-out', label: 'Giden', icon: SendHorizontal },
-                { id: 'dbs', label: 'DBS', icon: Receipt }
-            ].map((tab) => (
-                <TouchableOpacity
-                    key={tab.id}
-                    onPress={() => setActiveTab(tab.id)}
-                    className={`mr-4 px-4 py-2 rounded-xl flex-row items-center gap-2 border ${activeTab === tab.id
-                        ? 'bg-blue-600 border-blue-500'
-                        : 'bg-slate-900 border-slate-800'
-                        }`}
-                >
-                    <tab.icon size={16} color={activeTab === tab.id ? '#fff' : '#64748b'} />
-                    <Text className={activeTab === tab.id ? 'text-white font-bold' : 'text-slate-400 font-medium'}>
-                        {tab.label}
-                    </Text>
-                </TouchableOpacity>
-            ))}
-        </ScrollView>
-    );
+    const renderContent = () => {
+        if (loading) return <ActivityIndicator color="#3b82f6" className="mt-10" />;
 
-    const renderAccounts = () => (
-        <>
-            {viewMode === 'grid' ? (
-                /* Grid View - Cards */
-                <View className="gap-4">
-                    {Object.values(groupedBanks).map((group: any, index) => (
-                        group.accounts.map((bank: any, bankIndex: number) => (
-                            <BankCard
-                                key={bank.id}
-                                bank={bank}
-                                index={bankIndex}
-                                onPress={() => { }}
-                            />
-                        ))
-                    ))}
-                </View>
-            ) : (
-                /* List View - Grouped by Bank */
-                <View className="space-y-4">
-                    {Object.values(groupedBanks).map((group: any, index) => {
-                        const isExpanded = expandedBanks[group.name];
-                        return (
-                            <View key={index} className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
-                                {/* Bank Header */}
-                                <TouchableOpacity
-                                    onPress={() => toggleBank(group.name)}
-                                    className="p-4 flex-row items-center"
-                                    activeOpacity={0.7}
-                                >
-                                    <View className="mr-3">
-                                        {isExpanded ? (
-                                            <ChevronDown size={20} color="#64748b" />
-                                        ) : (
-                                            <ChevronRight size={20} color="#64748b" />
-                                        )}
-                                    </View>
-                                    <BankLogo bankName={group.name} size="medium" />
-                                    <View className="flex-1 ml-4">
-                                        <Text className="text-white font-bold text-base mb-0.5">
-                                            {group.name}
-                                        </Text>
-                                        <Text className="text-slate-500 text-xs">
-                                            {group.accounts.length} Alt Hesap
-                                        </Text>
-                                    </View>
-                                    <View className="items-end">
-                                        <Text className="text-slate-500 text-[9px] font-bold uppercase mb-0.5">
-                                            Toplam
-                                        </Text>
+        switch (activeCategory) {
+            case 'accounts':
+                return (
+                    <View className="space-y-3 px-2">
+                        {Object.values(groupedBanks).map((group: any, index) => {
+                            const isExpanded = expandedBanks[group.name];
+                            return (
+                                <View key={index} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+                                    <TouchableOpacity onPress={() => toggleBank(group.name)} className="p-4 flex-row items-center">
+                                        <BankLogo bankName={group.name} size="medium" />
+                                        <View className="flex-1 ml-4">
+                                            <Text className="text-white font-bold text-base">{group.name}</Text>
+                                            <Text className="text-slate-500 text-xs">{group.accounts.length} Hesap</Text>
+                                        </View>
                                         <Text className={`font-black text-base ${group.totalBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                                             {formatCurrency(group.totalBalance)}
                                         </Text>
-                                    </View>
-                                </TouchableOpacity>
-
-                                {/* Expanded Accounts */}
-                                {isExpanded && (
-                                    <View className="border-t border-slate-800 bg-slate-950/30 p-4">
-                                        {group.accounts.map((account: any, accountIndex: number) => (
-                                            <View
-                                                key={account.id}
-                                                className={`py-3 ${accountIndex < group.accounts.length - 1 ? 'border-b border-slate-800/50' : ''}`}
-                                            >
-                                                <View className="flex-row justify-between items-start mb-2">
-                                                    <View className="flex-1">
-                                                        <Text className="text-white font-bold text-sm mb-0.5">
-                                                            {account.name}
-                                                        </Text>
-                                                        <Text className="text-slate-500 text-[10px]">
-                                                            {account.branch} - {account.code}
-                                                        </Text>
+                                    </TouchableOpacity>
+                                    {isExpanded && (
+                                        <View className="bg-slate-950/50 border-t border-slate-800 p-2">
+                                            {group.accounts.map((acc: any) => (
+                                                <View key={acc.id} className="flex-row justify-between p-3 border-b border-slate-800/50 last:border-0">
+                                                    <View>
+                                                        <Text className="text-white text-sm font-medium">{acc.name}</Text>
+                                                        <Text className="text-slate-500 text-[10px]">{acc.iban}</Text>
                                                     </View>
-                                                    <Text className={`font-black text-base ${account.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                        {formatCurrency(account.balance)}
-                                                    </Text>
+                                                    <Text className="text-emerald-400 font-bold">{formatCurrency(acc.balance)}</Text>
                                                 </View>
-                                                <Text className="text-slate-600 font-mono text-[10px]">
-                                                    {account.iban}
-                                                </Text>
-                                            </View>
-                                        ))}
+                                            ))}
+                                        </View>
+                                    )}
+                                </View>
+                            );
+                        })}
+                    </View>
+                );
+            case 'dbs':
+                return (
+                    <View className="space-y-3 px-2">
+                        {dbsInvoices.length === 0 ? (
+                            <Text className="text-slate-500 text-center mt-10">DBS kaydı bulunamadı.</Text>
+                        ) : (
+                            dbsInvoices.map((inv, idx) => (
+                                <View key={idx} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex-row justify-between items-center">
+                                    <View>
+                                        <Text className="text-white font-bold">{inv.clientName}</Text>
+                                        <Text className="text-slate-500 text-xs">Vade: {new Date(inv.dbsDate).toLocaleDateString('tr-TR')}</Text>
                                     </View>
-                                )}
-                            </View>
-                        );
-                    })}
-                </View>
-            )}
-        </>
-    );
-
-    const renderTransactions = () => (
-        <View className="gap-4">
-            {financeTransactions.length === 0 ? (
-                <View className="py-20 items-center">
-                    <History size={48} color="#334155" />
-                    <Text className="text-slate-500 mt-4 font-bold">İşlem bulunamadı</Text>
-                </View>
-            ) : (
-                financeTransactions.map((tx, index) => (
-                    <TransactionItem
-                        key={index}
-                        tx={tx}
-                        index={index}
-                        onPress={handleTransactionClick}
-                    />
-                ))
-            )}
-        </View>
-    );
-
-    const renderDBS = () => (
-        <View className="gap-4">
-            {dbsInvoices.length === 0 ? (
-                <View className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 items-center">
-                    <Receipt size={48} color="#334155" />
-                    <Text className="text-white font-bold text-lg mt-4">Kayıt Yok</Text>
-                    <Text className="text-slate-400 text-center mt-2">DBS sisteminde bekleyen fatura bulunamadı.</Text>
-                </View>
-            ) : (
-                dbsInvoices.map((inv, index) => (
-                    <Animated.View key={index} entering={FadeInDown.delay(index * 50).springify()}>
-                        <View className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 flex-row items-center justify-between">
-                            <View>
-                                <Text className="text-white font-bold text-base mb-1">{inv.clientName}</Text>
-                                <Text className="text-slate-500 text-xs">{inv.ficheno}</Text>
-                            </View>
-                            <View className="items-end">
-                                <Text className="text-emerald-400 font-bold text-lg">
-                                    {formatCurrency(inv.amount)}
-                                </Text>
-                                <Text className="text-slate-400 text-xs mt-1">
-                                    Vade: {new Date(inv.dbsDate).toLocaleDateString('tr-TR')}
-                                </Text>
-                            </View>
-                        </View>
-                    </Animated.View>
-                ))
-            )}
-        </View>
-    );
-
-
-    if (loading) {
-        return (
-            <View className="flex-1 justify-center items-center bg-slate-950">
-                <ActivityIndicator size="large" color="#3b82f6" />
-                <Text className="text-slate-500 mt-4 font-medium">Bankalar yükleniyor...</Text>
-            </View>
-        );
-    }
+                                    <Text className="text-emerald-400 font-bold text-lg">{formatCurrency(inv.amount)}</Text>
+                                </View>
+                            ))
+                        )}
+                    </View>
+                );
+            case 'loans':
+                return (
+                    <View className="items-center justify-center py-20">
+                        <Wallet size={48} color="#334155" />
+                        <Text className="text-slate-500 mt-4 font-bold text-center">Aktif Ticari Kredi Bulunamadı</Text>
+                    </View>
+                );
+            default:
+                return (
+                    <View className="space-y-3 px-2">
+                        {financeTransactions.length === 0 ? (
+                            <Text className="text-slate-500 text-center mt-10">İşlem kaydı bulunamadı.</Text>
+                        ) : (
+                            financeTransactions.map((tx, idx) => (
+                                <TransactionItem key={idx} tx={tx} index={idx} onPress={(t) => { setSelectedTransaction(t); setIsModalOpen(true); }} />
+                            ))
+                        )}
+                    </View>
+                );
+        }
+    };
 
     return (
         <View className="flex-1 bg-slate-950">
-            <LinearGradient
-                colors={['#0f172a', '#020617']}
-                style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
-            />
-
-            <SafeAreaView className="flex-1 px-4 pt-2">
-                {/* Header */}
-                <View className="flex-row items-center justify-between mb-4">
-                    <View className="flex-row items-center gap-3">
-                        <Image
-                            source={require('../../assets/images/siyahlogo.png')}
-                            style={{ width: 40, height: 40, borderRadius: 10 }}
-                            resizeMode="contain"
-                        />
-                        <View>
-                            <Text className="text-3xl font-black text-white">Bankalar</Text>
-                            <Text className="text-slate-400 text-xs font-medium tracking-wide uppercase">
-                                Finans Yönetimi
-                            </Text>
-                        </View>
+            <LinearGradient colors={['#0f172a', '#020617']} style={{ position: 'absolute', inset: 0 }} />
+            <SafeAreaView className="flex-1 pt-2">
+                <View className="px-4 mb-4 flex-row justify-between items-center">
+                    <View>
+                        <Text className="text-3xl font-black text-white">Bankalar</Text>
+                        <Text className="text-slate-400 text-xs uppercase tracking-widest">Finansal Genel Bakış</Text>
                     </View>
-
-                    {/* View Mode Toggle (Only show on accounts tab) */}
-                    {activeTab === 'accounts' && (
-                        <View className="flex-row bg-slate-900 border border-slate-800 rounded-xl p-1">
-                            <TouchableOpacity
-                                onPress={() => setViewMode('grid')}
-                                className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-blue-600' : ''}`}
-                            >
-                                <LayoutGrid size={18} color={viewMode === 'grid' ? '#fff' : '#64748b'} />
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={() => setViewMode('list')}
-                                className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-blue-600' : ''}`}
-                            >
-                                <List size={18} color={viewMode === 'list' ? '#fff' : '#64748b'} />
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                    <Image source={require('../../assets/images/siyahlogo.png')} style={{ width: 40, height: 40, borderRadius: 8 }} />
                 </View>
 
-                <ScrollView
-                    contentContainerStyle={{ paddingBottom: 100 }}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />}
-                    showsVerticalScrollIndicator={false}
-                >
-                    {/* Stats */}
-                    {renderStats()}
+                <ScrollView contentContainerStyle={{ paddingBottom: 100 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />}>
 
-                    {/* Tabs */}
-                    {renderTabs()}
-
-                    {/* Search Bar */}
-                    <View className="bg-slate-900 border border-slate-800 rounded-xl flex-row items-center px-4 py-3 mb-4">
-                        <Search size={20} color="#64748b" />
-                        <TextInput
-                            placeholder="Ara..."
-                            placeholderTextColor="#64748b"
-                            value={search}
-                            onChangeText={setSearch}
-                            className="flex-1 ml-3 text-white font-medium"
-                        />
+                    <View className="px-4 mb-2">
+                        <View className="bg-slate-900/80 border border-slate-800 rounded-xl flex-row items-center px-4 py-3 mb-4">
+                            <Search size={20} color="#64748b" />
+                            <TextInput
+                                placeholder="Hesap veya işlem ara..."
+                                placeholderTextColor="#64748b"
+                                value={search}
+                                onChangeText={setSearch}
+                                className="flex-1 ml-3 text-white font-medium"
+                            />
+                        </View>
                     </View>
 
-                    {/* Content Based on Tab */}
-                    {activeTab === 'accounts' ? renderAccounts() :
-                        activeTab === 'dbs' ? renderDBS() : renderTransactions()}
+                    {renderGridMenu()}
+
+                    <View className="px-4 mb-4">
+                        <Text className="text-white font-bold text-lg mb-2 pl-2 border-l-4 border-blue-500">
+                            {menuItems.find(m => m.id === activeCategory)?.label}
+                        </Text>
+                        {renderContent()}
+                    </View>
 
                 </ScrollView>
             </SafeAreaView>
-
-            {/* Transaction Detail Modal */}
-            <FinanceDetailModal
-                visible={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                transaction={selectedTransaction}
-            />
+            <FinanceDetailModal visible={isModalOpen} onClose={() => setIsModalOpen(false)} transaction={selectedTransaction} />
         </View>
     );
 }
@@ -531,20 +300,3 @@ function getMockStats() {
     };
 }
 
-function getMockTransactions(type: string) {
-    const list = [];
-    for (let i = 0; i < 10; i++) {
-        list.push({
-            id: i,
-            date: new Date(Date.now() - i * 86400000).toISOString(),
-            type: type === 'pos' ? 'POS Tahsilat' : type === 'cc' ? 'Kredi Kartı Fişi' : type.includes('in') ? 'Gelen Havale' : 'Giden Havale',
-            amount: Math.floor(Math.random() * 50000) + 1000,
-            clientName: `Müşteri Firma ${i + 1}`,
-            bankAccount: 'Ziraat Bankası - Merkez',
-            trcode: type.includes('out') || type === 'cc' ? 72 : 70, // Expense or Income logic
-            sign: 0,
-            description: `Mock işlem açıklaması ${i + 1}`
-        });
-    }
-    return list;
-}

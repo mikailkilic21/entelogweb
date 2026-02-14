@@ -75,7 +75,7 @@ router.post('/orders', ordersController.createOrder);
 router.post('/orders/upload-discount-pdf', ordersController.uploadPdfMiddleware, ordersController.processDiscountPdf);
 router.get('/orders/top-products', ordersController.getTopProducts);
 router.get('/orders/:id', ordersController.getOrderDetails);
-router.delete('/orders/:id', ordersController.deleteOrder);
+router.post('/orders/:id/transfer', ordersController.transferToLogo);
 
 // Product Routes
 router.get('/products/warehouses', productsController.getWarehouses);

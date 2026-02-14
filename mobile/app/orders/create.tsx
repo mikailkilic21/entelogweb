@@ -51,8 +51,9 @@ export default function CreateOrderScreen() {
             } else {
                 console.error('Account fetch failed:', res.status);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Account fetch error:', error);
+            Alert.alert('Hata', 'Müşteriler getirilemedi: ' + error.message);
         } finally {
             setIsSearching(false);
         }
@@ -75,9 +76,12 @@ export default function CreateOrderScreen() {
             if (res.ok) {
                 const data = await res.json();
                 setProducts(Array.isArray(data) ? data : []);
+            } else {
+                console.error('Product fetch failed:', res.status);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Product fetch error:', error);
+            Alert.alert('Hata', 'Ürünler getirilemedi: ' + error.message);
         } finally {
             setIsSearching(false);
         }
@@ -107,40 +111,46 @@ export default function CreateOrderScreen() {
     }, [productModalVisible, productSearch, fetchProducts]);
 
     const addItem = (product: any) => {
-        setItems(prev => {
-            const existing = prev.find(i => i.product.id === product.id);
-            if (existing) {
-                return prev.map(i => i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
-            }
-            // Logic: Use fixedPrice (defined sales price) if available, otherwise avgPrice
-            const price = parseFloat(product.fixedPrice) || parseFloat(product.avgPrice) || 0;
-            return [...prev, { product, quantity: 1, price, discount: 0 }];
-        });
-        setProductModalVisible(false);
-        setProductSearch('');
+        try {
+            setItems(prev => {
+                const productId = product.id || product.LOGICALREF;
+                const existing = prev.find(i => (i.product.id || i.product.LOGICALREF) === productId);
+
+                if (existing) {
+                    return prev.map(i => (i.product.id || i.product.LOGICALREF) === productId ? { ...i, quantity: i.quantity + 1 } : i);
+                }
+
+                // Logic: Use fixedPrice (defined sales price) if available, otherwise avgPrice
+                const price = parseFloat(product.fixedPrice) || parseFloat(product.avgPrice) || 0;
+                return [...prev, { product, quantity: 1, price, discount: 0 }];
+            });
+            setProductModalVisible(false);
+            setProductSearch('');
+        } catch (error) {
+            console.error('Add item error:', error);
+            Alert.alert('Hata', 'Ürün eklenirken bir sorun oluştu.');
+        }
     };
 
     const removeItem = (productId: number) => {
-        setItems(prev => prev.filter(i => i.product.id !== productId));
+        setItems(prev => prev.filter(i => (i.product.id || i.product.LOGICALREF) !== productId));
     };
 
     const updateQuantity = (productId: number, text: string) => {
         const qty = parseFloat(text);
         if (isNaN(qty)) return;
-        setItems(prev => prev.map(i => i.product.id === productId ? { ...i, quantity: qty } : i));
+        setItems(prev => prev.map(i => (i.product.id || i.product.LOGICALREF) === productId ? { ...i, quantity: qty } : i));
     };
 
     const updateDiscount = (productId: number, text: string) => {
-        // Allow empty string for clearing
         if (text === '') {
-            setItems(prev => prev.map(i => i.product.id === productId ? { ...i, discount: 0 } : i));
+            setItems(prev => prev.map(i => (i.product.id || i.product.LOGICALREF) === productId ? { ...i, discount: 0 } : i));
             return;
         }
         const disc = parseFloat(text);
         if (isNaN(disc)) return;
-        // Limit discount to 0-100
         const validDisc = Math.min(Math.max(disc, 0), 100);
-        setItems(prev => prev.map(i => i.product.id === productId ? { ...i, discount: validDisc } : i));
+        setItems(prev => prev.map(i => (i.product.id || i.product.LOGICALREF) === productId ? { ...i, discount: validDisc } : i));
     };
 
     const calculateTotal = () => {
@@ -167,28 +177,53 @@ export default function CreateOrderScreen() {
 
         setLoading(true);
         try {
+            const token = await SecureStore.getItemAsync('token');
+            const totals = calculateTotal();
+
             const orderData = {
-                customerId: customer.id,
-                title: title || 'Mobil Sipariş',
-                items: items.map(i => ({
-                    productId: i.product.id,
+                customer: {
+                    id: customer.id,
+                    name: customer.name || customer.title,
+                    code: customer.code
+                },
+                lines: items.map(i => ({
+                    id: i.product.id || i.product.LOGICALREF,
+                    code: i.product.code,
+                    name: i.product.name,
                     quantity: i.quantity,
+                    unit: i.product.unit || 'ADET',
                     price: i.price,
-                    discount: i.discount
+                    discountRate: i.discount,
+                    total: (i.quantity * i.price) * (1 - i.discount / 100)
                 })),
-                date: new Date().toISOString()
+                note: title || 'Mobil Sipariş',
+                netTotal: totals.total,
+                grossTotal: totals.subtotal,
+                date: new Date().toISOString().split('T')[0]
             };
 
-            // SIMULATE SAVING
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            console.log('Order Data (Not Saved):', orderData);
+            const res = await fetch(`${API_URL}/orders`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token ? `Bearer ${token}` : '',
+                    'x-demo-mode': isDemo ? 'true' : 'false'
+                },
+                body: JSON.stringify(orderData)
+            });
 
-            Alert.alert('Başarılı (Simülasyon)', 'Sipariş verileri hazırlandı ancak veritabanına kaydedilmedi (Talep üzerine).', [
-                { text: 'Tamam', onPress: () => router.back() }
-            ]);
+            if (res.ok) {
+                Alert.alert('Başarılı', 'Sipariş başarıyla kaydedildi.', [
+                    { text: 'Tamam', onPress: () => router.back() }
+                ]);
+            } else {
+                const errorData = await res.json();
+                Alert.alert('Hata', errorData.error || 'Sipariş kaydedilemedi.');
+            }
 
-        } catch (error) {
-            Alert.alert('Hata', 'Bir sorun oluştu.');
+        } catch (error: any) {
+            console.error('Order save error:', error);
+            Alert.alert('Hata', 'Bir ağ sorunu oluştu: ' + error.message);
         } finally {
             setLoading(false);
         }
@@ -441,7 +476,8 @@ export default function CreateOrderScreen() {
                                 ListEmptyComponent={<Text className="text-slate-500 text-center mt-4">Ürün bulunamadı.</Text>}
                                 renderItem={({ item }) => {
                                     // Calculate display price
-                                    const displayPrice = item.fixedPrice || item.avgPrice || 0;
+                                    const rawPrice = item.fixedPrice || item.avgPrice || 0;
+                                    const displayPrice = typeof rawPrice === 'number' ? rawPrice : parseFloat(rawPrice as string) || 0;
                                     return (
                                         <TouchableOpacity
                                             onPress={() => addItem(item)}

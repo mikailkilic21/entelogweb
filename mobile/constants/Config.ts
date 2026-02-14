@@ -7,7 +7,7 @@
 export type Environment = 'development' | 'production' | 'vpn';
 
 // Current environment - CHANGE THIS BASED ON YOUR NEEDS
-const CURRENT_ENV: Environment = 'vpn'; // 'development' | 'production' | 'vpn'
+const CURRENT_ENV: Environment = 'development'; // 'development' | 'production' | 'vpn'
 
 // Environment configurations
 const ENV_CONFIG = {
@@ -29,18 +29,30 @@ const ENV_CONFIG = {
 } as const;
 
 // Export current configuration
-export const CONFIG = ENV_CONFIG[CURRENT_ENV];
-export const API_URL = CONFIG.API_URL;
-export const BASE_URL = CONFIG.BASE_URL;
-export const ENVIRONMENT = CURRENT_ENV;
-export const ENVIRONMENT_NAME = CONFIG.name;
+export let CONFIG: any = ENV_CONFIG[CURRENT_ENV];
+export let API_URL: string = CONFIG.API_URL;
+export let BASE_URL: string = CONFIG.BASE_URL;
+export let ENVIRONMENT: string = CURRENT_ENV;
+export let ENVIRONMENT_NAME: string = CONFIG.name;
 
-// Helper function to check environment
-export const isDevelopment = (): boolean => (CURRENT_ENV as string) === 'development';
-export const isProduction = (): boolean => (CURRENT_ENV as string) === 'production';
-export const isVPN = (): boolean => (CURRENT_ENV as string) === 'vpn';
+// Helper functions to check environment
+export const isDevelopment = () => ENVIRONMENT === 'development';
+export const isProduction = () => ENVIRONMENT === 'production';
+export const isVPN = () => ENVIRONMENT === 'vpn';
 
-// Debug info (remove in production)
+// Helper function to update configuration dynamically
+export const updateServerConfig = (ip: string, port: string, protocol: 'http' | 'https' = 'http') => {
+    const baseUrl = `${protocol}://${ip}:${port}`;
+    const apiUrl = `${baseUrl}/api`;
+
+    API_URL = apiUrl;
+    BASE_URL = baseUrl;
+    ENVIRONMENT_NAME = `Custom Server (${ip})`;
+
+    console.log('🔄 Server Config Updated:', API_URL);
+};
+
+// Start with default
 if (__DEV__) {
     console.log('🌍 Environment:', ENVIRONMENT_NAME);
     console.log('🔌 API URL:', API_URL);

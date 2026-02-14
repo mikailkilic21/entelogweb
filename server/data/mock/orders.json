@@ -1,5 +1,61 @@
 [
   {
+    "id": 1771070361424,
+    "firm": "115",
+    "ficheNo": "SIP-361424",
+    "documentNo": "",
+    "date": "2026-02-14",
+    "accountName": "AHMET YAKIŞIKLI",
+    "accountCode": "AHMET",
+    "clientRef": 232,
+    "netTotal": 62301.36,
+    "grossTotal": 51917.8,
+    "status": 1,
+    "shipmentStatus": "waiting",
+    "lines": [
+      {
+        "code": "57001001",
+        "name": "KAREA ANAHTAR MODÜL BEYAZ",
+        "quantity": 100,
+        "unit": "ADET",
+        "price": 72.4,
+        "discountRate": 68,
+        "total": 2316.8,
+        "vatRate": 20
+      },
+      {
+        "code": "OZYK-ALXLPE-1X150KV35",
+        "name": "1X150+25 AL XLPE KABLO 35kV",
+        "quantity": 100,
+        "unit": "M",
+        "price": 635.5,
+        "discountRate": 38,
+        "total": 39401,
+        "vatRate": 20
+      },
+      {
+        "code": "OZYK-NYA-1x4G",
+        "name": "1X4 NYA KABLO GRİ",
+        "quantity": 500,
+        "unit": "M",
+        "price": 34,
+        "discountRate": 40,
+        "total": 10200
+      }
+    ],
+    "note1": "",
+    "createdAt": "2026-02-14T11:59:21.424Z",
+    "note": "",
+    "customer": {
+      "name": "AHMET YAKIŞIKLI",
+      "code": "AHMET"
+    },
+    "generalDiscount": 0,
+    "totalDiscount": 35872.2,
+    "totalVat": 10383.560000000001,
+    "updatedAt": "2026-02-14T14:48:50.342Z"
+  },
+  {
     "id": 1769853108548,
     "ficheNo": "SIP-108548",
     "documentNo": "",

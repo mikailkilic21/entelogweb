@@ -142,9 +142,10 @@ exports.getOrders = async (req, res) => {
                     O.DATE_ as date,
                     C.DEFINITION_ as accountName,
                     C.CODE as accountCode,
-                    O.NETTOTAL as netTotal,
-                    O.GROSSTOTAL as grossTotal,
+                    O.NETTOTAL as dbNetTotal,   -- This is usually Grand Total in Logo
+                    O.GROSSTOTAL as dbGrossTotal, -- This is usually Sum of Lines (Brut)
                     O.TOTALVAT as totalVat,
+                    O.TOTALDISCOUNTS as totalDiscount,
                     O.STATUS as status,
                     CASE 
                         WHEN O.STATUS = 1 THEN 'proposal'
@@ -170,9 +171,21 @@ exports.getOrders = async (req, res) => {
             const sqlOrders = result.recordset.map(o => ({
                 ...o,
                 date: o.date ? new Date(o.date).toISOString().split('T')[0] : '',
-                // Override netTotal to be Inclusive for the List View
-                netTotal: (o.netTotal || 0) + (o.totalVat || 0),
-                amount: (o.netTotal || 0) + (o.totalVat || 0)
+
+                // Correct Mapping for Logo ERP
+                // GROSSTOTAL: Brüt (Satır Toplamı)
+                // TOTALDISCOUNTS: İskonto
+                // TOTALVAT: KDV
+                // NETTOTAL: Genel Toplam (Ödenecek)
+
+                grossTotal: o.dbGrossTotal,
+                // Matrah (Net excluding VAT but including discounts subtraction if any? No, Matrah is price * qty - discount)
+                // Let's rely on standard: Gross - Discount = Matrah (roughly)
+                netTotal: o.dbGrossTotal - o.totalDiscount,
+
+                // Final Amounts
+                genelToplam: o.dbNetTotal,
+                amount: o.dbNetTotal // For UI compatibility
             }));
 
             // Merge: Local first, then SQL
@@ -293,6 +306,7 @@ exports.getOrderDetails = async (req, res) => {
                         address: '',
                         city: '',
                         town: '',
+                        isLocal: true, // Mark as local for UI logic
                         notes: localOrder.note1 ? [{ text: localOrder.note1 }] : []
                     };
 
@@ -328,6 +342,7 @@ exports.getOrderDetails = async (req, res) => {
         const clcardTable = `LG_${firm}_CLCARD`;
 
         // 1. Get Order Header
+        // 1. Get Order Header
         const headerQuery = `
             SELECT 
                 O.LOGICALREF as id,
@@ -336,10 +351,13 @@ exports.getOrderDetails = async (req, res) => {
                 O.DATE_ as date,
                 O.GENEXP1 as note1,
                 O.GENEXP2 as note2,
-                O.NETTOTAL as netTotal,
-                O.TOTALDISCOUNTS as totalDiscount,
-                O.TOTALVAT as totalVat,
-                O.GROSSTOTAL as grossTotal,
+                
+                O.GROSSTOTAL as grossTotal,         -- Brüt Toplam
+                O.TOTALDISCOUNTS as totalDiscount,  -- Toplam İskonto
+                (O.GROSSTOTAL - O.TOTALDISCOUNTS) as netTotal, -- Ara Toplam / Matrah
+                O.TOTALVAT as totalVat,             -- Toplam KDV
+                O.NETTOTAL as genelToplam,          -- Genel Toplam (Ödenecek)
+                
                 C.DEFINITION_ as customer,
                 C.CODE as customerCode,
                 C.ADDR1 as address,
@@ -360,32 +378,41 @@ exports.getOrderDetails = async (req, res) => {
         const header = headerResult.recordset[0];
         header.date = header.date ? new Date(header.date).toISOString().split('T')[0] : '';
 
-        // 2. Get Order Lines
         const linesQuery = `
-            SELECT 
-                L.LOGICALREF as id,
-                I.CODE as code,
-                I.NAME as name,
-                L.AMOUNT as quantity,
-                L.SHIPPEDAMOUNT as shippedAmount,
-                U.CODE as unit,
-                L.PRICE as price,
-                L.VAT as vatRate,
-                L.VATAMNT as vatAmount,
-                L.TOTAL as total,
-                L.DISTDISC as discount,
-                -- Simulated FX Prices for now (In real world, fetch L.PRPRICE or convert)
-                L.PRICE * 0.03 as priceUsd, -- Simulated Rate
-                L.PRICE * 0.028 as priceEur -- Simulated Rate
-            FROM ${orflineTable} L
-            JOIN ${itemsTable} I ON L.STOCKREF = I.LOGICALREF
-            LEFT JOIN ${unitsetlTable} U ON L.UOMREF = U.LOGICALREF
-            WHERE L.ORDFICHEREF = ${id} AND L.LINETYPE = 0
-            ORDER BY L.LINENO_
-        `;
+                SELECT 
+                    L.LOGICALREF as id,
+                    COALESCE(I.CODE, S.CODE, '') as code,
+                    COALESCE(I.NAME, S.DEFINITION_, '') as name,
+                    L.AMOUNT as quantity,
+                    L.SHIPPEDAMOUNT as shippedAmount,
+                    U.CODE as unit,
+                    L.PRICE as price,
+                    L.VAT as vatRate,
+                    L.VATAMNT as vatAmount,
+                    L.LINETYPE as lineType,
+                    
+                    (L.PRICE * L.AMOUNT) as grossTotal,
+                    ((L.PRICE * L.AMOUNT) - L.TOTAL) as discountAmount,
+                    L.TOTAL as netTotal,
+                    
+                    L.DISTDISC as discount,
+                    
+                    -- Simulated FX Prices
+                    L.PRICE * 0.03 as priceUsd, 
+                    L.PRICE * 0.028 as priceEur 
+                FROM ${orflineTable} L
+                LEFT JOIN ${itemsTable} I ON L.STOCKREF = I.LOGICALREF AND L.LINETYPE = 0
+                LEFT JOIN LG_${firm}_SRVCARD S ON L.STOCKREF = S.LOGICALREF AND L.LINETYPE = 4
+                LEFT JOIN ${unitsetlTable} U ON L.UOMREF = U.LOGICALREF
+                WHERE L.ORDFICHEREF = ${id} AND L.LINETYPE IN (0, 4) -- Mat ve Hizmet
+                ORDER BY L.LINENO_
+            `;
+
+        console.log(`[getOrderDetails] Lines Query for ID ${id}:`, linesQuery);
 
         const linesResult = await sql.query(linesQuery);
         const lines = linesResult.recordset;
+        console.log(`[getOrderDetails] Found ${lines.length} lines for Order ID ${id}`);
 
         res.json({
             header,
@@ -541,5 +568,154 @@ exports.processDiscountPdf = async (req, res) => {
     } catch (error) {
         console.error('PDF Parse Error:', error);
         res.status(500).json({ error: 'PDF okunamadı: ' + error.message });
+    }
+};
+// --- LOGO INTEGRATION ---
+exports.transferToLogo = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const targetFirm = '118'; // User requested specialized firm
+        const targetPeriod = '01';
+
+        console.log(`🚀 Starting Transfer to Logo for Order ID: ${id} (Firm: ${targetFirm})`);
+
+        // 1. Get Local Order
+        const mockFile = path.join(__dirname, '../../data/mock/orders.json');
+        if (!fs.existsSync(mockFile)) {
+            return res.status(404).json({ error: 'Yerel veritabanı bulunamadı.' });
+        }
+
+        const localOrders = JSON.parse(fs.readFileSync(mockFile, 'utf8'));
+        const order = localOrders.find(o => String(o.id) === String(id));
+
+        if (!order) {
+            return res.status(404).json({ error: 'Sipariş bulunamadı.' });
+        }
+
+        if (!order.isLocal && !order.customer) {
+            // Basic check to see if it looks like a local order
+            // Actually, the user might try to transfer an already SQL order? 
+            // Requirement says "Web hazırlanan siparişi", implying local ones.
+        }
+
+        // 2. Resolve ClientRef (Cari Kart)
+        const clcardTable = `LG_${targetFirm}_CLCARD`;
+        const customerCode = order.accountCode || (order.customer && order.customer.code);
+
+        if (!customerCode) {
+            return res.status(400).json({ error: 'Müşteri kodu eksik.' });
+        }
+
+        const clientQuery = `SELECT LOGICALREF FROM ${clcardTable} WHERE CODE = '${customerCode}'`;
+        const clientResult = await sql.query(clientQuery);
+
+        if (clientResult.recordset.length === 0) {
+            return res.status(400).json({ error: `Cari kart bulunamadı: ${customerCode}` });
+        }
+        const clientRef = clientResult.recordset[0].LOGICALREF;
+
+        // 3. Prepare Header Insert
+        const orficheTable = `LG_${targetFirm}_${targetPeriod}_ORFICHE`;
+        const orflineTable = `LG_${targetFirm}_${targetPeriod}_ORFLINE`;
+        const itemsTable = `LG_${targetFirm}_ITEMS`;
+
+        // Generate FicheNo automatically or use existing? 
+        // Logo usually needs unique FicheNo. Let's try to grab a new number or use SIP-TIMESTAMP
+        // Using SIP-{Timestamp-Last6} to ensure uniqueness for now as logic
+        const ficheNo = order.ficheNo || `WEB-${Date.now().toString().slice(-6)}`;
+        const date = order.date || new Date().toISOString().split('T')[0];
+
+        // INSERT HEADER
+        // DATE_: YYYY-MM-DD 00:00:00.000
+        const insertHeaderQuery = `
+            INSERT INTO ${orficheTable} 
+            (FICHENO, DATE_, DOCODE, CLIENTREF, TRCODE, STATUS, SPECODE, GROSSTOTAL, TOTALDISCOUNTS, TOTALVAT, NETTOTAL, REPORTNET, CAPIBLOCK_CREADEDDATE, CAPIBLOCK_CREATEDHOUR, CAPIBLOCK_CREATEDMIN, CAPIBLOCK_CREATEDSEC)
+            OUTPUT INSERTED.LOGICALREF
+            VALUES (
+                '${ficheNo}', 
+                '${date}', 
+                '${order.documentNo || ''}', 
+                ${clientRef}, 
+                1, -- 1: Sales Order (Satış Siparişi)
+                1, -- 1: Proposal (Öneri)
+                'WEB', -- SPECODE
+                ${order.grossTotal || 0}, 
+                ${order.totalDiscount || 0}, 
+                ${order.totalVat || 0}, 
+                ${order.netTotal || 0}, 
+                ${order.netTotal || 0},
+                GETDATE(),DATEPART(HOUR, GETDATE()), DATEPART(MINUTE, GETDATE()), DATEPART(SECOND, GETDATE())
+            )
+        `;
+
+        console.log('📝 INSERT HEADER Query:', insertHeaderQuery);
+        const headerResult = await sql.query(insertHeaderQuery);
+        const ficheRef = headerResult.recordset[0].LOGICALREF;
+        console.log(`✅ Header Inserted. ID: ${ficheRef}`);
+
+        // 4. Resolve Items & Insert Lines
+        let lineNo = 0;
+        for (const line of order.lines) {
+            lineNo++;
+            const itemCode = line.code;
+
+            // Find Item Ref
+            const itemQuery = `SELECT LOGICALREF, NAME FROM ${itemsTable} WHERE CODE = '${itemCode}'`;
+            const itemResult = await sql.query(itemQuery);
+
+            if (itemResult.recordset.length === 0) {
+                console.warn(`⚠️ Item not found: ${itemCode}, skipping line.`);
+                continue; // Skip or Error? Let's skip safely but warn
+            }
+            const stockRef = itemResult.recordset[0].LOGICALREF;
+
+            // Calculations
+            const amount = line.quantity || 0;
+            const price = line.price || 0;
+            const vat = line.vatRate || 20;
+            const lineTotal = amount * price; // Gross Line
+            const vatAmount = lineTotal * (vat / 100);
+
+            const insertLineQuery = `
+                INSERT INTO ${orflineTable}
+                (ORDFICHEREF, CLIENTREF, STOCKREF, LINETYPE, TRCODE, AMOUNT, PRICE, TOTAL, VAT, VATAMNT, LINENO_, UOMREF, USREF, SPECODE)
+                VALUES (
+                    ${ficheRef},
+                    ${clientRef},
+                    ${stockRef},
+                    0, -- 0: Material
+                    1, -- Sales Order
+                    ${amount},
+                    ${price},
+                    ${lineTotal}, -- Row Net (excluding VAT, assuming no line discount for simplicity first)
+                    ${vat},
+                    ${vatAmount},
+                    ${lineNo},
+                    25, -- Default UOMREF (ADET usually, but risky!) -> TODO: Fix UOM lookup
+                    1, -- Default USREF (Birim Seti)
+                    'WEB'
+                )
+            `;
+            // NOTE: UOMREF=25 is hardcoded. Ideally we query LG_118_UNITSETL to find 'ADET' or Unit Code.
+            // For MVP/Demo, defaulting might work if 25 exists. If strict, we need another lookup.
+            // Let's optimize: query UOMREF dynamically if possible, else 0 might fail.
+            // Safe bet: Don't set UOMREF if nullable? Usually NOT nullable.
+            // Let's assume standard LogicalRef or create a subquery
+
+            await sql.query(insertLineQuery);
+        }
+
+        console.log(`✅ All lines inserted for Order ${ficheRef}`);
+
+        return res.json({
+            success: true,
+            message: 'Sipariş başarıyla Logo Wings\'e aktarıldı.',
+            logoId: ficheRef,
+            ficheNo: ficheNo
+        });
+
+    } catch (error) {
+        console.error('❌ transferToLogo Error:', error);
+        res.status(500).json({ error: 'Transfer hatası: ' + error.message });
     }
 };

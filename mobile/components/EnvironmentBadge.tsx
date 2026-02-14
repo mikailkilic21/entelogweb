@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal } from 'react-native';
-import { ENVIRONMENT, CONFIG, isVPN, isProduction } from '@/constants/Config';
+import { CONFIG, isVPN, isProduction } from '@/constants/Config';
 
 export const EnvironmentBadge = () => {
     const [showModal, setShowModal] = useState(false);

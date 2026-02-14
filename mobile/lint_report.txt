@@ -1,0 +1,75 @@
+﻿
+> mobile@1.0.0 lint
+> expo lint
+
+
+C:\entelogweb\mobile\app\(tabs)\banks.tsx
+   16:5   warning  'TrendingUp' is defined but never used           @typescript-eslint/no-unused-vars
+   17:5   warning  'TrendingDown' is defined but never used         @typescript-eslint/no-unused-vars
+   19:5   warning  'ChevronDown' is defined but never used          @typescript-eslint/no-unused-vars
+   20:5   warning  'ChevronRight' is defined but never used         @typescript-eslint/no-unused-vars
+   22:5   warning  'LayoutGrid' is defined but never used           @typescript-eslint/no-unused-vars
+   23:5   warning  'List' is defined but never used                 @typescript-eslint/no-unused-vars
+   29:5   warning  'History' is defined but never used              @typescript-eslint/no-unused-vars
+   34:8   warning  'Animated' is defined but never used             @typescript-eslint/no-unused-vars
+   34:20  warning  'FadeInDown' is defined but never used           @typescript-eslint/no-unused-vars
+   38:10  warning  'BankCard' is defined but never used             @typescript-eslint/no-unused-vars
+  311:10  warning  'getMockTransactions' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\entelogweb\mobile\app\(tabs)\checks.tsx
+   1:38  warning  'useCallback' is defined but never used                                                                                                                              @typescript-eslint/no-unused-vars
+   2:96  warning  'Image' is defined but never used                                                                                                                                    @typescript-eslint/no-unused-vars
+   4:28  warning  'Calendar' is defined but never used                                                                                                                                 @typescript-eslint/no-unused-vars
+   8:20  warning  'FadeInDown' is defined but never used                                                                                                                               @typescript-eslint/no-unused-vars
+  29:8   warning  React Hook useEffect has a missing dependency: 'fetchStats'. Either include it or remove the dependency array                                                        react-hooks/exhaustive-deps
+  36:8   warning  React Hook useEffect has missing dependencies: 'activeFilter', 'fetchChecks', 'isListVisible', and 'searchText'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  49:8   warning  React Hook useEffect has missing dependencies: 'activeFilter', 'fetchChecks', 'isListVisible', and 'subFilter'. Either include them or remove the dependency array   react-hooks/exhaustive-deps
+
+C:\entelogweb\mobile\app\(tabs)\invoices.tsx
+   1:38  warning  'useCallback' is defined but never used                                                                                                                            @typescript-eslint/no-unused-vars
+   2:96  warning  'Image' is defined but never used                                                                                                                                  @typescript-eslint/no-unused-vars
+   8:20  warning  'FadeInDown' is defined but never used                                                                                                                             @typescript-eslint/no-unused-vars
+  28:8   warning  React Hook useEffect has a missing dependency: 'fetchStats'. Either include it or remove the dependency array                                                      react-hooks/exhaustive-deps
+  35:8   warning  React Hook useEffect has missing dependencies: 'fetchInvoices', 'isListVisible', and 'searchText'. Either include them or remove the dependency array              react-hooks/exhaustive-deps
+  48:8   warning  React Hook useEffect has missing dependencies: 'activeFilter', 'fetchInvoices', 'isListVisible', and 'period'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\entelogweb\mobile\app\(tabs)\more.tsx
+   7:5  warning  'Settings' is defined but never used   @typescript-eslint/no-unused-vars
+  10:5  warning  'BarChart3' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\entelogweb\mobile\app\(tabs)\orders.tsx
+   9:20  warning  'FadeInDown' is defined but never used                                                                                                                                             @typescript-eslint/no-unused-vars
+  38:8   warning  React Hook useEffect has a missing dependency: 'fetchStats'. Either include it or remove the dependency array                                                                      react-hooks/exhaustive-deps
+  46:8   warning  React Hook useEffect has missing dependencies: 'fetchOrders', 'isListVisible', and 'searchText'. Either include them or remove the dependency array                                react-hooks/exhaustive-deps
+  62:8   warning  React Hook useEffect has missing dependencies: 'activeFilter', 'fetchOrders', 'isListVisible', 'period', and 'shipmentStatus'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\entelogweb\mobile\app\(tabs)\products.tsx
+   1:38  warning  'useCallback' is defined but never used                                                                                                                @typescript-eslint/no-unused-vars
+   4:27  warning  'TrendingUp' is defined but never used                                                                                                                 @typescript-eslint/no-unused-vars
+   4:39  warning  'AlertTriangle' is defined but never used                                                                                                              @typescript-eslint/no-unused-vars
+   4:54  warning  'CheckCircle' is defined but never used                                                                                                                @typescript-eslint/no-unused-vars
+   4:80  warning  'Filter' is defined but never used                                                                                                                     @typescript-eslint/no-unused-vars
+   4:88  warning  'ChevronDown' is defined but never used                                                                                                                @typescript-eslint/no-unused-vars
+  11:20  warning  'FadeInDown' is defined but never used                                                                                                                 @typescript-eslint/no-unused-vars
+  51:8   warning  React Hook useEffect has missing dependencies: 'fetchStats' and 'fetchWarehouses'. Either include them or remove the dependency array                  react-hooks/exhaustive-deps
+  67:8   warning  React Hook useEffect has missing dependencies: 'fetchProducts' and 'isListVisible'. Either include them or remove the dependency array                 react-hooks/exhaustive-deps
+  74:8   warning  React Hook useEffect has missing dependencies: 'fetchProducts', 'isListVisible', and 'searchText'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\entelogweb\mobile\app\(tabs)\reports.tsx
+    2:64  warning  'Image' is defined but never used                   @typescript-eslint/no-unused-vars
+    5:57  warning  'Download' is defined but never used                @typescript-eslint/no-unused-vars
+   15:9   warning  'width' is assigned a value but never used          @typescript-eslint/no-unused-vars
+   50:11  warning  'router' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  192:11  warning  'setViewReport' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\entelogweb\mobile\app\login.tsx
+  51:18  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\entelogweb\mobile\app\orders\[id].tsx
+  19:7  warning  'OrderLineItem' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\entelogweb\mobile\components\EnvironmentBadge.tsx
+  9:10  warning  'ENVIRONMENT' is defined but never used  @typescript-eslint/no-unused-vars
+
+Ô£û 48 problems (0 errors, 48 warnings)
+

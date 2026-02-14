@@ -1,0 +1,32 @@
+﻿node.exe : FAIL __tests__/App-test.tsx
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (FAIL __tests__/App-test.tsx:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  ÔùÅ Test suite failed to run
+
+    Incorrect version of "react-test-renderer" detected. Expected "19.1.0", but found "19.2.4".
+
+    Fix it by running:
+    npm install -D react-test-renderer@19.1.0
+
+    [0m [90m 1 |[39m [36mimport[39m [33mReact[39m [36mfrom[39m [32m'react'[39m[33m;[39m
+    [31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m { render } [36mfrom[39m [32m'@testing-library/react-nativ
+e'[39m[33m;[39m
+     [90m   |[39m [31m[1m^[22m[39m
+     [90m 3 |[39m [36mimport[39m { [33mText[39m[33m,[39m [33mView[39m } [36mfrom[39m [32m'react-native'
+[39m[33m;[39m
+     [90m 4 |[39m
+     [90m 5 |[39m [36mconst[39m [33mMockComponent[39m [33m=[39m () [33m=>[39m ([0m
+
+      at Object.ensurePeerDeps (node_modules/@testing-library/react-native/src/helpers/ensure-peer-deps.ts:36:3)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:1:1)
+      at Object.require (__tests__/App-test.tsx:2:1)
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        3.751 s
+Ran all test suites matching /__tests__\\App-test.tsx/i.

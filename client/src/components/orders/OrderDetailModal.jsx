@@ -8,6 +8,8 @@ const OrderDetailModal = ({ order, onClose }) => {
     const [loading, setLoading] = useState(true);
     const [companyInfo, setCompanyInfo] = useState(null);
 
+
+
     useEffect(() => {
         const fetchDetails = async () => {
             try {
@@ -514,14 +516,20 @@ const OrderDetailModal = ({ order, onClose }) => {
                     <div>
                         <div className="flex items-center gap-3">
                             <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                                <span className={isClosed ? 'text-slate-400' : 'text-orange-400'}>#{order.ficheNo}</span>
+                                <span className={isClosed ? 'text-slate-400' : 'text-orange-400'}>#{order?.ficheNo}</span>
                                 <span className="text-slate-400 text-lg font-normal">Detayları</span>
                             </h2>
                             {status === 'S' && <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs font-bold rounded border border-blue-500/30">SEVK BEKLİYOR (S)</span>}
                             {status === 'B' && <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs font-bold rounded border border-yellow-500/30">KISMI SEVK (B)</span>}
                             {status === 'K' && <span className="px-2 py-1 bg-slate-600/50 text-slate-300 text-xs font-bold rounded border border-slate-500/30">KAPANDI (K)</span>}
                         </div>
-                        <p className="text-slate-400 text-sm mt-1">{order.customer}</p>
+                        <p className="text-slate-400 text-sm mt-1">
+                            {order?.customer ? (
+                                typeof order.customer === 'object' ?
+                                    (order.customer.name || order.customer.accountName || '') :
+                                    order.customer
+                            ) : ''}
+                        </p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-white">
                         <X size={24} />
@@ -561,15 +569,17 @@ const OrderDetailModal = ({ order, onClose }) => {
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                                 <div className="p-4 bg-white/5 rounded-xl border border-white/5">
                                     <h4 className="text-xs uppercase text-slate-500 font-bold mb-1">Tarih</h4>
-                                    <p className="text-lg text-white font-medium">{new Date(details.header.date).toLocaleDateString()}</p>
+                                    <p className="text-lg text-white font-medium">
+                                        {details?.header?.date ? new Date(details.header.date).toLocaleDateString() : '-'}
+                                    </p>
                                 </div>
                                 <div className="p-4 bg-white/5 rounded-xl border border-white/5">
                                     <h4 className="text-xs uppercase text-slate-500 font-bold mb-1">Belge No</h4>
-                                    <p className="text-lg text-white font-medium">{details.header.documentNo || '-'}</p>
+                                    <p className="text-lg text-white font-medium">{details?.header?.documentNo || '-'}</p>
                                 </div>
                                 <div className="p-4 bg-white/5 rounded-xl border border-white/5">
                                     <h4 className="text-xs uppercase text-slate-500 font-bold mb-1">Cari Kodu</h4>
-                                    <p className="text-lg text-white font-medium">{details.header.customerCode}</p>
+                                    <p className="text-lg text-white font-medium">{details?.header?.customerCode || '-'}</p>
                                 </div>
                                 <div className="p-4 bg-white/5 rounded-xl border border-white/5">
                                     <h4 className="text-xs uppercase text-slate-500 font-bold mb-1">Ödeme Durumu</h4>
@@ -616,7 +626,7 @@ const OrderDetailModal = ({ order, onClose }) => {
 
                                                 <td className="p-4 text-center text-slate-400 text-sm">{line.unit}</td>
                                                 <td className="p-4 text-right text-slate-300">
-                                                    {line.price.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                                                    {(line.price || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
                                                 </td>
                                                 {/* Discount Column */}
                                                 <td className="p-4 text-center text-rose-300">
@@ -625,7 +635,7 @@ const OrderDetailModal = ({ order, onClose }) => {
                                                         : '-'}
                                                 </td>
                                                 <td className="p-4 text-right font-bold text-white">
-                                                    {line.total.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                                                    {(line.total || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
                                                 </td>
                                             </tr>
                                         ))}
@@ -634,38 +644,55 @@ const OrderDetailModal = ({ order, onClose }) => {
                                         <tr>
                                             <td colSpan={isPartial ? 8 : 6} className="p-4 text-right text-slate-400 font-medium">Alt Toplam</td>
                                             <td className="p-4 text-right text-slate-300 font-bold">
-                                                {details.header.grossTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                                                {(details?.header?.grossTotal || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
                                             </td>
                                         </tr>
                                         <tr>
                                             <td colSpan={isPartial ? 8 : 6} className="p-4 text-right text-slate-400 font-medium">İskonto</td>
                                             <td className="p-4 text-right text-rose-400 font-bold">
-                                                -{details.header.totalDiscount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                                                -{(details?.header?.totalDiscount || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
                                             </td>
                                         </tr>
                                         <tr>
                                             <td colSpan={isPartial ? 8 : 6} className="p-4 text-right text-slate-400 font-medium">KDV</td>
                                             <td className="p-4 text-right text-blue-400 font-bold">
-                                                {details.header.totalVat.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                                                {(details?.header?.totalVat || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
                                             </td>
                                         </tr>
                                         <tr className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border-t border-orange-500/20">
                                             <td colSpan={isPartial ? 8 : 6} className="p-4 text-right text-white font-bold text-lg">GENEL TOPLAM</td>
                                             <td className="p-4 text-right text-orange-400 font-bold text-xl">
-                                                {details.header.netTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                                                {(details?.header?.netTotal || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
                                             </td>
                                         </tr>
                                     </tfoot>
                                 </table>
                             </div>
                         </div>
+
                     ) : (
                         <div className="text-center text-slate-500 py-10">Sipariş detayı bulunamadı.</div>
                     )}
                 </div>
+
+                {/* Footer Actions */}
+                <div className="p-6 border-t border-white/10 flex justify-end gap-3 bg-black/20">
+                    <button
+                        onClick={handleDownloadPDF}
+                        className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center gap-2"
+                    >
+                        <FileDown size={18} />
+                        PDF İndir
+                    </button>
+                    <button
+                        onClick={onClose}
+                        className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                    >
+                        Kapat
+                    </button>
+                </div>
             </div>
-        </div>
+        </div >
     );
 };
-
 export default OrderDetailModal;

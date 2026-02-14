@@ -96,11 +96,21 @@ exports.getBankStats = async (req, res) => {
             ORDER BY date ASC
         `);
 
+        // Checks in Bank stats (Status 3: Tahsil, 6: Teminat)
+        const cscardTable = `LG_${firm}_${period}_CSCARD`;
+        const checkStats = await sql.query(`
+            SELECT 
+                ISNULL(SUM(AMOUNT), 0) as totalChecksInBank
+            FROM ${cscardTable}
+            WHERE CURRSTAT IN (3, 6)
+        `);
+
         res.json({
             stats: {
                 ...result.recordset[0],
                 ...clStats.recordset[0],
-                ...havaleStats.recordset[0]
+                ...havaleStats.recordset[0],
+                ...checkStats.recordset[0]
             },
             chart: chartResult.recordset
         });
@@ -117,61 +127,85 @@ exports.getBankFinanceTransactions = async (req, res) => {
         const { firmNo, periodNo } = await getConfig();
         const firm = firmNo.toString().padStart(3, '0');
         const period = periodNo.toString().padStart(2, '0');
-        const { type } = req.query; // 'pos', 'cc', 'havale'
+        const { type } = req.query; // 'pos', 'cc', 'havale', 'checks-in-bank'
 
         const clcardTable = `LG_${firm}_CLCARD`;
         const bankaccTable = `LG_${firm}_BANKACC`;
         const clfTable = `LG_${firm}_${period}_CLFLINE`;
         const bnfTable = `LG_${firm}_${period}_BNFLINE`;
+        const cscardTable = `LG_${firm}_${period}_CSCARD`;
 
         let query = '';
         if (type === 'pos' || type === 'cc') {
             const trcode = type === 'pos' ? 70 : 72;
             query = `
                 SELECT 
-                    L.LOGICALREF as id,
-                    L.DATE_ as date,
-                    L.TRCODE as trcode,
+                    clf.LOGICALREF as id,
+                    clf.DATE_ as date,
+                    clf.TRCODE as trcode,
                     CASE 
-                        WHEN L.TRCODE = 70 THEN 'Müşteri KK Tahsilatı (POS)'
-                        WHEN L.TRCODE = 72 THEN 'Firma KK Harcaması'
+                        WHEN clf.TRCODE = 70 THEN 'Müşteri KK Tahsilatı (POS)'
+                        WHEN clf.TRCODE = 72 THEN 'Firma KK Harcaması'
                     END as type,
-                    C.DEFINITION_ as clientName,
-                    B.DEFINITION_ as bankAccount,
-                    L.AMOUNT as amount,
-                    L.SIGN as sign,
-                    L.LINEEXP as description,
-                    L.TRANNO as ficheNo,
-                    L.SPECODE as speCode
-                FROM ${clfTable} L
-                LEFT JOIN ${clcardTable} C ON L.CLIENTREF = C.LOGICALREF
-                LEFT JOIN ${bankaccTable} B ON L.BANKACCREF = B.LOGICALREF
-                WHERE L.TRCODE = ${trcode} AND L.CANCELLED = 0
-                ORDER BY L.DATE_ DESC
+                    cl.DEFINITION_ as clientName,
+                    ba.DEFINITION_ as bankAccount,
+                    clf.AMOUNT as amount,
+                    clf.SIGN as sign,
+                    clf.LINEEXP as description,
+                    clf.TRANNO as ficheNo,
+                    clf.SPECODE as speCode
+                FROM ${clfTable} clf
+                LEFT JOIN ${clcardTable} cl ON clf.CLIENTREF = cl.LOGICALREF
+                LEFT JOIN ${bankaccTable} ba ON clf.BANKACCREF = ba.LOGICALREF
+                WHERE clf.TRCODE = ${trcode} AND clf.CANCELLED = 0
+                ORDER BY clf.DATE_ DESC
             `;
         } else if (type === 'havale-in' || type === 'havale-out') {
             const trcode = type === 'havale-in' ? 3 : 4;
             query = `
                 SELECT 
-                    L.LOGICALREF as id,
-                    L.DATE_ as date,
-                    L.TRCODE as trcode,
+                    bnf.LOGICALREF as id,
+                    bnf.DATE_ as date,
+                    bnf.TRCODE as trcode,
                     CASE 
-                        WHEN L.TRCODE = 3 THEN 'Gelen Havale'
-                        WHEN L.TRCODE = 4 THEN 'Gönderilen Havale'
+                        WHEN bnf.TRCODE = 3 THEN 'Gelen Havale'
+                        WHEN bnf.TRCODE = 4 THEN 'Gönderilen Havale'
                     END as type,
-                    C.DEFINITION_ as clientName,
-                    B.DEFINITION_ as bankAccount,
-                    L.AMOUNT as amount,
-                    L.SIGN as sign,
-                    L.LINEEXP as description,
-                    L.TRANNO as ficheNo,
-                    L.SPECODE as speCode
-                FROM ${bnfTable} L
-                LEFT JOIN ${clcardTable} C ON L.CLIENTREF = C.LOGICALREF
-                LEFT JOIN ${bankaccTable} B ON L.BNACCREF = B.LOGICALREF
-                WHERE L.TRCODE = ${trcode} AND L.CANCELLED = 0
-                ORDER BY L.DATE_ DESC
+                    cl.DEFINITION_ as clientName,
+                    ba.DEFINITION_ as bankAccount,
+                    bnf.AMOUNT as amount,
+                    bnf.SIGN as sign,
+                    bnf.LINEEXP as description,
+                    bnf.TRANNO as ficheNo,
+                    bnf.SPECODE as speCode
+                FROM ${bnfTable} bnf
+                LEFT JOIN ${clcardTable} cl ON bnf.CLIENTREF = cl.LOGICALREF
+                LEFT JOIN ${bankaccTable} ba ON bnf.BNACCREF = ba.LOGICALREF
+                WHERE bnf.TRCODE = ${trcode} AND bnf.CANCELLED = 0
+                ORDER BY bnf.DATE_ DESC
+            `;
+        } else if (type === 'checks-in-bank') {
+            // Checks currently in bank (Status 3 or 6)
+            query = `
+                SELECT 
+                    cs.LOGICALREF as id,
+                    cs.DUEDATE as date,
+                    1 as trcode, -- Dummy for type mapping
+                    CASE 
+                        WHEN cs.CURRSTAT = 3 THEN 'Bankada (Tahsil)'
+                        WHEN cs.CURRSTAT = 6 THEN 'Bankada (Teminat)'
+                        ELSE 'Çek'
+                    END as type,
+                    cs.BANKNAME as bankAccount, -- Issuer Bank as proxy or Bank Name
+                    cs.OWING as clientName,
+                    cs.AMOUNT as amount,
+                    0 as sign, -- Asset
+                    cs.NEWSERINO as description, 
+                    cs.PORTFOYNO as ficheNo,
+                    '' as speCode
+                FROM ${cscardTable} cs
+                WHERE cs.CURRSTAT IN (3, 6)
+                ORDER BY cs.DUEDATE ASC
             `;
         } else {
             return res.status(400).json({ error: 'Geçersiz işlem tipi' });

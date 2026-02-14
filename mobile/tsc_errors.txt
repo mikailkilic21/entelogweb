@@ -1,0 +1,2 @@
+﻿app/(tabs)/checks.tsx(454,5): error TS1005: ')' expected.
+app/(tabs)/checks.tsx(455,5): error TS1109: Expression expected.

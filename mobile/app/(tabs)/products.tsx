@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Image, Modal, StyleSheet, Alert, Button, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Package, TrendingUp, AlertTriangle, CheckCircle, ScanLine, X } from 'lucide-react-native';
+import { Search, Package, ScanLine, X, Check } from 'lucide-react-native';
 import { API_URL, BASE_URL } from '@/constants/Config';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/context/AuthContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Product } from '@/types';
-import ProductItem from '@/components/ProductItem';
-import { io } from "socket.io-client"; // Socket.IO Import
+import Animated from 'react-native-reanimated';
 
 interface Stats {
     totalProducts: number;
@@ -26,46 +25,83 @@ export default function ProductsScreen() {
     const [products, setProducts] = useState<Product[]>([]);
     const [searchText, setSearchText] = useState('');
     const [stats, setStats] = useState<Stats | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
-    const [sortBy, setSortBy] = useState('realStock'); // 'amount' | 'quantity' | 'realStock'
-    const [selectedWarehouse, setSelectedWarehouse] = useState<number | null>(null);
+    const [isListVisible, setIsListVisible] = useState(false);
+
+    // Filters & Values
+    const [activeFilter, setActiveFilter] = useState<'all' | 'inStock' | 'critical' | 'value'>('all');
+
+    // Detailed Filters
+    const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
     const [warehouses, setWarehouses] = useState<any[]>([]);
+    const [selectedWarehouse, setSelectedWarehouse] = useState<number | null>(null);
+    const [sortBy, setSortBy] = useState<'quantity' | 'amount' | 'realStock' | 'price' | 'name'>('quantity');
+    const [stockStatus, setStockStatus] = useState<'all' | 'inStock' | 'critical'>('all');
 
-    // Socket Ref
-    const socketRef = React.useRef<any>(null);
+    // Camera State
+    const [permission, requestPermission] = useCameraPermissions();
+    const [isScanning, setIsScanning] = useState(false);
+    const [scanned, setScanned] = useState(false);
 
-    // Fetch Warehouses (REST)
-    useEffect(() => {
-        fetch(`${API_URL}/products/warehouses`, {
-            headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
-        }).then(res => res.json()).then(data => {
-            if (Array.isArray(data)) setWarehouses([{ id: null, name: 'Tümü' }, ...data]);
-        }).catch(err => console.error(err));
+    const fetchStats = useCallback(async () => {
+        try {
+            const res = await fetch(`${API_URL}/products/stats`, {
+                headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setStats(data);
+            }
+        } catch (error) {
+            console.error(error);
+        }
     }, [isDemo]);
 
-    // Initial Data Fetch (REST)
-    const fetchData = useCallback(async () => {
+    const fetchWarehouses = useCallback(async () => {
         try {
-            // Stats URL
-            let statsUrl = `${API_URL}/products/stats?search=${encodeURIComponent(searchText)}`;
-            if (selectedWarehouse !== null) statsUrl += `&warehouse=${selectedWarehouse}`;
+            const res = await fetch(`${API_URL}/products/warehouses`, {
+                headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setWarehouses(data);
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }, [isDemo]);
 
-            // Products URL (REST Endpoint)
-            let prodUrl = `${API_URL}/products?limit=50&sortBy=${sortBy}`;
-            if (selectedWarehouse !== null) prodUrl += `&warehouse=${selectedWarehouse}`;
-            if (searchText) prodUrl += `&search=${encodeURIComponent(searchText)}`;
+    const fetchProducts = useCallback(async (search = searchText, overrideFilter?: 'all' | 'inStock' | 'critical' | 'value') => {
+        setLoading(true);
+        setIsListVisible(true);
+        try {
+            let url = `${API_URL}/products?limit=50`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
 
-            // Parallel Request
-            const [statsRes, prodRes] = await Promise.all([
-                fetch(statsUrl, { headers: { 'x-demo-mode': isDemo ? 'true' : 'false' } }),
-                fetch(prodUrl, { headers: { 'x-demo-mode': isDemo ? 'true' : 'false' } })
-            ]);
+            let currentStatus = stockStatus;
+            let currentSort = sortBy;
 
-            if (statsRes.ok) setStats(await statsRes.json());
+            if (overrideFilter) {
+                if (overrideFilter === 'inStock') currentStatus = 'inStock';
+                else if (overrideFilter === 'critical') currentStatus = 'critical';
+                else if (overrideFilter === 'value') currentSort = 'amount';
+                else if (overrideFilter === 'all') currentStatus = 'all';
+            } else if (activeFilter !== 'all') {
+                if (activeFilter === 'inStock') currentStatus = 'inStock';
+                else if (activeFilter === 'critical') currentStatus = 'critical';
+            }
 
-            if (prodRes.ok) {
-                const data = await prodRes.json();
+            url += `&sortBy=${currentSort}`;
+            if (selectedWarehouse !== null) url += `&warehouse=${selectedWarehouse}`;
+            if (currentStatus === 'critical') url += `&critical=true`;
+            if (currentStatus === 'inStock') url += `&minStock=1`;
+
+            const res = await fetch(url, {
+                headers: { 'x-demo-mode': isDemo ? 'true' : 'false' }
+            });
+            if (res.ok) {
+                const data = await res.json();
                 setProducts(Array.isArray(data) ? data : []);
             }
         } catch (error) {
@@ -74,49 +110,70 @@ export default function ProductsScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [searchText, sortBy, selectedWarehouse, isDemo]);
+    }, [isDemo, searchText, stockStatus, sortBy, activeFilter, selectedWarehouse]);
 
-    // Socket.IO Connection & Initial Fetch
+    // Initial Load
     useEffect(() => {
-        // Connect Socket
-        socketRef.current = io(BASE_URL);
+        fetchStats();
+        fetchWarehouses();
+    }, [fetchStats, fetchWarehouses]);
 
-        socketRef.current.on("connect", () => {
-            console.log("⚡ Socket.IO Bağlandı:", socketRef.current.id);
-        });
-
-        // Listen for updates (Example event)
-        socketRef.current.on("stock_update", (updatedProduct: any) => {
-            console.log("📦 Stok Güncellemesi Geldi:", updatedProduct.code);
-            // Update local state without full refresh
-            setProducts(prevProducts => prevProducts.map(p =>
-                p.id === updatedProduct.id ? { ...p, ...updatedProduct } : p
-            ));
-        });
-
-        fetchData();
-
-        return () => {
-            if (socketRef.current) socketRef.current.disconnect();
-        };
-    }, [fetchData]); // Re-connect only if BASE_URL changes (unlikely) or component remounts
-
-    // Trigger Fetch on Filter Change
+    // Search Effect: Debounce search
     useEffect(() => {
-        setLoading(true);
-        const timer = setTimeout(fetchData, 500); // Debounce
-        return () => clearTimeout(timer);
-    }, [fetchData]); // fetchData is stable via useCallback
+        const delayDebounceFn = setTimeout(() => {
+            if (searchText.length > 0) {
+                setIsListVisible(true);
+                fetchProducts(searchText);
+            } else if (searchText.length === 0) {
+                if (isListVisible) fetchProducts('');
+            }
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchText, isListVisible, fetchProducts]);
+
+    // Filter Trigger Effect
+    useEffect(() => {
+        if (isListVisible) {
+            fetchProducts(searchText);
+        }
+    }, [selectedWarehouse, isListVisible, searchText, fetchProducts]);
+
+
+    const handleBoxPress = (filterType: 'all' | 'inStock' | 'critical' | 'value') => {
+        setActiveFilter(filterType);
+        if (filterType === 'inStock') setStockStatus('inStock');
+        else if (filterType === 'critical') setStockStatus('critical');
+        else setStockStatus('all');
+
+        if (filterType === 'value') setSortBy('amount');
+
+        setSearchText('');
+        fetchProducts('', filterType);
+    };
+
+    const applyFilters = () => {
+        setIsFilterModalVisible(false);
+        setActiveFilter('all');
+        fetchProducts();
+    };
+
+    const clearFilters = () => {
+        setSelectedWarehouse(null);
+        setSortBy('quantity');
+        setStockStatus('all');
+        setActiveFilter('all');
+        setIsFilterModalVisible(false);
+        fetchProducts();
+    };
 
     const onRefresh = () => {
         setRefreshing(true);
-        fetchData(); // Socket will stay connected
+        fetchStats();
+        fetchWarehouses();
+        if (isListVisible) fetchProducts();
+        else setRefreshing(false);
     };
-
-    // Camera State
-    const [permission, requestPermission] = useCameraPermissions();
-    const [isScanning, setIsScanning] = useState(false);
-    const [scanned, setScanned] = useState(false);
 
     const handleScan = () => {
         if (!permission?.granted) {
@@ -134,135 +191,267 @@ export default function ProductsScreen() {
         Alert.alert("Barkod Okundu", `Ürün Kodu: ${data}`);
     };
 
-    // Memoized Navigation
-    const handleProductPress = useCallback((id: number) => {
-        let url = `/products/${id}`;
-        if (selectedWarehouse) {
-            url += `?warehouse=${selectedWarehouse}`;
-            const whName = warehouses.find(w => w.id === selectedWarehouse)?.name;
-            if (whName) url += `&warehouseName=${encodeURIComponent(whName)}`;
-        }
-        router.push(url as any);
-    }, [router, selectedWarehouse, warehouses]);
-
-    // Render Helpers
-    const renderItem = useCallback(({ item, index }: { item: Product; index: number }) => (
-        <ProductItem item={item} index={index} onPress={handleProductPress} />
-    ), [handleProductPress]);
-
-    const keyExtractor = useCallback((item: Product) => item.id.toString(), []);
-
-    const renderHeader = () => (
-        <View className="mb-4">
-            {/* Warehouse Selector */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4 max-h-12">
-                {warehouses.map((w) => (
-                    <TouchableOpacity
-                        key={w.id ?? 'all'}
-                        onPress={() => setSelectedWarehouse(w.id)}
-                        className={`px-4 py-2 rounded-full mr-2 border ${selectedWarehouse === w.id
-                            ? 'bg-blue-600 border-blue-500'
-                            : 'bg-slate-800/60 border-slate-700/50'
-                            }`}
-                    >
-                        <Text className={`${selectedWarehouse === w.id ? 'text-white font-bold' : 'text-slate-400 font-medium'} text-xs`}>
-                            {w.name}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
-            </ScrollView>
-
-            {stats && (
-                <View className="mb-4 space-y-2">
-                    {/* Top Row: Returns Stats Component logic from before... */}
-                    <View className="flex-row gap-2">
-                        <LinearGradient colors={['#3730a3', '#312e81']} className="flex-1 p-3 rounded-xl border border-indigo-500/30">
-                            <Package size={20} color="#818cf8" />
-                            <Text className="text-white font-bold text-lg mt-1">{stats.totalProducts || 0}</Text>
-                            <Text className="text-indigo-200 text-xs">Toplam</Text>
-                        </LinearGradient>
-                        <LinearGradient colors={['#065f46', '#064e3b']} className="flex-1 p-3 rounded-xl border border-emerald-500/30">
-                            <CheckCircle size={20} color="#34d399" />
-                            <Text className="text-white font-bold text-lg mt-1">{stats.productsInStock || 0}</Text>
-                            <Text className="text-emerald-200 text-xs">Stokta</Text>
-                        </LinearGradient>
-                        <LinearGradient colors={['#92400e', '#78350f']} className="flex-1 p-3 rounded-xl border border-amber-500/30">
-                            <AlertTriangle size={20} color="#fbbf24" />
-                            <Text className="text-white font-bold text-lg mt-1">{stats.criticalStock || 0}</Text>
-                            <Text className="text-amber-200 text-xs">Kritik</Text>
-                        </LinearGradient>
-                    </View>
-                    {/* Bottom Row: Total Stock Value */}
-                    <LinearGradient colors={['#1e1b4b', '#0f172a']} className="p-3 rounded-xl border border-indigo-500/30 flex-row items-center justify-between">
-                        <View className="flex-row items-center gap-3">
-                            <View className="bg-indigo-500/20 p-2 rounded-lg">
-                                <TrendingUp size={24} color="#818cf8" />
-                            </View>
-                            <View>
-                                <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider">Toplam Stok Değeri</Text>
-                                <Text className="text-slate-500 text-[10px]">(Alış Fiyatıyla)</Text>
-                            </View>
-                        </View>
-                        <Text className="text-white font-bold text-xl">
-                            {(stats.totalStockValue || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺
-                        </Text>
-                    </LinearGradient>
-                </View>
-            )}
-
-            {/* Sorting Tabs */}
-            <View className="flex-row bg-slate-900 p-1 rounded-xl border border-slate-800 mb-2">
-                <TouchableOpacity onPress={() => setSortBy('realStock')} className={`flex-1 py-2 rounded-lg items-center ${sortBy === 'realStock' ? 'bg-indigo-600' : ''}`}><Text className={`text-xs font-bold ${sortBy === 'realStock' ? 'text-white' : 'text-slate-400'}`}>Gerçek Stok</Text></TouchableOpacity>
-                <TouchableOpacity onPress={() => setSortBy('amount')} className={`flex-1 py-2 rounded-lg items-center ${sortBy === 'amount' ? 'bg-indigo-600' : ''}`}><Text className={`text-xs font-bold ${sortBy === 'amount' ? 'text-white' : 'text-slate-400'}`}>Tutar</Text></TouchableOpacity>
-                <TouchableOpacity onPress={() => setSortBy('quantity')} className={`flex-1 py-2 rounded-lg items-center ${sortBy === 'quantity' ? 'bg-indigo-600' : ''}`}><Text className={`text-xs font-bold ${sortBy === 'quantity' ? 'text-white' : 'text-slate-400'}`}>Miktar</Text></TouchableOpacity>
-            </View>
-        </View>
-    );
+    const handleProductPress = (id: number) => {
+        router.push(`/products/${id}` as any);
+    };
 
     return (
         <View className="flex-1 bg-slate-950">
             <LinearGradient colors={['#0f172a', '#020617']} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />
-            <SafeAreaView className="flex-1 px-4 pt-2">
-                <View className="flex-row items-center gap-3 mb-6">
-                    <Image source={require('../../assets/images/siyahlogo.png')} style={{ width: 40, height: 40, borderRadius: 10 }} resizeMode="contain" />
-                    <View>
-                        <Text className="text-3xl font-black text-white">Stok & Ürün</Text>
-                        <Text className="text-slate-400 text-xs font-medium tracking-wide uppercase">Entelog Mobile (Canlı)</Text>
-                    </View>
+            <SafeAreaView className="flex-1 px-4 pt-4">
+                {/* Header Title */}
+                <View className="mb-6">
+                    <Text className="text-3xl font-black text-white tracking-tight">Stok Yönetimi</Text>
+                    <Text className="text-slate-400 text-sm font-medium">Hızlı Erişim ve Arama</Text>
                 </View>
 
                 {/* Search Bar */}
-                <View className="flex-row gap-3 mb-4">
-                    <View className="bg-slate-900 border border-slate-800 rounded-xl flex-1 flex-row items-center px-4 py-3">
-                        <Search size={20} color="#94a3b8" />
+                <View className="mb-6 flex-row items-center">
+                    <View className="flex-1 flex-row items-center bg-slate-900 border border-slate-700/50 rounded-2xl h-14 px-4 shadow-sm">
+                        <Search size={22} color="#94a3b8" />
                         <TextInput
-                            placeholder="Ürün ara veya barkod tara..."
+                            placeholder="Ürün adı, kod veya barkod..."
                             placeholderTextColor="#64748b"
                             value={searchText}
                             onChangeText={setSearchText}
-                            className="flex-1 ml-3 text-white font-medium"
+                            returnKeyType="search"
+                            onSubmitEditing={() => fetchProducts(searchText)}
+                            className="flex-1 ml-3 text-white text-lg font-medium h-full"
                         />
+                        {searchText.length > 0 && (
+                            <TouchableOpacity onPress={() => setSearchText('')} className="p-2">
+                                <X size={18} color="#64748b" />
+                            </TouchableOpacity>
+                        )}
+                        <TouchableOpacity onPress={handleScan} className="bg-slate-800 p-2 rounded-lg ml-2">
+                            <ScanLine size={20} color="#cbd5e1" />
+                        </TouchableOpacity>
                     </View>
-                    <TouchableOpacity onPress={handleScan} className="bg-blue-600 rounded-xl justify-center items-center w-14 border border-blue-500">
-                        <ScanLine size={24} color="white" />
+                </View>
+
+                {/* Dashboard Action Grid - Single Horizontal Box */}
+                <View className="mb-6">
+                    <TouchableOpacity
+                        onPress={() => handleBoxPress('all')}
+                        activeOpacity={0.9}
+                        className={`w-full flex-row items-center p-4 rounded-3xl border ${activeFilter === 'all' && isListVisible ? 'bg-blue-600 border-blue-400' : 'bg-slate-900 border-slate-800'}`}
+                    >
+                        <View className={`p-3 rounded-2xl mr-4 ${activeFilter === 'all' && isListVisible ? 'bg-white/20' : 'bg-slate-800'}`}>
+                            <Package size={28} color={activeFilter === 'all' && isListVisible ? '#fff' : '#94a3b8'} />
+                        </View>
+
+                        <View className="flex-1">
+                            <Text className={`text-3xl font-black ${activeFilter === 'all' && isListVisible ? 'text-white' : 'text-white'}`}>
+                                {stats?.totalProducts || 0}
+                            </Text>
+                            <Text className={`text-xs font-bold uppercase ${activeFilter === 'all' && isListVisible ? 'text-blue-100' : 'text-slate-500'}`}>
+                                Toplam Ürün
+                            </Text>
+                        </View>
+
+                        {/* Optional: Add stock value summary on the right side if space permits, or strictly follow "Only Total Product Box" */}
+                        {/* User said "SADECE TOPLAM ÜRÜN KUTUCU" so I will keep it focused on Total Products but maybe clearer layout. */}
+
+                        {(activeFilter === 'all' && isListVisible) && (
+                            <View className="bg-white/20 p-2 rounded-full">
+                                <Check size={20} color="#fff" />
+                            </View>
+                        )}
                     </TouchableOpacity>
                 </View>
 
-                {loading && !refreshing && !products.length ? (
-                    <ActivityIndicator size="large" color="#3b82f6" className="mt-10" />
+                {/* Warehouse Filter */}
+                <View className="mb-6">
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row" contentContainerStyle={{ paddingHorizontal: 4 }}>
+                        <TouchableOpacity
+                            onPress={() => setSelectedWarehouse(null)}
+                            className={`px-4 py-3 rounded-xl mr-2 border ${selectedWarehouse === null ? 'bg-indigo-600 border-indigo-500' : 'bg-slate-900 border-slate-800'}`}
+                        >
+                            <Text className={`text-sm font-bold ${selectedWarehouse === null ? 'text-white' : 'text-slate-400'}`}>
+                                Tüm Depolar
+                            </Text>
+                        </TouchableOpacity>
+                        {warehouses.map((wh) => (
+                            <TouchableOpacity
+                                key={wh.id}
+                                onPress={() => setSelectedWarehouse(wh.number)}
+                                className={`px-4 py-3 rounded-xl mr-2 border ${selectedWarehouse === wh.number ? 'bg-indigo-600 border-indigo-500' : 'bg-slate-900 border-slate-800'}`}
+                            >
+                                <Text className={`text-sm font-bold ${selectedWarehouse === wh.number ? 'text-white' : 'text-slate-400'}`}>
+                                    {wh.name}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
+
+                {/* Content Area */}
+                {!isListVisible ? (
+                    <View className="flex-1 justify-center items-center opacity-50 pb-20">
+                        <Package size={64} color="#334155" />
+                        <Text className="text-slate-500 mt-4 text-center px-10">
+                            İşlem yapmak için yukarıdan bir kategori seçin veya arama yapın.
+                        </Text>
+                    </View>
                 ) : (
                     <FlatList
                         data={products}
-                        renderItem={renderItem}
-                        keyExtractor={keyExtractor}
+                        renderItem={({ item, index }) => {
+                            const p = item as any;
+                            if (!p) return null;
+                            return (
+                                <Animated.View>
+                                    <TouchableOpacity
+                                        onPress={() => handleProductPress(p.id)}
+                                        activeOpacity={0.7}
+                                        className="mb-3 bg-slate-900 border border-slate-800 p-4 rounded-3xl flex-row items-center justify-between"
+                                    >
+                                        <View className="flex-row items-center flex-1">
+                                            {p.image && p.image !== '' ? (
+                                                <Image
+                                                    source={{ uri: p.image.startsWith('http') ? p.image : `${BASE_URL}/uploads/products/${p.image}` }}
+                                                    className="w-14 h-14 rounded-xl mr-4 bg-slate-800"
+                                                    resizeMode="cover"
+                                                />
+                                            ) : (
+                                                <View className="w-14 h-14 rounded-xl mr-4 bg-slate-800 justify-center items-center border border-slate-700/50">
+                                                    <Package size={24} color="#64748b" />
+                                                </View>
+                                            )}
+                                            <View className="flex-1 pr-2">
+                                                <Text className="text-white font-bold text-base mb-1" numberOfLines={1}>{p.name || 'İsimsiz'}</Text>
+                                                <View className="flex-row items-center">
+                                                    <View className="bg-slate-800 px-2 py-0.5 rounded mr-2">
+                                                        <Text className="text-slate-400 text-[10px] font-mono">{p.code}</Text>
+                                                    </View>
+                                                    {p.brand && (
+                                                        <View className="bg-slate-800 px-2 py-0.5 rounded mr-2">
+                                                            <Text className="text-slate-400 text-[10px]">{p.brand}</Text>
+                                                        </View>
+                                                    )}
+                                                </View>
+                                            </View>
+                                        </View>
+                                        <View className="items-end">
+                                            <Text className="text-white font-black text-lg">
+                                                {Number(p.salesPrice || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                                            </Text>
+                                            <Text className={`text-xs font-bold mt-1 ${p.realStock > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                {p.realStock} Adet
+                                            </Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                </Animated.View>
+                            );
+                        }}
+                        keyExtractor={item => item.id.toString()}
                         contentContainerStyle={{ paddingBottom: 100 }}
-                        ListHeaderComponent={renderHeader}
-                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />}
-                        ListEmptyComponent={<View className="items-center justify-center py-20"><Package size={64} color="#334155" /><Text className="text-slate-500 mt-4 font-medium">Kayıt bulunamadı</Text></View>}
-                        initialNumToRender={10} maxToRenderPerBatch={10} windowSize={5} removeClippedSubviews={true} getItemLayout={(data, index) => ({ length: 100, offset: 100 * index, index })}
+                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}
+                        ListEmptyComponent={
+                            <View className="items-center justify-center py-20">
+                                {loading ? <ActivityIndicator color="#fff" /> : <Text className="text-slate-500">Ürün bulunamadı</Text>}
+                            </View>
+                        }
                     />
                 )}
             </SafeAreaView>
+
+            {/* Filter Modal */}
+            <Modal
+                visible={isFilterModalVisible}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setIsFilterModalVisible(false)}
+            >
+                <View className="flex-1 bg-black/80 justify-end">
+                    <View className="bg-slate-900 rounded-t-3xl border-t border-slate-800 p-6 h-[70%]">
+                        <View className="flex-row justify-between items-center mb-6">
+                            <Text className="text-white font-bold text-xl">Detaylı Filtreleme</Text>
+                            <TouchableOpacity onPress={() => setIsFilterModalVisible(false)} className="p-2 bg-slate-800 rounded-full">
+                                <X size={20} color="white" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView className="flex-1">
+                            {/* Sort Options */}
+                            <Text className="text-slate-400 font-bold mb-3 uppercase text-xs">Sıralama</Text>
+                            <View className="flex-row flex-wrap gap-2 mb-6">
+                                {['quantity', 'amount', 'realStock', 'price', 'name'].map((option) => (
+                                    <TouchableOpacity
+                                        key={option}
+                                        onPress={() => setSortBy(option as any)}
+                                        className={`px-4 py-3 rounded-xl border ${sortBy === option ? 'bg-indigo-600 border-indigo-500' : 'bg-slate-800 border-slate-700'}`}
+                                    >
+                                        <Text className={`font-medium ${sortBy === option ? 'text-white' : 'text-slate-400'}`}>
+                                            {option === 'quantity' ? 'Satış Adedi' :
+                                                option === 'amount' ? 'Satış Cirosu' :
+                                                    option === 'realStock' ? 'Stok Miktarı' :
+                                                        option === 'price' ? 'Fiyat' : 'İsim'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Status Filters */}
+                            <Text className="text-slate-400 font-bold mb-3 uppercase text-xs">Durum</Text>
+                            <View className="flex-row flex-wrap gap-2 mb-6">
+                                {[
+                                    { key: 'all', label: 'Tümü' },
+                                    { key: 'inStock', label: 'Sadece Stoktakiler' },
+                                    { key: 'critical', label: 'Kritik Stok' }
+                                ].map((option) => (
+                                    <TouchableOpacity
+                                        key={option.key}
+                                        onPress={() => setStockStatus(option.key as any)}
+                                        className={`px-4 py-3 rounded-xl border ${stockStatus === option.key ? 'bg-indigo-600 border-indigo-500' : 'bg-slate-800 border-slate-700'}`}
+                                    >
+                                        <Text className={`font-medium ${stockStatus === option.key ? 'text-white' : 'text-slate-400'}`}>
+                                            {option.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Warehouse Selection */}
+                            <Text className="text-slate-400 font-bold mb-3 uppercase text-xs">Depo / Ambar</Text>
+                            <View className="flex-row flex-wrap gap-2 mb-6">
+                                <TouchableOpacity
+                                    onPress={() => setSelectedWarehouse(null)}
+                                    className={`px-4 py-3 rounded-xl border ${selectedWarehouse === null ? 'bg-blue-600 border-blue-500' : 'bg-slate-800 border-slate-700'}`}
+                                >
+                                    <Text className={`font-medium ${selectedWarehouse === null ? 'text-white' : 'text-slate-400'}`}>
+                                        Tüm Depolar
+                                    </Text>
+                                </TouchableOpacity>
+                                {warehouses.map((wh) => (
+                                    <TouchableOpacity
+                                        key={wh.id}
+                                        onPress={() => setSelectedWarehouse(wh.number)}
+                                        className={`px-4 py-3 rounded-xl border ${selectedWarehouse === wh.number ? 'bg-blue-600 border-blue-500' : 'bg-slate-800 border-slate-700'}`}
+                                    >
+                                        <Text className={`font-medium ${selectedWarehouse === wh.number ? 'text-white' : 'text-slate-400'}`}>
+                                            {wh.name} (#{wh.number})
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Clear Button */}
+                            <TouchableOpacity onPress={clearFilters} className="mb-4 flex-row justify-center items-center py-3">
+                                <Text className="text-slate-400 font-medium">Filtreleri Temizle</Text>
+                            </TouchableOpacity>
+                        </ScrollView>
+
+                        {/* Apply Button */}
+                        <TouchableOpacity
+                            onPress={applyFilters}
+                            className="bg-indigo-600 p-4 rounded-2xl items-center shadow-lg shadow-indigo-500/30"
+                        >
+                            <Text className="text-white font-bold text-lg">Uygula</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
 
             {/* Camera Modal */}
             <Modal visible={isScanning} animationType="slide" presentationStyle="fullScreen">

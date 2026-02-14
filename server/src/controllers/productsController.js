@@ -34,53 +34,55 @@ exports.getProducts = async (req, res) => {
         const gntotstTable = `LG_${firm}_${period}_GNTOTST`;
         const stlineTable = `LG_${firm}_${period}_STLINE`;
         const prclistTable = `LG_${firm}_PRCLIST`;
+        const unitBarcodeTable = `LG_${firm}_UNITBARCODE`;
 
         const limit = parseInt(req.query.limit) || 50;
         const search = req.query.search || '';
-        const sortBy = req.query.sortBy || 'quantity'; // 'quantity' (Sales Qty) or 'amount' (Sales Amount)
+        const sortBy = req.query.sortBy || 'quantity'; // 'quantity', 'amount', 'realStock', 'price', 'name'
         const warehouse = req.query.warehouse || null; // Warehouse ID
+        const minStock = req.query.minStock ? parseInt(req.query.minStock) : null;
+        const maxStock = req.query.maxStock ? parseInt(req.query.maxStock) : null;
+        const critical = req.query.critical === 'true';
 
         let whereCondition = 'I.ACTIVE = 0'; // Only active products
         if (search) {
-            whereCondition += ` AND (I.CODE LIKE '%${search}%' OR I.NAME LIKE '%${search}%')`;
+            const s = search.replace(/'/g, "''");
+            const sNormalized = s.replace(/[.\-\s]/g, ""); // Normalize search term too
+            whereCondition += ` AND (
+                I.CODE LIKE N'%${s}%' 
+                OR REPLACE(REPLACE(REPLACE(I.CODE, '.', ''), '-', ''), ' ', '') LIKE N'%${sNormalized}%'
+                OR I.NAME LIKE N'%${s}%' 
+                OR I.PRODUCERCODE LIKE N'%${s}%'
+                OR I.SPECODE LIKE N'%${s}%'
+                OR EXISTS (SELECT 1 FROM ${unitBarcodeTable} UB WHERE UB.ITEMREF = I.LOGICALREF AND UB.BARCODE LIKE N'%${s}%')
+            )`;
         }
 
+        // ... (Warehouse Logic & Physical Stock Query - no changes needed to CTE structure) ...
         // Warehouse filtering logic
         // Always calculate from STLINE for accuracy, as GNTOTST is unreliable (missing records for Devir items)
         const stockInvenNo = warehouse ? warehouse : -1;
 
         // Dynamic Stock Query using STLINE
-        // Filter by Warehouse if selected (SOURCEINDEX)
-        // We rely on standard IOCODE logic: 1,3 (+), 2,4 (-)
-        // Transfers (TRCODE 25) typically generate two rows (Out from Source, In to Dest), both with correct IOCODE/SOURCEINDEX.
-        // So we do NOT need to check DESTINDEX, to avoid double counting.
         const whCondition = warehouse
             ? `AND SOURCEINDEX = ${warehouse}`
-            : ''; // Global: include all
+            : '';
 
         const physicalStockQuery = `
             ISNULL((
                 SELECT SUM(
                     CASE 
-                         -- Logic for Warehouse specific calculation
-                        -- Special Case for TRCODE 25 (Transfer): User indicates IOCODE 1,3 behaves as Output (-) and 2,4 as Input (+) for this transaction type in their context.
                         WHEN ${warehouse || 'NULL'} IS NOT NULL AND SOURCEINDEX = ${warehouse || 0} AND TRCODE = 25 AND IOCODE IN (1, 3) THEN -AMOUNT
                         WHEN ${warehouse || 'NULL'} IS NOT NULL AND SOURCEINDEX = ${warehouse || 0} AND TRCODE = 25 AND IOCODE IN (2, 4) THEN AMOUNT
-
-                        -- Standard Logic (Non-Transfer or Standard IOCODE behavior)
                         WHEN ${warehouse || 'NULL'} IS NOT NULL AND SOURCEINDEX = ${warehouse || 0} AND IOCODE IN (1, 3) THEN AMOUNT 
                         WHEN ${warehouse || 'NULL'} IS NOT NULL AND SOURCEINDEX = ${warehouse || 0} AND IOCODE IN (2, 4) THEN -AMOUNT
-                        
-                        -- Logic for Global calculation (No WAREHOUSE filter)
-                        -- Apply same inversion for TRCODE 25 globally if needed, or keep standard. Assuming consistency:
-                         WHEN ${warehouse ? '1=0' : '1=1'} AND IOCODE IN (1, 3, 2, 4) THEN 
+                        WHEN ${warehouse ? '1=0' : '1=1'} AND IOCODE IN (1, 3, 2, 4) THEN 
                              (CASE 
                                 WHEN TRCODE = 25 AND IOCODE IN (1,3) THEN -AMOUNT
                                 WHEN TRCODE = 25 AND IOCODE IN (2,4) THEN AMOUNT
                                 WHEN IOCODE IN (1, 3) THEN AMOUNT 
                                 ELSE -AMOUNT 
                               END)
-                        
                         ELSE 0 
                     END
                 ) FROM ${stlineTable} 
@@ -88,23 +90,21 @@ exports.getProducts = async (req, res) => {
             ), 0)
         `;
 
-        // Sorting Logic Updated
+        // Sorting Logic
         let orderByClause = 'salesQuantity DESC';
-        if (sortBy === 'amount') {
-            orderByClause = 'salesAmount DESC';
-        } else if (sortBy === 'realStock') {
-            // realStock is calculated in CTE
-            orderByClause = 'realStock DESC';
-        } else if (sortBy === 'quantity') {
-            orderByClause = 'salesQuantity DESC';
-        }
+        if (sortBy === 'amount') orderByClause = 'salesAmount DESC';
+        else if (sortBy === 'realStock') orderByClause = 'realStock DESC';
+        else if (sortBy === 'quantity') orderByClause = 'salesQuantity DESC';
+        else if (sortBy === 'price') orderByClause = 'fixedPrice DESC';
+        else if (sortBy === 'name') orderByClause = 'name ASC';
 
         const salesSourceFilter = warehouse ? `AND SOURCEINDEX = ${warehouse}` : '';
 
-        // Add filter for positive real stock when sortBy is 'stock'
-        const realStockFilter = sortBy === 'stock'
-            ? 'WHERE (physicalStock + transitStock - reservedStock) > 0'
-            : '';
+        // Dynamic CTE Filter
+        let finalWhere = '1=1';
+        if (minStock !== null) finalWhere += ` AND (physicalStock + transitStock - reservedStock) >= ${minStock}`;
+        if (maxStock !== null) finalWhere += ` AND (physicalStock + transitStock - reservedStock) <= ${maxStock}`;
+        if (critical) finalWhere += ` AND (physicalStock + transitStock - reservedStock) <= 0`; // Assuming critical means <= 0 or low stock
 
         const query = `
             WITH ProductStats AS (
@@ -115,50 +115,27 @@ exports.getProducts = async (req, res) => {
                     I.VAT as vat,
                     I.SPECODE as brand,
                     U.CODE as unit,
-                    -- Stock Level (Physical)
                     ${physicalStockQuery} as physicalStock,
-                    -- Reserved Stock (Rezerve)
                     ISNULL((SELECT SUM(RESERVED) FROM ${gntotstTable} WHERE STOCKREF = I.LOGICALREF AND INVENNO = ${stockInvenNo}), 0) as reservedStock,
-                    -- Transit Stock (Yoldaki/Transfer)
                     ISNULL((SELECT SUM(TEMPIN) FROM ${gntotstTable} WHERE STOCKREF = I.LOGICALREF AND INVENNO = ${stockInvenNo}), 0) as transitStock,
-                    -- Sales Quantity (Toplam Satış Miktarı) - TRCODE 7,8 (Perakende/Toptan Satış)
                     ISNULL((SELECT SUM(AMOUNT) FROM ${stlineTable} WHERE STOCKREF = I.LOGICALREF AND TRCODE IN (7, 8) AND LINETYPE = 0 AND CANCELLED = 0 ${salesSourceFilter}), 0) as salesQuantity,
-                    -- Sales Amount (Toplam Satış Tutarı)
                     ISNULL((SELECT SUM(TOTAL) FROM ${stlineTable} WHERE STOCKREF = I.LOGICALREF AND TRCODE IN (7, 8) AND LINETYPE = 0 AND CANCELLED = 0 ${salesSourceFilter}), 0) as salesAmount,
-                    -- Fixed Sales Price (Sabit Satış Fiyatı) - PTYPE 2 (Satış)
                     ISNULL((SELECT TOP 1 PRICE FROM ${prclistTable} WHERE CARDREF = I.LOGICALREF AND PTYPE = 2 AND (CLIENTCODE = '' OR CLIENTCODE IS NULL) ORDER BY PRIORITY DESC, LOGICALREF DESC), 0) as fixedPrice,
-                    -- Last Purchase/Input Price (En Son Giriş Fiyatı)
-                    ISNULL((
-                        SELECT TOP 1 PRICE 
-                        FROM ${stlineTable} 
-                        WHERE STOCKREF = I.LOGICALREF 
-                          AND TRCODE IN (1, 13, 14, 50) 
-                          AND CANCELLED = 0 
-                          AND LINETYPE = 0 
-                          AND PRICE > 0 
-                        ORDER BY DATE_ DESC, LOGICALREF DESC
-                    ), 
-                    ISNULL((SELECT TOP 1 PRICE FROM ${prclistTable} WHERE CARDREF = I.LOGICALREF AND PTYPE = 1 AND (CLIENTCODE = '' OR CLIENTCODE IS NULL) ORDER BY PRIORITY DESC, LOGICALREF DESC), 0)
-                    ) as purchasePrice
+                    ISNULL((SELECT TOP 1 PRICE FROM ${stlineTable} WHERE STOCKREF = I.LOGICALREF AND TRCODE IN (1, 13, 14, 50) AND CANCELLED = 0 AND LINETYPE = 0 AND PRICE > 0 ORDER BY DATE_ DESC, LOGICALREF DESC), 
+                    ISNULL((SELECT TOP 1 PRICE FROM ${prclistTable} WHERE CARDREF = I.LOGICALREF AND PTYPE = 1 AND (CLIENTCODE = '' OR CLIENTCODE IS NULL) ORDER BY PRIORITY DESC, LOGICALREF DESC), 0)) as purchasePrice
                 FROM ${itemsTable} I
                 LEFT JOIN LG_${firm}_UNITSETL U ON I.UNITSETREF = U.UNITSETREF AND U.MAINUNIT = 1
                 WHERE ${whereCondition}
             )
             SELECT TOP ${limit} 
                 *,
-                -- Calculated Real Stock (Gerçek Stok = Fiili + Yolda - Rezerve)
                 (physicalStock + transitStock - reservedStock) as realStock,
-                -- Legacy field mapping for compatibility if needed, though we use realStock now
                 physicalStock as stockLevel,
-                -- Price is derived from fixedPrice first, then avgPrice (total sales / quantity)
-                CASE WHEN fixedPrice > 0 THEN fixedPrice 
-                     WHEN salesQuantity > 0 THEN salesAmount / salesQuantity 
-                     ELSE 0 END as avgPrice,
-                -- Stock Value based on Purchase Price
+                CASE WHEN fixedPrice > 0 THEN fixedPrice WHEN salesQuantity > 0 THEN salesAmount / salesQuantity ELSE 0 END as avgPrice,
                 ((physicalStock + transitStock - reservedStock) * purchasePrice) as stockValue,
-                fixedPrice -- return separately too just in case
+                fixedPrice
             FROM ProductStats
-            ${realStockFilter}
+            WHERE ${finalWhere}
             ORDER BY ${orderByClause}
         `;
 

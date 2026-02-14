@@ -3,6 +3,8 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { useEffect } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import { updateServerConfig } from '@/constants/Config';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 
@@ -12,6 +14,25 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
   const colorScheme = useColorScheme();
+
+  // Load Server Configuration on Startup
+  useEffect(() => {
+    const loadServerSettings = async () => {
+      try {
+        const savedConfig = await SecureStore.getItemAsync('server_settings');
+        if (savedConfig) {
+          console.log('⚡ Loading saved server config...');
+          const { ip, port, protocol } = JSON.parse(savedConfig);
+          if (ip && port) {
+            updateServerConfig(ip, port, protocol || 'http');
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load server settings', e);
+      }
+    };
+    loadServerSettings();
+  }, []);
 
   useEffect(() => {
     if (isLoading) return;

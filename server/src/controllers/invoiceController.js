@@ -60,7 +60,7 @@ exports.getInvoices = async (req, res) => {
     // Type Filter
     if (type === 'sales') {
       whereClause += ` AND S.TRCODE IN (7, 8, 9)`;
-    } else if (type === 'purchase') {
+    } else if (type === 'purchase' || type === 'purchases') {
       whereClause += ` AND S.TRCODE IN (1, 2, 3)`;
     } else {
       // If 'All', show both Sales and Purchase (exclude other slip types)
@@ -152,7 +152,7 @@ exports.getInvoices = async (req, res) => {
       const ficheNo = `F${1000 + i}`;
 
       if (type === 'sales' && !isSales) return null;
-      if (type === 'purchase' && isSales) return null;
+      if ((type === 'purchase' || type === 'purchases') && isSales) return null;
       if (search && !customerName.toLowerCase().includes(search) && !ficheNo.toLowerCase().includes(search)) return null;
 
       const date = new Date();
